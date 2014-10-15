@@ -1,0 +1,6 @@
+*.pyc
+stone*/
+*env/
+requirements.txt
+.idea/
+django_plugins/db.sqlite3
