@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from websocket import create_connection
-from biomio.protocol.message import BiomioMessage, BiomioClientMessage, BiomioServerMessage
+from biomio.protocol.message import BiomioMessageOld, BiomioClientMessageOld, BiomioServerMessageOld
 from jsonschema import validate
 
 BIOMIO_protocol_json_schema = {
@@ -251,11 +251,11 @@ class TestServerHandshake:
         self.ws = None
 
     def test_hello_server(self):
-        message = BiomioClientMessage(seq=0, message_id='', proto_ver='', os_id='', app_id='')
+        message = BiomioClientMessageOld(seq=0, message_id='', proto_ver='', os_id='', app_id='')
         message.hello(public_key='', private_key='')
         verify_json(obj=message.json_obj())
         responce_str = biomio_send(message=message)
-        response = BiomioServerMessage.from_string(responce_str)
+        response = BiomioServerMessageOld.from_string(responce_str)
         verify_json(response.json_obj())
 
 

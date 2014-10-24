@@ -1,6 +1,7 @@
 
 import json
 import jsonschema
+from bunch import Bunch
 
 
 ### Common definitions
@@ -33,7 +34,7 @@ SERVER_MSG_HELLO = 'hello'
 SERVER_MSG_HELLO_REFRESH_TOKEN = 'refreshToken'
 SERVER_MSG_HELLO_TTL = 'ttl'
 
-class BiomioMessage:
+class BiomioMessageOld:
 
     def __init__(self):
         self._header = ''
@@ -67,7 +68,7 @@ class BiomioMessage:
         return json.dumps(obj)
 
 
-class BiomioServerMessage(BiomioMessage):
+class BiomioServerMessageOld(BiomioMessageOld):
 
     def __init__(self, seq, proto_ver, token):
         self._init_header(seq=seq, proto_ver=proto_ver, token=token)
@@ -78,7 +79,7 @@ class BiomioServerMessage(BiomioMessage):
 
         # Get header
         header_obj = obj[MSG_HEADER]
-        message = BiomioServerMessage(
+        message = BiomioServerMessageOld(
             header_obj[SERVER_MSG_HEADER_SEQ],
             header_obj[SERVER_MSG_HEADER_PROTO_VER],
             header_obj[SERVER_MSG_HEADER_TOKEN]
@@ -104,7 +105,7 @@ class BiomioServerMessage(BiomioMessage):
         }
 
 
-class BiomioClientMessage(BiomioMessage):
+class BiomioClientMessageOld(BiomioMessageOld):
 
     def __init__(self, seq, message_id, proto_ver, os_id, app_id):
         self._init_header(seq=seq, message_id=message_id, proto_ver=proto_ver, os_id=os_id, app_id=app_id)

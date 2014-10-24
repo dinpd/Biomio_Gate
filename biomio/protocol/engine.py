@@ -1,6 +1,6 @@
 
 
-from biomio.protocol.message import BiomioMessage, BiomioClientMessage, BiomioServerMessage
+from biomio.protocol.message import BiomioMessageOld, BiomioClientMessageOld, BiomioServerMessageOld
 from biomio.third_party.fysom import Fysom
 
 # States
@@ -22,7 +22,7 @@ class HelloMessageHandler(MessageHandler):
     @staticmethod
     def verify(e):
         e.request.dumps()
-        if e.request.msg() == 'hello'
+        if e.request.msg_sting() == 'hello':
             return STATE_HELLO
         else:
             return STATE_END
@@ -54,7 +54,7 @@ class BiomioProtocol:
     def process_next(self, input_msg):
         print 'Processing message: "%s" ' % input_msg.msg_sting()
         make_transition = getattr(self._state_machine, '%s' % (input_msg.msg_sting()), None)
-        responce = BiomioServerMessage(seq=self._seq, proto_ver=self._proto_ver, token=self._token)
+        responce = BiomioServerMessageOld(seq=self._seq, proto_ver=self._proto_ver, token=self._token)
         make_transition(request=input_msg, responce=responce)
         print 'Send responce %s' % responce.dumps()
         return responce
