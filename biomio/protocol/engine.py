@@ -1,6 +1,6 @@
 
 
-from biomio.protocol.message import BiomioMessageOld, BiomioClientMessageOld, BiomioServerMessageOld
+from biomio.protocol.message import BiomioMessage
 from biomio.third_party.fysom import Fysom
 
 # States
@@ -16,13 +16,12 @@ class HelloMessageHandler(MessageHandler):
 
     @staticmethod
     def onhello(e):
-        e.responce.hello(refresh_token='', ttl='')
+        e.responce.set_server_hello_message(refreshToken='', ttl=0)
         print 'onhello'
 
     @staticmethod
     def verify(e):
-        e.request.dumps()
-        if e.request.msg_sting() == 'hello':
+        if e.request.msg_string() == 'hello':
             return STATE_HELLO
         else:
             return STATE_END
@@ -49,12 +48,13 @@ class BiomioProtocol:
         self._state_machine.onchangestate = BiomioProtocol.printstatechange
         self._seq = 0
         self._proto_ver = '0.0'
-        self._token = ''
+        self._token = 'token'
 
     def process_next(self, input_msg):
-        print 'Processing message: "%s" ' % input_msg.msg_sting()
-        make_transition = getattr(self._state_machine, '%s' % (input_msg.msg_sting()), None)
-        responce = BiomioServerMessageOld(seq=self._seq, proto_ver=self._proto_ver, token=self._token)
+        print ' ------ '
+        print 'Processing message: "%s" ' % input_msg.toJson(), input_msg.msg_string()
+        make_transition = getattr(self._state_machine, '%s' % (input_msg.msg_string()), None)
+        responce = BiomioMessage(seq=self._seq, protoVer=self._proto_ver, token=self._token)
         make_transition(request=input_msg, responce=responce)
-        print 'Send responce %s' % responce.dumps()
+        print 'Send responce %s' % responce.toJson()
         return responce

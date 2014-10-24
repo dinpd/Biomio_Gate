@@ -6,7 +6,7 @@ import tornado.httpserver
 import tornado.ioloop
 
 
-from biomio.protocol.message import BiomioClientMessageOld, BiomioServerMessageOld
+from biomio.protocol.message import BiomioMessage
 from biomio.protocol.engine import BiomioProtocol
 
 class WebSocketHandler(tornado.websocket.WebSocketHandler):
@@ -15,10 +15,10 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         pass
 
     def on_message(self, message_string):
-        print 'Got message "%s" ' % message_string
-        message = BiomioClientMessageOld.from_string(message_string)
+        message = BiomioMessage.fromJson(message_string)
+        print 'Got message "%s" ' % message.toJson()
         answer = self.biomio_protocol.process_next(message)
-        self.write_message(answer.dumps())
+        self.write_message(answer.toJson())
 
     def on_close(self):
         pass
