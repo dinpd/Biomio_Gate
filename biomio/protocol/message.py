@@ -14,9 +14,11 @@ class BiomioMessage(Bunch):
         for k, v in kwargs.iteritems():
             self.header.__setattr__(k, v)
 
-    def _set_message(self, message):
+    def _set_message(self, message, value=None):
         self.msg = Bunch()
-        self.msg.__setattr__(message, Bunch())
+        if not value:
+            value = Bunch()
+        self.msg.__setattr__(message, value)
 
     def set_client_hello_message(self, secret=None):
         self._set_message(message='hello')
@@ -29,6 +31,10 @@ class BiomioMessage(Bunch):
         self.msg.hello.ttl = ttl
         if key:
             self.msg.hello.key = key
+
+    def set_status_message(self, status_str):
+        self._set_message(message='status', value=status_str)
+
 
     def msg_string(self):
         try:
@@ -44,6 +50,6 @@ class BiomioMessage(Bunch):
     @staticmethod
     def fromJson(message_str):
         obj = json.loads(message_str)
-        b = BiomioMessage(obj=obj)
-        bunchify(b)
+
+        b = BiomioMessage(obj=bunchify(obj))
         return b

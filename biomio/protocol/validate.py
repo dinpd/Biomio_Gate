@@ -1,4 +1,4 @@
-from jsonschema import validate
+from jsonschema import validate, ValidationError, SchemaError
 
 BIOMIO_protocol_json_schema = {
     "id": "http://biom.io/entry-schema#",
@@ -25,6 +25,7 @@ BIOMIO_protocol_json_schema = {
                 { "$ref": "#/definitions/common/definitions/nop" },
                 { "$ref": "#/definitions/common/definitions/status" },
                 { "$ref": "#/definitions/client/definitions/again" },
+                { "$ref": "#/definitions/client/definitions/ack" }, # ack message to confirm handshake
                 { "$ref": "#/definitions/client/definitions/auth" },
                 { "$ref": "#/definitions/client/definitions/resources" },
                 { "$ref": "#/definitions/client/definitions/probe" },
@@ -123,6 +124,7 @@ BIOMIO_protocol_json_schema = {
                 },
                 "auth": { "type": "string" },
                 "again": { "enum": [ "again" ] },
+                "ack": { "enum": [ "ack" ] }, # ack message to confirm handshake
                 "resources": {
                     "type": "array",
                     "items": {
@@ -225,4 +227,9 @@ BIOMIO_protocol_json_schema = {
 }
 
 def verify_json(obj):
-    validate(obj, BIOMIO_protocol_json_schema)
+    try:
+        validate(obj, BIOMIO_protocol_json_schema)
+    except (ValidationError, SchemaError):
+        return False
+
+    return True

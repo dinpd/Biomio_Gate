@@ -16,7 +16,6 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
     def on_message(self, message_string):
         message = BiomioMessage.fromJson(message_string)
-        print 'Got message "%s" ' % message.toJson()
         answer = self.biomio_protocol.process_next(message)
         self.write_message(answer.toJson())
 
