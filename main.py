@@ -11,13 +11,11 @@ from biomio.protocol.engine import BiomioProtocol
 
 class WebSocketHandler(tornado.websocket.WebSocketHandler):
     def open(self):
-        self.biomio_protocol = BiomioProtocol()
-        pass
+        self.biomio_protocol = BiomioProtocol(close_callback=self.close, send_callback=self.write_message)
 
     def on_message(self, message_string):
         message = BiomioMessage.fromJson(message_string)
-        answer = self.biomio_protocol.process_next(message)
-        self.write_message(answer.toJson())
+        self.biomio_protocol.process_next(message)
 
     def on_close(self):
         pass

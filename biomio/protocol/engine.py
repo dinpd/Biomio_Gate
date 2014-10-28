@@ -79,6 +79,9 @@ class ByeMessageHandler:
         print 'onbye'
 
 
+def disconnect(e):
+    e.protocol_instance.close_connection()
+
 biomio_states = {
     'initial': STATE_CONNECTED,
     'events': [
@@ -90,7 +93,8 @@ biomio_states = {
     'callbacks': {
         'onhello': HelloMessageHandler.onhello,
         'onnop': NopMessageHandler.onnop,
-        'onbye': ByeMessageHandler.onbye
+        'onbye': ByeMessageHandler.onbye,
+        'ondisconnected': disconnect
     }
 }
 
@@ -101,13 +105,15 @@ class BiomioProtocol:
         print 'STATE_TRANSITION: event: %s, %s -> %s' % (e.event, e.src, e.dst)
 
 
-    def __init__(self):
+    def __init__(self, close_callback, send_callback):
         self._state_machine = Fysom(biomio_states)
         self._state_machine.onchangestate = BiomioProtocol.printstatechange
         self._seq = 0
         self._proto_ver = '0.0'
         self._token = 'token'
         self._error = ''
+        self._close_callback = close_callback
+        self._send_callback = send_callback
         #TODO: use some kind of logger instead
         print ' --------- '
 
@@ -119,13 +125,24 @@ class BiomioProtocol:
             make_transition = getattr(self._state_machine, '%s' % (input_msg.msg_string()), None)
             responce = BiomioMessage(seq=self._seq, protoVer=self._proto_ver, token=self._token)
             make_transition(request=input_msg, responce=responce, protocol_instance=self)
-            print 'SENT: %s' % responce.toJson()
         else:
             error_str = 'Invalid message sent'
             print error_str
             responce = self.create_status_message(str=error_str)
 
-        return responce
+        if not self._state_machine.isstate(STATE_DISCONNECTED):
+            print 'SENT: %s' % responce.toJson()
+            self._send_callback(responce.toJson())
+
+    def close_connection(self):
+        print 'CLOSING CONNECTION...'
+        message = BiomioMessage(seq=self._seq, protoVer=self._proto_ver, token=self._token)
+        message.set_bye_message()
+        # print '  &&& ', message.msg()
+        # print '  &&& ', message.msg_string()
+        self._send_callback(message.toJson())
+        print 'SENT: %s' % message.toJson()
+        self._close_callback()
 
     def is_header_valid(self, request):
         """Return True if header information is valid; false otherwise"""

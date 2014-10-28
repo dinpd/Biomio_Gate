@@ -28,6 +28,16 @@ class TestServerHandshake:
         response = biomio_send(message=message)
         verify_json(obj=response.toDict())
 
+    def test_invalid_protocol_ver(self):
+        invalid_proto_ver_string = '2.0'
+        message = BiomioMessage(seq=0, protoVer=invalid_proto_ver_string, id='id', osId='os id', appId='app id')
+        message.set_client_hello_message(secret='secret')
+
+        verify_json(obj=message.toDict())
+        response = biomio_send(message=message)
+        verify_json(obj=response.toDict())
+        assert response.msg_string() == 'bye'
+
 def main():
     pass
 
