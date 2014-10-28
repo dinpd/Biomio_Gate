@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-# import python_jsonschema_objects as pjs
-import biomio.third_party.python_jsonschema_objects as pjs
+import python_jsonschema_objects as pjs
+# import biomio.third_party.python_jsonschema_objects as pjs
 
 import logging
 
@@ -221,10 +221,8 @@ obj = {"msg": {"hello": {"secret": "secret"}},
 
 
 def main():
-    # logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG)
     builder = pjs.ObjectBuilder(BIOMIO_protocol_json_schema)
-    # builder = pjs.ObjectBuilder(some_schema_1)
-    # builder = pjs.ObjectBuilder(some_schema_3)
     ns = builder.build_classes()
     biomio_message = ns.BiomioSchema(**obj)
 
