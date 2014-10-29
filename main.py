@@ -10,12 +10,18 @@ from biomio.protocol.message import BiomioMessage
 from biomio.protocol.engine import BiomioProtocol
 
 class WebSocketHandler(tornado.websocket.WebSocketHandler):
+    connections = {}
+
     def open(self):
-        self.biomio_protocol = BiomioProtocol(close_callback=self.close, send_callback=self.write_message)
+        biomio_protocol = BiomioProtocol(close_callback=self.close, send_callback=self.write_message)
+        self.connections[self] = biomio_protocol
 
     def on_message(self, message_string):
         message = BiomioMessage.fromJson(message_string)
-        self.biomio_protocol.process_next(message)
+
+        biomio_protocol = self.connections.get(self, None)
+        if biomio_protocol:
+            biomio_protocol.process_next(message)
 
     def on_close(self):
         pass

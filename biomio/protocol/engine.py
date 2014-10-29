@@ -106,14 +106,16 @@ class BiomioProtocol:
 
 
     def __init__(self, close_callback, send_callback):
-        self._state_machine = Fysom(biomio_states)
-        self._state_machine.onchangestate = BiomioProtocol.printstatechange
         self._seq = 0
         self._proto_ver = '0.0'
         self._token = 'token'
         self._error = ''
         self._close_callback = close_callback
         self._send_callback = send_callback
+
+        # Initialize state machine
+        self._state_machine_instance = Fysom(biomio_states)
+        self._state_machine_instance.onchangestate = BiomioProtocol.printstatechange
         #TODO: use some kind of logger instead
         print ' --------- '
 
@@ -122,15 +124,19 @@ class BiomioProtocol:
 
         if input_msg:
             print 'RECEIVED: "%s" ' % input_msg.toJson()
-            make_transition = getattr(self._state_machine, '%s' % (input_msg.msg_string()), None)
-            responce = BiomioMessage(seq=self._seq, protoVer=self._proto_ver, token=self._token)
-            make_transition(request=input_msg, responce=responce, protocol_instance=self)
+            make_transition = getattr(self._state_machine_instance, '%s' % (input_msg.msg_string()), None)
+            if make_transition:
+                responce = BiomioMessage(seq=self._seq, protoVer=self._proto_ver, token=self._token)
+                make_transition(request=input_msg, responce=responce, protocol_instance=self)
+            else:
+                error_str = 'Could not process message: %s' % input_msg.msg_string()
+                responce = self.create_status_message(str=error_str)
         else:
             error_str = 'Invalid message sent'
             print error_str
             responce = self.create_status_message(str=error_str)
 
-        if not self._state_machine.isstate(STATE_DISCONNECTED):
+        if not self._state_machine_instance.isstate(STATE_DISCONNECTED):
             print 'SENT: %s' % responce.toJson()
             self._send_callback(responce.toJson())
 
