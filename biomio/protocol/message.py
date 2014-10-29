@@ -38,6 +38,9 @@ class BiomioMessage(Bunch):
     def set_bye_message(self):
         self.msg = 'bye'
 
+    def set_ack_message(self):
+        self.msg = 'ack'
+
     def msg_string(self):
             try:
                 if isinstance(self.msg, basestring):

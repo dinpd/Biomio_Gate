@@ -70,6 +70,7 @@ class AckMessageHandler:
 
     @staticmethod
     def verify(e):
+        # TODO: add real verification if session created without errors
         return STATE_READY
 
 class ByeMessageHandler:
@@ -86,7 +87,7 @@ biomio_states = {
     'initial': STATE_CONNECTED,
     'events': [
         {'name': 'hello', 'src': STATE_CONNECTED, 'dst': [STATE_HANDSHAKE, STATE_DISCONNECTED], 'decision': HelloMessageHandler.verify},
-        {'name': 'ack', 'src': STATE_HANDSHAKE, 'dst': [STATE_READY, STATE_DISCONNECTED]},
+        {'name': 'ack', 'src': STATE_HANDSHAKE, 'dst': [STATE_READY, STATE_DISCONNECTED], 'decision': AckMessageHandler.verify },
         {'name': 'nop', 'src': STATE_READY, 'dst': [STATE_READY, STATE_DISCONNECTED], 'decision': NopMessageHandler.verify},
         {'name': 'bye', 'src': [STATE_CONNECTED, STATE_HANDSHAKE, STATE_READY], 'dst': STATE_DISCONNECTED}
     ],
