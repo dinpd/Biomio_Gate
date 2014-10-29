@@ -60,7 +60,7 @@ class NopMessageHandler:
 
     @staticmethod
     def verify(e):
-        return STATE_HANDSHAKE
+        return STATE_READY
 
 
 class AckMessageHandler:

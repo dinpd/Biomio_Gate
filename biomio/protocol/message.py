@@ -41,6 +41,9 @@ class BiomioMessage(Bunch):
     def set_ack_message(self):
         self.msg = 'ack'
 
+    def set_nop_message(self):
+        self.msg = 'nop'
+
     def msg_string(self):
             try:
                 if isinstance(self.msg, basestring):

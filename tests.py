@@ -57,6 +57,23 @@ class TestServerHandshake:
         message.set_ack_message()
         biomio_send(websocket=websocket, message=message, close_connection=False, wait_for_responce=False)
 
+    def test_nop_message(self):
+        websocket = new_connection()
+
+        # Send hello message
+        message = BiomioMessage(seq=0, protoVer='0.1', id='id', osId='os id', appId='app id')
+        message.set_client_hello_message(secret='secret')
+        response = biomio_send(websocket=websocket, message=message, close_connection=False)
+
+        # Send ack message
+        message = BiomioMessage(seq=0, protoVer='0.1', id='id', osId='os id', appId='app id')
+        message.set_ack_message()
+        biomio_send(websocket=websocket, message=message, close_connection=False, wait_for_responce=False)
+
+        # Send nop message
+        message = BiomioMessage(seq=0, protoVer='0.1', id='id', osId='os id', appId='app id')
+        message.set_nop_message()
+        biomio_send(websocket=websocket, message=message, close_connection=False, wait_for_responce=False)
 
 def main():
     pass
