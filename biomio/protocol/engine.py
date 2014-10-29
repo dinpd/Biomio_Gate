@@ -137,7 +137,8 @@ class BiomioProtocol:
             print error_str
             responce = self.create_status_message(str=error_str)
 
-        if not self._state_machine_instance.isstate(STATE_DISCONNECTED):
+        if not self._state_machine_instance.isstate(STATE_DISCONNECTED)\
+                and responce.msg_string():
             print 'SENT: %s' % responce.toJson()
             self._send_callback(responce.toJson())
 
