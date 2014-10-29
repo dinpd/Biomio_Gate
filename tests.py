@@ -7,17 +7,19 @@ from biomio.protocol.validate import verify_json
 def new_connection():
     return create_connection("ws://127.0.0.1:8080/websocket")
 
-def biomio_send(message, websocket=None, close_connection=True):
+def biomio_send(message, websocket=None, close_connection=True, wait_for_responce=True):
 
     if websocket is None:
         websocket = new_connection()
 
-    websocket.send(message.toJson())
     verify_json(obj=message.toDict())
-    result = websocket.recv()
+    websocket.send(message.toJson())
 
-    responce = BiomioMessage.fromJson(result)
-    verify_json(obj=responce.toDict())
+    responce = None
+    if wait_for_responce:
+        result = websocket.recv()
+        responce = BiomioMessage.fromJson(result)
+        verify_json(obj=responce.toDict())
 
     if close_connection:
         websocket.close()
@@ -53,8 +55,7 @@ class TestServerHandshake:
         # Send ack message
         message = BiomioMessage(seq=0, protoVer='0.1', id='id', osId='os id', appId='app id')
         message.set_ack_message()
-        responce = biomio_send(websocket=websocket, message=message, close_connection=False)
-
+        biomio_send(websocket=websocket, message=message, close_connection=False, wait_for_responce=False)
 
 
 def main():
