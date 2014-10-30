@@ -34,6 +34,11 @@ class TestServerHandshake:
     @classmethod
     @nottest
     def get_curr_connection(cls):
+        """Helper method to get current connected websocket.
+           Should be used to get current websocket after some setup methods
+          (e.g. setup_test_with_handshake) that creates connection with server
+          and send messages to prepare test case.
+        """
         if not cls._ws:
             cls._ws = new_connection()
         return cls._ws
@@ -41,6 +46,11 @@ class TestServerHandshake:
     @classmethod
     @nottest
     def create_next_message(cls, **kwargs):
+        """Helper method to create next new client message.
+        By default (if no parameters passed) it is initializes
+        client message header with correct default values and correct next
+        sequence number.
+        """
         default_args = {
             'seq': cls._curr_seq,
             'protoVer': '0.1',
@@ -50,7 +60,7 @@ class TestServerHandshake:
         }
 
         for (k, v) in default_args.iteritems():
-            if not kwargs.has_key(k):
+            if not k in kwargs:
                 kwargs[k] = v
 
         message = BiomioMessage(**kwargs)
@@ -60,11 +70,13 @@ class TestServerHandshake:
     @classmethod
     @nottest
     def setup_test(cls):
+        """Default setup for test methods."""
         cls._curr_seq = 0
 
     @classmethod
     @nottest
     def teardown_test(cls):
+        """Default teardown for test methods"""
         cls._curr_seq = 0
         if cls._ws:
             if cls._ws.open:
