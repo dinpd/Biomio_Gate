@@ -146,8 +146,6 @@ class BiomioProtocol:
         print 'CLOSING CONNECTION...'
         message = BiomioMessage(seq=self._seq, protoVer=self._proto_ver, token=self._token)
         message.set_bye_message()
-        # print '  &&& ', message.msg()
-        # print '  &&& ', message.msg_string()
         self._send_callback(message.toJson())
         print 'SENT: %s' % message.toJson()
         self._close_callback()
