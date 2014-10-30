@@ -5,31 +5,36 @@ from biomio.protocol.message import BiomioMessage
 from biomio.protocol.validate import verify_json
 from nose.tools import ok_, eq_, nottest, with_setup
 
-def new_connection():
-    return create_connection("ws://127.0.0.1:8080/websocket")
-
-def biomio_send(message, websocket=None, close_connection=True, wait_for_responce=True):
-
-    if websocket is None:
-        websocket = new_connection()
-
-    verify_json(obj=message.toDict())
-    websocket.send(message.toJson())
-
-    responce = None
-    if wait_for_responce:
-        result = websocket.recv()
-        responce = BiomioMessage.fromJson(result)
-        verify_json(obj=responce.toDict())
-
-    if close_connection:
-        websocket.close()
-
-    return responce
-
-class TestServerHandshake:
+class BiomioTest:
     _ws = None
     _curr_seq = 0
+
+    @classmethod
+    @nottest
+    def new_connection(cls):
+        return create_connection("ws://127.0.0.1:8080/websocket")
+
+    @classmethod
+    @nottest
+    def send_message(cls, message, websocket=None, close_connection=True, wait_for_responce=True):
+
+        if websocket is None:
+            websocket = cls.new_connection()
+
+        verify_json(obj=message.toDict())
+        websocket.send(message.toJson())
+
+        responce = None
+        if wait_for_responce:
+            result = websocket.recv()
+            responce = BiomioMessage.fromJson(result)
+            verify_json(obj=responce.toDict())
+
+        if close_connection:
+            websocket.close()
+
+        return responce
+
 
     @classmethod
     @nottest
@@ -40,7 +45,7 @@ class TestServerHandshake:
           and send messages to prepare test case.
         """
         if not cls._ws:
-            cls._ws = new_connection()
+            cls._ws = cls.new_connection()
         return cls._ws
 
     @classmethod
@@ -92,47 +97,49 @@ class TestServerHandshake:
         # Send hello message
         message = cls.create_next_message()
         message.set_client_hello_message(secret='secret')
-        response = biomio_send(websocket=self.get_curr_connection(), message=message, close_connection=False)
+        response = BiomioTest.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
         eq_(response.msg_string(), 'hello', msg='Response does not contains hello message')
 
         # Send ack message
         message = cls.create_next_message()
         message.set_ack_message()
-        biomio_send(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
+        BiomioTest.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
 
-    @with_setup(setup=setup_test)
+
+class TestServerHandshake(BiomioTest):
+    @with_setup(setup=BiomioTest.setup_test)
     def test_hello_server(self):
         message = self.create_next_message()
         message.set_client_hello_message(secret='secret')
-        response = biomio_send(message=message)
+        response = BiomioTest.send_message(message=message)
         eq_(response.msg_string(), 'hello', msg='Response does not contains hello message')
 
-    @with_setup(setup=setup_test, teardown=teardown_test)
+    @with_setup(setup=BiomioTest.setup_test, teardown=BiomioTest.teardown_test)
     def test_invalid_protocol_ver(self):
         invalid_proto_ver_string = '2.0'
         message = self.create_next_message(protoVer=invalid_proto_ver_string)
         message.set_client_hello_message(secret='secret')
 
-        response = biomio_send(message=message)
+        response = BiomioTest.send_message(message=message)
         eq_(response.msg_string(), 'bye', msg='Response does not contains bye message')
 
-    @with_setup(setup=setup_test_with_handshake, teardown=teardown_test)
+    @with_setup(setup=BiomioTest.setup_test_with_handshake, teardown=BiomioTest.teardown_test)
     def test_ack_message(self):
         pass
 
-    @with_setup(setup=setup_test_with_handshake, teardown=teardown_test)
+    @with_setup(setup=BiomioTest.setup_test_with_handshake, teardown=BiomioTest.teardown_test)
     def test_nop_message(self):
         # Send nop message
         message = self.create_next_message()
         message.set_nop_message()
-        biomio_send(websocket=self.get_curr_connection(), message=message, close_connection=True, wait_for_responce=False)
+        BiomioTest.send_message(websocket=self.get_curr_connection(), message=message, close_connection=True, wait_for_responce=False)
 
-    @with_setup(setup=setup_test_with_handshake, teardown=teardown_test)
+    @with_setup(setup=BiomioTest.setup_test_with_handshake, teardown=BiomioTest.teardown_test)
     def test_bye_message(self):
         # Send bye message
         message = self.create_next_message()
         message.set_bye_message()
-        response = biomio_send(websocket=self.get_curr_connection(), message=message, close_connection=False)
+        response = BiomioTest.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
 
         eq_(response.msg_string(), 'bye', msg='Response does not contains bye message')
 
