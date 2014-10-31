@@ -128,6 +128,11 @@ class TestConnectedState(BiomioTest):
         response = self.send_message(message=message)
         eq_(response.msg_string(), 'bye', msg='Response does not contains bye message')
 
+    def test_nop_message_sent(self):
+        message = self.create_next_message()
+        message.set_nop_message()
+        response = self.send_message(message=message)
+        eq_(response.msg_string(), 'bye', msg='Response does not contains bye message')
 
 class TestHandshakeState(BiomioTest):
     def setup(self):

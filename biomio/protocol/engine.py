@@ -42,14 +42,10 @@ class HelloMessageHandler:
             return STATE_DISCONNECTED
 
         # Process message
-        if e.request.msg_string() == MESSAGE_HELLO:
-            # "HELLO" RECEIVED
+        if e.src == STATE_CONNECTED:
+            # "hello" received in connected state
             return STATE_HANDSHAKE
-        elif e.request.msg_string() == MESSAGE_NOP:
-            # "NOP" RECEIVED
-            return STATE_CONNECTED
         else:
-            # ANY OTHER MESSAGE RECEIVED (EXCEPT "HELLO")
             return STATE_DISCONNECTED
 
 class NopMessageHandler:
@@ -74,7 +70,10 @@ class NopMessageHandler:
             # INVALID HEADER INFO
             return STATE_DISCONNECTED
 
-        return STATE_READY
+        if e.src == STATE_READY:
+            return STATE_READY
+        else:
+            return STATE_DISCONNECTED
 
 class AckMessageHandler:
     @staticmethod
