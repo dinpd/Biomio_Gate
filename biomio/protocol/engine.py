@@ -60,8 +60,21 @@ class NopMessageHandler:
 
     @staticmethod
     def verify(e):
-        return STATE_READY
+        if e.protocol_instance.is_connection_timeout():
+            # CONNECTION TIMEOUT
+            return STATE_DISCONNECTED
 
+        # Verify client message
+        if not e.request: #or not verify_json(e.request):
+            # JSON VALIDATION FAILED
+            return STATE_DISCONNECTED
+
+        # Verify header
+        if not e.protocol_instance.is_header_valid(request=e.request):
+            # INVALID HEADER INFO
+            return STATE_DISCONNECTED
+
+        return STATE_READY
 
 class AckMessageHandler:
     @staticmethod
@@ -107,7 +120,7 @@ class BiomioProtocol:
 
 
     def __init__(self, close_callback, send_callback):
-        self._seq = 0
+        self._seq = 1
         self._proto_ver = '0.0'
         self._token = 'token'
         self._error = ''
@@ -127,7 +140,7 @@ class BiomioProtocol:
             print 'RECEIVED: "%s" ' % input_msg.toJson()
             make_transition = getattr(self._state_machine_instance, '%s' % (input_msg.msg_string()), None)
             if make_transition:
-                responce = BiomioMessage(seq=self._seq, protoVer=self._proto_ver, token=self._token)
+                responce = self.create_next_message()
                 make_transition(request=input_msg, responce=responce, protocol_instance=self)
             else:
                 error_str = 'Could not process message: %s' % input_msg.msg_string()
@@ -142,9 +155,14 @@ class BiomioProtocol:
             print 'SENT: %s' % responce.toJson()
             self._send_callback(responce.toJson())
 
+    def create_next_message(self):
+        message = BiomioMessage(seq=self._seq, protoVer=self._proto_ver, token=self._token)
+        self._seq += 2
+        return message
+
     def close_connection(self):
         print 'CLOSING CONNECTION...'
-        message = BiomioMessage(seq=self._seq, protoVer=self._proto_ver, token=self._token)
+        message = self.create_next_message()
         message.set_bye_message()
         self._send_callback(message.toJson())
         print 'SENT: %s' % message.toJson()
@@ -153,7 +171,8 @@ class BiomioProtocol:
     def is_header_valid(self, request):
         """Return True if header information is valid; false otherwise"""
         #TODO: implement header validation
-        return self._is_protocol_version_valid(request.header.protoVer)
+        return self._is_protocol_version_valid(request.header.protoVer) \
+            and self._is_sequence_is_valid(request.header.seq)
 
     def is_connection_timeout(self):
         """Return True if connection lifetime is over; False otherwise"""
@@ -161,7 +180,7 @@ class BiomioProtocol:
 
     def create_status_message(self, str):
         """Helper method to create status responce"""
-        responce = BiomioMessage(seq=self._seq, protoVer=self._proto_ver, token=self._token)
+        responce = self.create_next_message()
         responce.set_status_message(status_str=str)
         return responce
 
@@ -173,7 +192,7 @@ class BiomioProtocol:
             return False
 
     def _is_sequence_is_valid(self, seq):
-        if seq % 2 == 0 and (seq > self._seq or self,_seq == 0):
+        if seq % 2 == 0:
             return True
         else:
             return False
