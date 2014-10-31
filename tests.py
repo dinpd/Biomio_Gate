@@ -17,6 +17,13 @@ class BiomioTest:
         return socket
 
     @nottest
+    def read_message(self, websocket):
+        result = websocket.recv()
+        responce = BiomioMessage.fromJson(result)
+        verify_json(obj=responce.toDict())
+        return responce
+
+    @nottest
     def send_message(self, message, websocket=None, close_connection=True, wait_for_responce=True):
 
         if websocket is None:
@@ -27,9 +34,7 @@ class BiomioTest:
 
         responce = None
         if wait_for_responce:
-            result = websocket.recv()
-            responce = BiomioMessage.fromJson(result)
-            verify_json(obj=responce.toDict())
+            responce = self.read_message(websocket=websocket)
 
         if close_connection:
             websocket.close()
@@ -124,14 +129,15 @@ class TestConnectedState(BiomioTest):
         invalid_proto_ver_string = '2.0'
         message = self.create_next_message(protoVer=invalid_proto_ver_string)
         message.set_client_hello_message(secret='secret')
-
-        response = self.send_message(message=message)
+        response = self.send_message(websocket=self.get_curr_connection(), message=message)
         eq_(response.msg_string(), 'bye', msg='Response does not contains bye message')
 
     def test_nop_message_sent(self):
         message = self.create_next_message()
         message.set_nop_message()
-        response = self.send_message(message=message)
+        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
+        eq_(response.msg_string(), 'status', msg='Response does not contains status message')
+        response = self.read_message(websocket=self.get_curr_connection())
         eq_(response.msg_string(), 'bye', msg='Response does not contains bye message')
 
 class TestHandshakeState(BiomioTest):
@@ -147,6 +153,13 @@ class TestHandshakeState(BiomioTest):
         message.set_ack_message()
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
 
+    def test_any_other_message_received(self):
+        message = self.create_next_message()
+        message.set_nop_message()
+        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
+        eq_(response.msg_string(), 'status', msg='Response does not contains status message')
+        response = self.read_message(websocket=self.get_curr_connection())
+        eq_(response.msg_string(), 'bye', msg='Response does not contains bye message')
 
 class TestReadyState(BiomioTest):
     def setup(self):
@@ -166,7 +179,6 @@ class TestReadyState(BiomioTest):
         message = self.create_next_message()
         message.set_bye_message()
         response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
-
         eq_(response.msg_string(), 'bye', msg='Response does not contains bye message')
 
     def test_invalid_sequence(self):

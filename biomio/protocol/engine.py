@@ -1,7 +1,7 @@
 
 
 from biomio.protocol.message import BiomioMessage
-from biomio.third_party.fysom import Fysom
+from biomio.third_party.fysom import Fysom, FysomError
 from biomio.protocol.validate import verify_json
 
 # States
@@ -140,31 +140,43 @@ class BiomioProtocol:
             make_transition = getattr(self._state_machine_instance, '%s' % (input_msg.msg_string()), None)
             if make_transition:
                 responce = self.create_next_message()
-                make_transition(request=input_msg, responce=responce, protocol_instance=self)
+                try:
+                    make_transition(request=input_msg, responce=responce, protocol_instance=self)
+                except FysomError, e:
+                    self.close_connection(status_message=str(e))
             else:
-                error_str = 'Could not process message: %s' % input_msg.msg_string()
-                responce = self.create_status_message(str=error_str)
+                self.close_connection(status_message='Could not process message: %s' % input_msg.msg_string())
         else:
-            error_str = 'Invalid message sent'
-            print error_str
-            responce = self.create_status_message(str=error_str)
+            self.close_connection(status_message='Invalid message sent')
 
         if not self._state_machine_instance.isstate(STATE_DISCONNECTED)\
                 and responce.msg_string():
-            print 'SENT: %s' % responce.toJson()
-            self._send_callback(responce.toJson())
+            self.send_message(responce=responce)
 
     def create_next_message(self):
         message = BiomioMessage(seq=self._seq, protoVer=self._proto_ver, token=self._token)
         self._seq += 2
         return message
 
-    def close_connection(self):
+    def send_message(self, responce):
+        print 'SENT: %s' % responce.toJson()
+        self._send_callback(responce.toJson())
+
+    def close_connection(self, status_message=None):
         print 'CLOSING CONNECTION...'
+
+        # Send status message first if any
+        if status_message:
+            message = self.create_next_message()
+            message.set_status_message(status_str=status_message)
+            self.send_message(responce=message)
+
+        # Send bye message
         message = self.create_next_message()
         message.set_bye_message()
-        self._send_callback(message.toJson())
-        print 'SENT: %s' % message.toJson()
+        self.send_message(responce=message)
+
+        # Close connection
         self._close_callback()
 
     def is_header_valid(self, request):
