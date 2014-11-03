@@ -27,10 +27,6 @@ class HelloMessageHandler:
 
     @staticmethod
     def verify(e):
-        if e.protocol_instance.is_connection_timeout():
-            # CONNECTION TIMEOUT
-            return STATE_DISCONNECTED
-
         # Verify client message
         if not e.request: #or not verify_json(e.request):
             # JSON VALIDATION FAILED
@@ -56,10 +52,6 @@ class NopMessageHandler:
 
     @staticmethod
     def verify(e):
-        if e.protocol_instance.is_connection_timeout():
-            # CONNECTION TIMEOUT
-            return STATE_DISCONNECTED
-
         # Verify client message
         if not e.request: #or not verify_json(e.request):
             # JSON VALIDATION FAILED
@@ -144,6 +136,7 @@ class BiomioProtocol:
             if make_transition:
                 responce = self.create_next_message()
                 try:
+                    #TODO: add restating connection timer on next correct message from client
                     make_transition(request=input_msg, responce=responce, protocol_instance=self)
                 except FysomError, e:
                     self.close_connection(status_message=str(e))
@@ -188,10 +181,6 @@ class BiomioProtocol:
         #TODO: implement header validation
         return self._is_protocol_version_valid(request.header.protoVer) \
             and self._is_sequence_is_valid(request.header.seq)
-
-    def is_connection_timeout(self):
-        """Return True if connection lifetime is over; False otherwise"""
-        return False #TODO: implement connection timer
 
     def create_status_message(self, str):
         """Helper method to create status responce"""
