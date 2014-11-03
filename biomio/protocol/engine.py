@@ -93,6 +93,7 @@ class ByeMessageHandler:
 
 
 def disconnect(e):
+    #TODO: send status on disconnect
     e.protocol_instance.close_connection()
 
 biomio_states = {
@@ -118,13 +119,15 @@ class BiomioProtocol:
         print 'STATE_TRANSITION: event: %s, %s -> %s' % (e.event, e.src, e.dst)
 
 
-    def __init__(self, close_callback, send_callback):
+    def __init__(self, close_callback, send_callback, start_connection_timer_callback, stop_connection_timer_callback):
         self._seq = 1
         self._proto_ver = '0.0'
         self._token = 'token'
         self._error = ''
         self._close_callback = close_callback
         self._send_callback = send_callback
+        self._start_connection_timer_callback = start_connection_timer_callback
+        self._stop_connection_timer_callback = stop_connection_timer_callback
 
         # Initialize state machine
         self._state_machine_instance = Fysom(biomio_states)
@@ -164,6 +167,7 @@ class BiomioProtocol:
 
     def close_connection(self, status_message=None):
         print 'CLOSING CONNECTION...'
+        self._stop_connection_timer_callback()
 
         # Send status message first if any
         if status_message:

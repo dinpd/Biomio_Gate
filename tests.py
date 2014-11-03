@@ -111,6 +111,19 @@ class BiomioTest:
         message.set_ack_message()
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
 
+class TestTimeouts(BiomioTest):
+    def setup(self):
+        self.setup_test()
+
+    def teardown(self):
+        self.teardown_test()
+
+    def test_connection_timeout(self):
+        websocket = self.new_connection(socket_timeout=60)
+        response = self.read_message(websocket=websocket)
+        eq_(response.msg_string(), 'status', msg='Connection timeout')
+        response = self.read_message(websocket=websocket)
+        eq_(response.msg_string(), 'bye', msg='Response does not contains bye message')
 
 class TestConnectedState(BiomioTest):
     def setup(self):
@@ -186,6 +199,7 @@ class TestReadyState(BiomioTest):
         message.set_nop_message()
         socket = self.get_curr_connection()
         response = self.send_message(websocket=socket, message=message, close_connection=False)
+        eq_(response.msg_string(), 'bye', msg='Response does not contains bye message')
 
 def main():
     pass
