@@ -35,14 +35,24 @@ class BiomioMessage(Bunch):
     def set_status_message(self, status_str):
         self._set_message(message='status', value=status_str)
 
+    def set_bye_message(self):
+        self.msg = 'bye'
+
+    def set_ack_message(self):
+        self.msg = 'ack'
+
+    def set_nop_message(self):
+        self.msg = 'nop'
 
     def msg_string(self):
-        try:
-            for k,v in self.msg.iteritems():
-                return k
-        except AttributeError:
-            pass
-        return ''
+            try:
+                if isinstance(self.msg, basestring):
+                    return self.msg
+                else:
+                    for k,v in self.msg.iteritems():
+                        return k
+            except AttributeError:
+                return ''
 
     def toJson(self, **options):
         return toJSON(self=self, **options)
