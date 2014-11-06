@@ -9,7 +9,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-from biomio.protocol.engine import BiomioProtocol, logger
+from biomio.protocol.engine import BiomioProtocol
 
 CONNECTION_TIMEOUT = 10
 
