@@ -283,6 +283,7 @@ class BiomioMessageBuilder:
     @classmethod
     def _get_ns(cls):
         if not cls._ns:
+            # Suppress logging inside of python_jsonschema_objects module
             logger = logging.getLogger("python_jsonschema_objects.classbuilder")
             logger.disabled = True
 

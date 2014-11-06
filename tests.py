@@ -2,7 +2,7 @@
 
 from websocket import create_connection
 from biomio.protocol.message import BiomioMessageBuilder
-from nose.tools import ok_, eq_, nottest, with_setup
+from nose.tools import ok_, eq_, nottest
 import logging
 
 class BiomioTest:
