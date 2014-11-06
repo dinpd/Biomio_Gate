@@ -10,7 +10,6 @@ STATE_HANDSHAKE = 'handshake'
 STATE_READY = 'ready'
 STATE_DISCONNECTED = 'disconnected'
 
-
 class MessageHandler:
     @staticmethod
     def _is_header_valid(e):
@@ -34,7 +33,7 @@ class MessageHandler:
         return is_valid
 
     @staticmethod
-    def verifyHelloMessage(e):
+    def verify_hello_message(e):
         if MessageHandler._is_header_valid(e) \
                 and (e.src == STATE_CONNECTED):
             # "hello" received in connected state
@@ -44,14 +43,14 @@ class MessageHandler:
         return STATE_DISCONNECTED
 
     @staticmethod
-    def verifyAckMessage(e):
+    def verify_ack_message(e):
         if MessageHandler._is_header_valid(e):
             return STATE_READY
 
         return STATE_DISCONNECTED
 
     @staticmethod
-    def verifyNopMessage(e):
+    def verify_nop_message(e):
         if MessageHandler._is_header_valid(e) \
                 and (e.src == STATE_READY):
             return STATE_READY
@@ -59,7 +58,7 @@ class MessageHandler:
         return STATE_DISCONNECTED
 
     @staticmethod
-    def verifyByeMessage(e):
+    def verify_bye_message(e):
         return STATE_DISCONNECTED
 
 def handshake(e):
@@ -76,10 +75,30 @@ def disconnect(e):
 biomio_states = {
     'initial': STATE_CONNECTED,
     'events': [
-        {'name': 'clientHello', 'src': STATE_CONNECTED, 'dst': [STATE_HANDSHAKE, STATE_DISCONNECTED], 'decision': MessageHandler.verifyHelloMessage },
-        {'name': 'ack', 'src': STATE_HANDSHAKE, 'dst': [STATE_READY, STATE_DISCONNECTED], 'decision': MessageHandler.verifyAckMessage },
-        {'name': 'nop', 'src': STATE_READY, 'dst': [STATE_READY, STATE_DISCONNECTED], 'decision': MessageHandler.verifyNopMessage },
-        {'name': 'bye', 'src': [STATE_CONNECTED, STATE_HANDSHAKE, STATE_READY], 'dst': STATE_DISCONNECTED, 'decision': MessageHandler.verifyByeMessage }
+        {
+            'name': 'clientHello',
+            'src': STATE_CONNECTED,
+            'dst': [STATE_HANDSHAKE, STATE_DISCONNECTED],
+            'decision': MessageHandler.verify_hello_message
+        },
+        {
+            'name': 'ack',
+            'src': STATE_HANDSHAKE,
+            'dst': [STATE_READY, STATE_DISCONNECTED],
+            'decision': MessageHandler.verify_ack_message
+        },
+        {
+            'name': 'nop',
+            'src': STATE_READY,
+            'dst': [STATE_READY, STATE_DISCONNECTED],
+            'decision': MessageHandler.verify_nop_message
+        },
+        {
+            'name': 'bye',
+            'src': [STATE_CONNECTED, STATE_HANDSHAKE, STATE_READY],
+            'dst': STATE_DISCONNECTED,
+            'decision': MessageHandler.verify_bye_message
+        }
     ],
     'callbacks': {
         'onhandshake': handshake,
@@ -87,30 +106,28 @@ biomio_states = {
     }
 }
 
+
 class BiomioProtocol:
     @staticmethod
-    def printstatechange(e):
+    def print_state_change(e):
         print 'STATE_TRANSITION: event: %s, %s -> %s' % (e.event, e.src, e.dst)
 
+    def __init__(self, **kwargs):
+        self._close_callback = kwargs['close_callback']
+        self._send_callback = kwargs['send_callback']
+        self._start_connection_timer_callback = kwargs['start_connection_timer_callback']
+        self._stop_connection_timer_callback = kwargs['stop_connection_timer_callback']
 
-    def __init__(self, close_callback, send_callback, start_connection_timer_callback, stop_connection_timer_callback):
-        self._error = ''
-        self._close_callback = close_callback
-        self._send_callback = send_callback
-        self._start_connection_timer_callback = start_connection_timer_callback
-        self._stop_connection_timer_callback = stop_connection_timer_callback
         self._builder = BiomioMessageBuilder(oid='serverHeader', seq=1, protoVer='0.1', token='token')
 
         # Initialize state machine
         self._state_machine_instance = Fysom(biomio_states)
-        self._state_machine_instance.onchangestate = BiomioProtocol.printstatechange
+        self._state_machine_instance.onchangestate = BiomioProtocol.print_state_change
         #TODO: use some kind of logger instead
         print ' --------- '
 
     def process_next(self, msg_string):
-        responce = None
         input_msg = None
-
         try:
             input_msg = self._builder.create_message_from_json(msg_string)
         except ValidationError, e:
@@ -118,7 +135,7 @@ class BiomioProtocol:
 
         if input_msg:
             print 'RECEIVED: "%s" ' % msg_string
-            make_transition = getattr(self._state_machine_instance, '%s' % (input_msg.msg.oid), None)
+            make_transition = getattr(self._state_machine_instance, '%s' % input_msg.msg.oid, None)
             if make_transition:
                 try:
                     #TODO: add restating connection timer on next correct message from client
@@ -151,9 +168,8 @@ class BiomioProtocol:
         self._close_callback()
 
     def is_sequence_valid(self, seq):
-        #TODO: fix sequence validation
-        return ((self._builder.get_header_field_value(field_str='seq') < seq) \
-            or (seq == 0)) and (int(seq) % 2 == 0)
+        return ((self._builder.get_header_field_value(field_str='seq') < seq)
+                or (seq == 0)) and (int(seq) % 2 == 0)
 
     def is_protocol_version_valid(self, version):
         """Checks protocol version. Return true if it is current version; false otherwise"""

@@ -31,7 +31,6 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         if biomio_protocol:
             del self.connections[self]
 
-
     def stop_connection_timer(self):
         timeout_handle = self.timeouts.get(self, None)
         if timeout_handle:
@@ -42,11 +41,11 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
     def start_connection_timer(self):
         if self.timeouts.get(self, None):
             self.stop_connection_timer()
-        timeout_handle = tornado.ioloop.IOLoop.instance().call_later(delay=CONNECTION_TIMEOUT, callback=self.on_conenction_timeout)
+        timeout_handle = tornado.ioloop.IOLoop.instance().call_later(delay=CONNECTION_TIMEOUT, callback=self.on_connection_timeout)
         self.timeouts[self] = timeout_handle
         print 'create timer for connection %d' % id(self)
 
-    def on_conenction_timeout(self):
+    def on_connection_timeout(self):
         print 'connection timeout'
         biomio_protocol = self.connections.get(self, None)
         if biomio_protocol:
