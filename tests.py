@@ -2,7 +2,6 @@
 
 from websocket import create_connection
 from biomio.protocol.message import BiomioMessageBuilder
-from biomio.protocol.validate import verify_json
 from nose.tools import ok_, eq_, nottest, with_setup
 import logging
 
