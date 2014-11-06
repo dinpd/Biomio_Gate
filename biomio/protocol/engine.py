@@ -1,8 +1,8 @@
 
 
-from biomio.protocol.message import BiomioMessage
+from biomio.protocol.message import BiomioMessageBuilder
 from biomio.third_party.fysom import Fysom, FysomError
-from biomio.protocol.validate import verify_json
+from jsonschema import ValidationError
 
 # States
 STATE_CONNECTED = 'connected'
@@ -10,96 +10,98 @@ STATE_HANDSHAKE = 'handshake'
 STATE_READY = 'ready'
 STATE_DISCONNECTED = 'disconnected'
 
-MESSAGE_HELLO = 'hello'
-MESSAGE_NOP = 'nop'
-MESSAGE_BYE = 'bye'
-
-
 class MessageHandler:
-    pass
+    @staticmethod
+    def _is_header_valid(e):
+        """Helper method to verify header.
+        Returns true if header information is valid, false otherwise
+        Method attaches status attribute to the event parameter passed,
+        which contains error string in case when """
+        #TODO: implement header validation
 
+        is_valid = True
+        if not e.protocol_instance.is_sequence_valid(e.request.header.seq):
+            is_valid = False
+            e.status = 'Message sequence number is invalid'
+            print e.status
 
-class HelloMessageHandler:
+        if not e.protocol_instance.is_protocol_version_valid(e.request.header.protoVer):
+            is_valid = False
+            e.status = 'Protocol version is invalid'
+            print e.status
+
+        return is_valid
 
     @staticmethod
-    def onhello(e):
-        e.responce.set_server_hello_message(refreshToken='token', ttl=0)
-
-    @staticmethod
-    def verify(e):
-        # Verify client message
-        if not e.request: #or not verify_json(e.request):
-            # JSON VALIDATION FAILED
-            return STATE_DISCONNECTED
-
-        # Verify header
-        if not e.protocol_instance.is_header_valid(request=e.request):
-            # INVALID HEADER INFO
-            return STATE_DISCONNECTED
-
-        # Process message
-        if e.src == STATE_CONNECTED:
+    def verify_hello_message(e):
+        if MessageHandler._is_header_valid(e) \
+                and (e.src == STATE_CONNECTED):
             # "hello" received in connected state
+            # and header is valid
             return STATE_HANDSHAKE
-        else:
-            return STATE_DISCONNECTED
 
-class NopMessageHandler:
+        return STATE_DISCONNECTED
 
     @staticmethod
-    def onnop(e):
-        print 'onnop'
-
-    @staticmethod
-    def verify(e):
-        # Verify client message
-        if not e.request: #or not verify_json(e.request):
-            # JSON VALIDATION FAILED
-            return STATE_DISCONNECTED
-
-        # Verify header
-        if not e.protocol_instance.is_header_valid(request=e.request):
-            # INVALID HEADER INFO
-            return STATE_DISCONNECTED
-
-        if e.src == STATE_READY:
+    def verify_ack_message(e):
+        if MessageHandler._is_header_valid(e):
             return STATE_READY
-        else:
-            return STATE_DISCONNECTED
 
-class AckMessageHandler:
-    @staticmethod
-    def onack():
-        print 'onack'
+        return STATE_DISCONNECTED
 
     @staticmethod
-    def verify(e):
-        # TODO: add real verification if session created without errors
-        return STATE_READY
+    def verify_nop_message(e):
+        if MessageHandler._is_header_valid(e) \
+                and (e.src == STATE_READY):
+            return STATE_READY
 
-class ByeMessageHandler:
+        return STATE_DISCONNECTED
 
     @staticmethod
-    def onbye(e):
-        print 'onbye'
+    def verify_bye_message(e):
+        return STATE_DISCONNECTED
 
+def handshake(e):
+    message = e.protocol_instance.create_next_message(oid='serverHello', refreshToken='token', ttl=0)
+    e.protocol_instance.send_message(responce=message)
 
 def disconnect(e):
     #TODO: send status on disconnect
-    e.protocol_instance.close_connection()
+    status = None
+    if hasattr(e, 'status'):
+        status = e.status
+    e.protocol_instance.close_connection(status_message=status)
 
 biomio_states = {
     'initial': STATE_CONNECTED,
     'events': [
-        {'name': 'hello', 'src': STATE_CONNECTED, 'dst': [STATE_HANDSHAKE, STATE_DISCONNECTED], 'decision': HelloMessageHandler.verify},
-        {'name': 'ack', 'src': STATE_HANDSHAKE, 'dst': [STATE_READY, STATE_DISCONNECTED], 'decision': AckMessageHandler.verify },
-        {'name': 'nop', 'src': STATE_READY, 'dst': [STATE_READY, STATE_DISCONNECTED], 'decision': NopMessageHandler.verify},
-        {'name': 'bye', 'src': [STATE_CONNECTED, STATE_HANDSHAKE, STATE_READY], 'dst': STATE_DISCONNECTED}
+        {
+            'name': 'clientHello',
+            'src': STATE_CONNECTED,
+            'dst': [STATE_HANDSHAKE, STATE_DISCONNECTED],
+            'decision': MessageHandler.verify_hello_message
+        },
+        {
+            'name': 'ack',
+            'src': STATE_HANDSHAKE,
+            'dst': [STATE_READY, STATE_DISCONNECTED],
+            'decision': MessageHandler.verify_ack_message
+        },
+        {
+            'name': 'nop',
+            'src': STATE_READY,
+            'dst': [STATE_READY, STATE_DISCONNECTED],
+            'decision': MessageHandler.verify_nop_message
+        },
+        {
+            'name': 'bye',
+            'src': [STATE_CONNECTED, STATE_HANDSHAKE, STATE_READY],
+            'dst': STATE_DISCONNECTED,
+            'decision': MessageHandler.verify_bye_message
+        }
     ],
     'callbacks': {
-        'onhello': HelloMessageHandler.onhello,
-        'onnop': NopMessageHandler.onnop,
-        'onbye': ByeMessageHandler.onbye,
+        'onhandshake': handshake,
         'ondisconnected': disconnect
     }
 }
@@ -107,96 +109,69 @@ biomio_states = {
 
 class BiomioProtocol:
     @staticmethod
-    def printstatechange(e):
+    def print_state_change(e):
         print 'STATE_TRANSITION: event: %s, %s -> %s' % (e.event, e.src, e.dst)
 
+    def __init__(self, **kwargs):
+        self._close_callback = kwargs['close_callback']
+        self._send_callback = kwargs['send_callback']
+        self._start_connection_timer_callback = kwargs['start_connection_timer_callback']
+        self._stop_connection_timer_callback = kwargs['stop_connection_timer_callback']
 
-    def __init__(self, close_callback, send_callback, start_connection_timer_callback, stop_connection_timer_callback):
-        self._seq = 1
-        self._proto_ver = '0.0'
-        self._token = 'token'
-        self._error = ''
-        self._close_callback = close_callback
-        self._send_callback = send_callback
-        self._start_connection_timer_callback = start_connection_timer_callback
-        self._stop_connection_timer_callback = stop_connection_timer_callback
+        self._builder = BiomioMessageBuilder(oid='serverHeader', seq=1, protoVer='0.1', token='token')
 
         # Initialize state machine
         self._state_machine_instance = Fysom(biomio_states)
-        self._state_machine_instance.onchangestate = BiomioProtocol.printstatechange
+        self._state_machine_instance.onchangestate = BiomioProtocol.print_state_change
         #TODO: use some kind of logger instead
         print ' --------- '
 
-    def process_next(self, input_msg):
-        responce = None
+    def process_next(self, msg_string):
+        input_msg = None
+        try:
+            input_msg = self._builder.create_message_from_json(msg_string)
+        except ValidationError, e:
+            print e
 
         if input_msg:
-            print 'RECEIVED: "%s" ' % input_msg.toJson()
-            make_transition = getattr(self._state_machine_instance, '%s' % (input_msg.msg_string()), None)
+            print 'RECEIVED: "%s" ' % msg_string
+            make_transition = getattr(self._state_machine_instance, '%s' % input_msg.msg.oid, None)
             if make_transition:
-                responce = self.create_next_message()
                 try:
                     #TODO: add restating connection timer on next correct message from client
-                    make_transition(request=input_msg, responce=responce, protocol_instance=self)
+                    make_transition(request=input_msg, protocol_instance=self)
                 except FysomError, e:
                     self.close_connection(status_message=str(e))
             else:
-                self.close_connection(status_message='Could not process message: %s' % input_msg.msg_string())
+                self.close_connection(status_message='Could not process message: %s' % input_msg.msg.oid)
         else:
             self.close_connection(status_message='Invalid message sent')
 
-        if not self._state_machine_instance.isstate(STATE_DISCONNECTED)\
-                and responce.msg_string():
-            self.send_message(responce=responce)
-
-    def create_next_message(self):
-        message = BiomioMessage(seq=self._seq, protoVer=self._proto_ver, token=self._token)
-        self._seq += 2
+    def create_next_message(self, status=None, **kwargs):
+        message = self._builder.create_message(status=status, **kwargs)
         return message
 
     def send_message(self, responce):
-        print 'SENT: %s' % responce.toJson()
-        self._send_callback(responce.toJson())
+        print 'SENT: %s' % responce.serialize()
+        self._send_callback(responce.serialize())
 
     def close_connection(self, status_message=None):
         print 'CLOSING CONNECTION...'
         self._stop_connection_timer_callback()
 
-        # Send status message first if any
-        if status_message:
-            message = self.create_next_message()
-            message.set_status_message(status_str=status_message)
-            self.send_message(responce=message)
-
         # Send bye message
-        message = self.create_next_message()
-        message.set_bye_message()
+        message = self.create_next_message(status=status_message, oid='bye')
+
         self.send_message(responce=message)
 
         # Close connection
         self._close_callback()
 
-    def is_header_valid(self, request):
-        """Return True if header information is valid; false otherwise"""
-        #TODO: implement header validation
-        return self._is_protocol_version_valid(request.header.protoVer) \
-            and self._is_sequence_is_valid(request.header.seq)
+    def is_sequence_valid(self, seq):
+        return ((self._builder.get_header_field_value(field_str='seq') < seq)
+                or (seq == 0)) and (int(seq) % 2 == 0)
 
-    def create_status_message(self, str):
-        """Helper method to create status responce"""
-        responce = self.create_next_message()
-        responce.set_status_message(status_str=str)
-        return responce
-
-    def _is_protocol_version_valid(self, version):
+    def is_protocol_version_valid(self, version):
         """Checks protocol version. Return true if it is current version; false otherwise"""
-        if version == '0.1':
-            return True
-        else:
-            return False
+        return version == '1.0'
 
-    def _is_sequence_is_valid(self, seq):
-        if seq % 2 == 0:
-            return True
-        else:
-            return False

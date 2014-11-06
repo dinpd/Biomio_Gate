@@ -1,12 +1,10 @@
 #!/usr/bin/env python
-from glib._glib import timeout_add_seconds
 
 import tornado.web
 import tornado.websocket
 import tornado.httpserver
 import tornado.ioloop
 
-from biomio.protocol.message import BiomioMessage
 from biomio.protocol.engine import BiomioProtocol
 
 CONNECTION_TIMEOUT = 10
@@ -22,21 +20,16 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         self.start_connection_timer()
 
     def on_message(self, message_string):
-        message = BiomioMessage.fromJson(message_string)
-
         biomio_protocol = self.connections.get(self, None)
         if biomio_protocol:
-            biomio_protocol.process_next(message)
+            biomio_protocol.process_next(message_string)
 
     def on_close(self):
-        print "on_close"
-
         # Remove protocol instance from connection dictionary
         self.stop_connection_timer()
         biomio_protocol = self.connections[self]
         if biomio_protocol:
             del self.connections[self]
-
 
     def stop_connection_timer(self):
         timeout_handle = self.timeouts.get(self, None)
@@ -48,11 +41,12 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
     def start_connection_timer(self):
         if self.timeouts.get(self, None):
             self.stop_connection_timer()
-        timeout_handle = tornado.ioloop.IOLoop.instance().call_later(delay=CONNECTION_TIMEOUT, callback=self.on_conenction_timeout)
+        timeout_handle = tornado.ioloop.IOLoop.instance().call_later(delay=CONNECTION_TIMEOUT, callback=self.on_connection_timeout)
         self.timeouts[self] = timeout_handle
         print 'create timer for connection %d' % id(self)
 
-    def on_conenction_timeout(self):
+    def on_connection_timeout(self):
+        print 'connection timeout'
         biomio_protocol = self.connections.get(self, None)
         if biomio_protocol:
             biomio_protocol.close_connection(status_message='Connection timeout')
