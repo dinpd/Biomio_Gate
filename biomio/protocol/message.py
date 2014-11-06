@@ -1,7 +1,9 @@
 
 import json
 import python_jsonschema_objects as pjs
+
 import logging
+logger = logging.getLogger(__name__)
 
 BIOMIO_protocol_json_schema = {
     "title": "Biomio Schema",

@@ -4,6 +4,9 @@ from biomio.protocol.message import BiomioMessageBuilder
 from biomio.third_party.fysom import Fysom, FysomError
 from jsonschema import ValidationError
 
+import logging
+logger = logging.getLogger(__name__)
+
 # States
 STATE_CONNECTED = 'connected'
 STATE_HANDSHAKE = 'handshake'
@@ -23,12 +26,10 @@ class MessageHandler:
         if not e.protocol_instance.is_sequence_valid(e.request.header.seq):
             is_valid = False
             e.status = 'Message sequence number is invalid'
-            print e.status
 
         if not e.protocol_instance.is_protocol_version_valid(e.request.header.protoVer):
             is_valid = False
             e.status = 'Protocol version is invalid'
-            print e.status
 
         return is_valid
 
@@ -110,7 +111,7 @@ biomio_states = {
 class BiomioProtocol:
     @staticmethod
     def print_state_change(e):
-        print 'STATE_TRANSITION: event: %s, %s -> %s' % (e.event, e.src, e.dst)
+        logger.debug('STATE_TRANSITION: event: %s, %s -> %s' % (e.event, e.src, e.dst))
 
     def __init__(self, **kwargs):
         self._close_callback = kwargs['close_callback']
@@ -124,17 +125,17 @@ class BiomioProtocol:
         self._state_machine_instance = Fysom(biomio_states)
         self._state_machine_instance.onchangestate = BiomioProtocol.print_state_change
         #TODO: use some kind of logger instead
-        print ' --------- '
+        logger.debug(' --------- ')  # helpful to separate output when auto tests is running
 
     def process_next(self, msg_string):
         input_msg = None
         try:
             input_msg = self._builder.create_message_from_json(msg_string)
         except ValidationError, e:
-            print e
+            logger.debug(str(e))
 
         if input_msg:
-            print 'RECEIVED: "%s" ' % msg_string
+            logger.debug('RECEIVED: "%s" ' % msg_string)
             make_transition = getattr(self._state_machine_instance, '%s' % input_msg.msg.oid, None)
             if make_transition:
                 try:
@@ -152,11 +153,11 @@ class BiomioProtocol:
         return message
 
     def send_message(self, responce):
-        print 'SENT: %s' % responce.serialize()
+        logger.debug('SENT: %s' % responce.serialize())
         self._send_callback(responce.serialize())
 
     def close_connection(self, status_message=None):
-        print 'CLOSING CONNECTION...'
+        logger.debug('CLOSING CONNECTION...')
         self._stop_connection_timer_callback()
 
         # Send bye message

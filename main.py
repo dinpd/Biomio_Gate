@@ -5,7 +5,11 @@ import tornado.websocket
 import tornado.httpserver
 import tornado.ioloop
 
-from biomio.protocol.engine import BiomioProtocol
+import logging
+logger = logging.getLogger(__name__)
+
+
+from biomio.protocol.engine import BiomioProtocol, logger
 
 CONNECTION_TIMEOUT = 10
 
@@ -34,19 +38,20 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
     def stop_connection_timer(self):
         timeout_handle = self.timeouts.get(self, None)
         if timeout_handle:
+            logger.debug('Removing timer for connection %d' % id(self))
             tornado.ioloop.IOLoop.instance().remove_timeout(timeout=timeout_handle)
             del self.timeouts[self]
-            print 'remove timer for connection %d' % id(self)
 
     def start_connection_timer(self):
         if self.timeouts.get(self, None):
+            logger.debug('Removing old timer for connection %d' % id(self))
             self.stop_connection_timer()
+        logger.debug('Creating timer for connection %d' % id(self))
         timeout_handle = tornado.ioloop.IOLoop.instance().call_later(delay=CONNECTION_TIMEOUT, callback=self.on_connection_timeout)
         self.timeouts[self] = timeout_handle
-        print 'create timer for connection %d' % id(self)
 
     def on_connection_timeout(self):
-        print 'connection timeout'
+        logger.debug('Connection timeout')
         biomio_protocol = self.connections.get(self, None)
         if biomio_protocol:
             biomio_protocol.close_connection(status_message='Connection timeout')
@@ -64,11 +69,17 @@ class Application(tornado.web.Application):
 def run_tornado():
     app = Application()
     server = tornado.httpserver.HTTPServer(app)
-    print 'Running tornado server...'
+    logger.info('Running tornado server...')
     server.listen(8080)
     tornado.ioloop.IOLoop.instance().start()
 
 
 if __name__ == '__main__':
+
+    logging.basicConfig(
+        format='%(levelname)-8s [%(asctime)s] %(message)s',
+        level=logging.DEBUG
+    )
+
     # Run tornado application
     run_tornado()
