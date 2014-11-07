@@ -120,7 +120,7 @@ class TestConnectedState(BiomioTest):
         eq_(response.msg.oid, 'serverHello', msg='Response does not contains serverHello message')
 
     def test_invalid_message(self):
-        websocket = self.new_connection(socket_timeout=60)
+        websocket = self.new_connection()
         invalid_message_str = '{}'
         websocket.send(invalid_message_str)
         response = self.read_message(websocket=websocket)
@@ -128,7 +128,7 @@ class TestConnectedState(BiomioTest):
         ok_(hasattr(response, 'status'), msg='Response does not contains status string')
 
     def test_invalid_json(self):
-        websocket = self.new_connection(socket_timeout=60)
+        websocket = self.new_connection()
         invalid_json_str = ''
         websocket.send(invalid_json_str)
         response = self.read_message(websocket=websocket)
@@ -168,6 +168,38 @@ class TestHandshakeState(BiomioTest):
         message = self.create_next_message(oid='ack')
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
 
+    def test_invalid_message(self):
+        websocket = self.get_curr_connection()
+        invalid_message_str = '{}'
+        websocket.send(invalid_message_str)
+        response = self.read_message(websocket=websocket)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
+        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+
+    def test_invalid_json(self):
+        websocket = self.get_curr_connection()
+        invalid_json_str = ''
+        websocket.send(invalid_json_str)
+        response = self.read_message(websocket=websocket)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
+        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+
+    def test_invalid_sequence(self):
+        message = self.create_next_message(oid='ack')
+        message.header.seq = 1
+        response = self.send_message(websocket=self.get_curr_connection(), message=message)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
+        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+        pass
+
+    def test_invalid_protocol_ver(self):
+        message = self.create_next_message(oid='ack')
+        message.header.protoVer = '2.0'
+        response = self.send_message(websocket=self.get_curr_connection(), message=message)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
+        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+
+
     def test_any_other_message_received(self):
         message = self.create_next_message(oid='nop')
         response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
@@ -201,6 +233,38 @@ class TestReadyState(BiomioTest):
         response = self.send_message(websocket=socket, message=message, close_connection=False)
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
         ok_(hasattr(response, 'status'), msg='Response does not contains status message')
+
+    def test_invalid_message(self):
+        websocket = self.get_curr_connection()
+        invalid_message_str = '{}'
+        websocket.send(invalid_message_str)
+        response = self.read_message(websocket=websocket)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
+        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+
+    def test_invalid_json(self):
+        websocket = self.get_curr_connection()
+        invalid_json_str = ''
+        websocket.send(invalid_json_str)
+        response = self.read_message(websocket=websocket)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
+        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+
+    def test_invalid_sequence(self):
+        message = self.create_next_message(oid='nop')
+        message.header.seq = 1
+        response = self.send_message(websocket=self.get_curr_connection(), message=message)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
+        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+        pass
+
+    def test_invalid_protocol_ver(self):
+        message = self.create_next_message(oid='nop')
+        message.header.protoVer = '2.0'
+        response = self.send_message(websocket=self.get_curr_connection(), message=message)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
+        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+
 
 def main():
     pass
