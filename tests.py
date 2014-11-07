@@ -5,6 +5,7 @@ from biomio.protocol.message import BiomioMessageBuilder
 from nose.tools import ok_, eq_, nottest
 import logging
 
+
 class BiomioTest:
     def __init__(self):
         self._ws = None
@@ -94,6 +95,7 @@ class BiomioTest:
         message = self.create_next_message(oid='ack')
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
 
+
 class TestTimeouts(BiomioTest):
     def setup(self):
         self.setup_test()
@@ -106,6 +108,7 @@ class TestTimeouts(BiomioTest):
         response = self.read_message(websocket=websocket)
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
         ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+
 
 class TestConnectedState(BiomioTest):
     def setup(self):
@@ -156,6 +159,7 @@ class TestConnectedState(BiomioTest):
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
         ok_(hasattr(response, 'status'), msg='Response does not contains status string')
 
+
 class TestHandshakeState(BiomioTest):
     def setup(self):
         self.setup_test_with_hello()
@@ -199,12 +203,12 @@ class TestHandshakeState(BiomioTest):
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
         ok_(hasattr(response, 'status'), msg='Response does not contains status string')
 
-
     def test_any_other_message_received(self):
         message = self.create_next_message(oid='nop')
         response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
         ok_(hasattr(response, 'status'), msg='Response does not contains status message')
+
 
 class TestReadyState(BiomioTest):
     def setup(self):
@@ -250,14 +254,6 @@ class TestReadyState(BiomioTest):
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
         ok_(hasattr(response, 'status'), msg='Response does not contains status string')
 
-    def test_invalid_sequence(self):
-        message = self.create_next_message(oid='nop')
-        message.header.seq = 1
-        response = self.send_message(websocket=self.get_curr_connection(), message=message)
-        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
-        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
-        pass
-
     def test_invalid_protocol_ver(self):
         message = self.create_next_message(oid='nop')
         message.header.protoVer = '2.0'
@@ -269,6 +265,7 @@ class TestReadyState(BiomioTest):
 def main():
     pass
 
+# Suppress logging in  python_jsonschema_objects module for bettter tests results readability
 logger = logging.getLogger("python_jsonschema_objects.classbuilder")
 logger.disabled = True
 logger = logging.getLogger("python_jsonschema_objects")
