@@ -18,8 +18,8 @@ class MessageHandler:
     def _is_header_valid(e):
         """Helper method to verify header.
         Returns true if header information is valid, false otherwise
-        Method attaches status attribute to the event parameter passed,
-        which contains error string in case when """
+        Method attaches status attribute to the event parameter passed.
+        Status contains error string in case when validation fails."""
         #TODO: implement header validation
 
         is_valid = True
@@ -132,19 +132,24 @@ class BiomioProtocol:
         try:
             input_msg = self._builder.create_message_from_json(msg_string)
         except ValidationError, e:
-            logger.debug(str(e))
+            logger.exception(e)
 
-        if input_msg:
+        if input_msg and input_msg.msg and input_msg.header:
             logger.debug('RECEIVED: "%s" ' % msg_string)
-            make_transition = getattr(self._state_machine_instance, '%s' % input_msg.msg.oid, None)
-            if make_transition:
-                try:
-                    #TODO: add restating connection timer on next correct message from client
+            try:
+                #TODO: add restating connection timer on next correct message from client
+                make_transition = getattr(self._state_machine_instance, '%s' % input_msg.msg.oid, None)
+                if make_transition:
                     make_transition(request=input_msg, protocol_instance=self)
-                except FysomError, e:
-                    self.close_connection(status_message=str(e))
-            else:
-                self.close_connection(status_message='Could not process message: %s' % input_msg.msg.oid)
+                else:
+                    self.close_connection(status_message='Could not process message: %s' % input_msg.msg.oid)
+            except FysomError, e:
+                logger.exception('State event for method not defined')
+                self.close_connection(status_message=str(e))
+            except AttributeError:
+                status_message = 'Internal error during processing next message'
+                logger.exception(status_message)
+                self.close_connection(status_message=status_message)
         else:
             self.close_connection(status_message='Invalid message sent')
 

@@ -295,9 +295,14 @@ class BiomioMessageBuilder:
 
     @staticmethod
     def create_message_from_json(json_string):
-        obj = json.loads(json_string)
-        ns = BiomioMessageBuilder._get_ns()
-        biomio_message = ns.BiomioSchema(**obj)
+        biomio_message = None
+        try:
+            obj = json.loads(json_string)
+            ns = BiomioMessageBuilder._get_ns()
+            biomio_message = ns.BiomioSchema(**obj)
+        except ValueError:
+            return None
+
         return biomio_message
 
     def create_message(self, status=None, **kwargs):
