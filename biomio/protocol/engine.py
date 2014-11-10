@@ -62,16 +62,27 @@ class MessageHandler:
     def verify_bye_message(e):
         return STATE_DISCONNECTED
 
+
 def handshake(e):
     message = e.protocol_instance.create_next_message(request_seq=e.request.header.seq, oid='serverHello', refreshToken='token', ttl=0)
     e.protocol_instance.send_message(responce=message)
 
+
 def disconnect(e):
-    #TODO: send status on disconnect
+    # If status parameter passed to state change method
+    # we will add it as a status for message
     status = None
     if hasattr(e, 'status'):
         status = e.status
-    e.protocol_instance.close_connection(request_seq=e.request.header.seq, status_message=status)
+
+    # In a case of reaching disconnected state due to invalid message,
+    # request could not be passed to state change method
+    request_seq = None
+    if hasattr(e, 'request'):
+        request_seq = e.request.header.seq
+
+    e.protocol_instance.close_connection(request_seq=request_seq, status_message=status)
+
 
 biomio_states = {
     'initial': STATE_CONNECTED,
@@ -148,16 +159,16 @@ class BiomioProtocol:
                     if not (self._state_machine_instance.current == STATE_DISCONNECTED):
                         self._start_connection_timer_callback()
                 else:
-                    self.close_connection(request_seq=input_msg.header.seq, status_message='Could not process message: %s' % input_msg.msg.oid)
+                    self._state_machine_instance.bye(request=input_msg, protocol_instance=self, status='Could not process message: %s' % input_msg.msg.oid)
             except FysomError, e:
                 logger.exception('State event for method not defined')
-                self.close_connection(request_seq=input_msg.header.seq, status_message=str(e))
+                self._state_machine_instance.bye(request=input_msg, protocol_instance=self, status=str(e))
             except AttributeError:
                 status_message = 'Internal error during processing next message'
                 logger.exception(status_message)
-                self.close_connection(status_message=status_message)
+                self._state_machine_instance.bye(request=input_msg, protocol_instance=self, status=status_message)
         else:
-            self.close_connection(status_message='Invalid message sent')
+            self._state_machine_instance.bye(protocol_instance=self, status_message='Invalid message sent')
 
     def create_next_message(self, request_seq=None, status=None, **kwargs):
         if request_seq:
