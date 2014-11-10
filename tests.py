@@ -3,8 +3,9 @@
 from websocket import create_connection
 from biomio.protocol.message import BiomioMessageBuilder
 from nose.tools import ok_, eq_, nottest
+from nose.plugins.attrib import attr
+import time
 import logging
-
 
 class BiomioTest:
     def __init__(self):
@@ -103,12 +104,27 @@ class TestTimeouts(BiomioTest):
     def teardown(self):
         self.teardown_test()
 
+    @attr('slow')
     def test_connection_timeout(self):
         websocket = self.new_connection(socket_timeout=60)
         response = self.read_message(websocket=websocket)
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
         ok_(hasattr(response, 'status'), msg='Response does not contains status string')
 
+    @attr('slow')
+    def test_connection_timer_restart(self):
+        self.setup_test_with_handshake()
+        message_timeout = 4
+        for i in range(10):
+            time.sleep(message_timeout)
+            connection = self.get_curr_connection()
+            ok_(connection.connected, msg='Socket is not in connected state')
+            message = self.create_next_message(oid='nop')
+            self.send_message(websocket=connection, message=message, close_connection=False, wait_for_responce=False)
+
+        # Finish test, send bye message
+        message = self.create_next_message(oid='bye')
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
 
 class TestConnectedState(BiomioTest):
     def setup(self):
