@@ -261,6 +261,22 @@ class TestReadyState(BiomioTest):
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
         ok_(hasattr(response, 'status'), msg='Response does not contains status string')
 
+    def test_message_sequence_with_bye(self):
+        # Handshake done (setup method)
+        # Send few nop's in a row
+        message = self.create_next_message(oid='nop')
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
+        message = self.create_next_message(oid='nop')
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
+        message = self.create_next_message(oid='nop')
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
+
+        # Send 'bye' and check sequence number
+        message = self.create_next_message(oid='bye')
+        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
+        ok_(hasattr(response, 'status'), msg='Response does not contains status message')
+        eq_(response.header.seq, int(message.header.seq) + 1, msg='Bye responce has invalid sequence number')
 
 def main():
     pass

@@ -321,5 +321,6 @@ class BiomioMessageBuilder:
 
         ns = self._get_ns()
         biomio_message = ns.BiomioSchema(**obj)
+        self._header['seq'] += 2
 
         return biomio_message

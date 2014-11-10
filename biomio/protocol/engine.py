@@ -63,7 +63,7 @@ class MessageHandler:
         return STATE_DISCONNECTED
 
 def handshake(e):
-    message = e.protocol_instance.create_next_message(oid='serverHello', refreshToken='token', ttl=0)
+    message = e.protocol_instance.create_next_message(request_seq=e.request.header.seq, oid='serverHello', refreshToken='token', ttl=0)
     e.protocol_instance.send_message(responce=message)
 
 def disconnect(e):
@@ -71,7 +71,7 @@ def disconnect(e):
     status = None
     if hasattr(e, 'status'):
         status = e.status
-    e.protocol_instance.close_connection(status_message=status)
+    e.protocol_instance.close_connection(request_seq=e.request.header.seq, status_message=status)
 
 biomio_states = {
     'initial': STATE_CONNECTED,
@@ -128,6 +128,9 @@ class BiomioProtocol:
         logger.debug(' --------- ')  # helpful to separate output when auto tests is running
 
     def process_next(self, msg_string):
+
+        self._stop_connection_timer_callback()
+
         input_msg = None
         try:
             input_msg = self._builder.create_message_from_json(msg_string)
@@ -141,11 +144,14 @@ class BiomioProtocol:
                 make_transition = getattr(self._state_machine_instance, '%s' % input_msg.msg.oid, None)
                 if make_transition:
                     make_transition(request=input_msg, protocol_instance=self)
+
+                    if not (self._state_machine_instance.current == STATE_DISCONNECTED):
+                        self._start_connection_timer_callback()
                 else:
-                    self.close_connection(status_message='Could not process message: %s' % input_msg.msg.oid)
+                    self.close_connection(request_seq=input_msg.header.seq, status_message='Could not process message: %s' % input_msg.msg.oid)
             except FysomError, e:
                 logger.exception('State event for method not defined')
-                self.close_connection(status_message=str(e))
+                self.close_connection(request_seq=input_msg.header.seq, status_message=str(e))
             except AttributeError:
                 status_message = 'Internal error during processing next message'
                 logger.exception(status_message)
@@ -153,7 +159,9 @@ class BiomioProtocol:
         else:
             self.close_connection(status_message='Invalid message sent')
 
-    def create_next_message(self, status=None, **kwargs):
+    def create_next_message(self, request_seq=None, status=None, **kwargs):
+        if request_seq:
+            self._builder.set_header(seq=int(request_seq) + 1)
         message = self._builder.create_message(status=status, **kwargs)
         return message
 
@@ -161,12 +169,12 @@ class BiomioProtocol:
         logger.debug('SENT: %s' % responce.serialize())
         self._send_callback(responce.serialize())
 
-    def close_connection(self, status_message=None):
+    def close_connection(self, request_seq=None, status_message=None):
         logger.debug('CLOSING CONNECTION...')
         self._stop_connection_timer_callback()
 
         # Send bye message
-        message = self.create_next_message(status=status_message, oid='bye')
+        message = self.create_next_message(request_seq=request_seq, status=status_message, oid='bye')
 
         self.send_message(responce=message)
 
@@ -174,7 +182,8 @@ class BiomioProtocol:
         self._close_callback()
 
     def is_sequence_valid(self, seq):
-        return ((self._builder.get_header_field_value(field_str='seq') < seq)
+        curr_seq = self._builder.get_header_field_value(field_str='seq')
+        return ((int(curr_seq) - 2 < seq)
                 or (seq == 0)) and (int(seq) % 2 == 0)
 
     def is_protocol_version_valid(self, version):
