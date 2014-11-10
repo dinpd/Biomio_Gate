@@ -1,270 +1,307 @@
 #!/usr/bin/env python
 
 from websocket import create_connection
-from biomio.protocol.message import BiomioMessage, BiomioClientMessage, BiomioServerMessage
-from jsonschema import validate
+from biomio.protocol.message import BiomioMessageBuilder
+from nose.tools import ok_, eq_, nottest
+from nose.plugins.attrib import attr
+import time
+import logging
 
-BIOMIO_protocol_json_schema = {
-    "id": "http://biom.io/entry-schema#",
-    "$schema": "http://json-schema.org/draft-04/schema#",
-    "description": "schema of BIOMIO communication protocol",
-    "type": "object",
-    "required": [ "header",
-                  "msg"
-                  # "action",   #fixed
-                  # "seq"
-    ],
-    "properties": {
-        "header": {
-            "type": "object",
-            "oneOf": [
-                { "$ref": "#/definitions/client/definitions/header" },
-                { "$ref": "#/definitions/server/definitions/header" }
-            ]
-        },
-        "msg": {
-            "type": "object",
-            "oneOf": [
-                { "$ref": "#/definitions/common/definitions/bye" },
-                { "$ref": "#/definitions/common/definitions/nop" },
-                { "$ref": "#/definitions/common/definitions/status" },
-                { "$ref": "#/definitions/client/definitions/again" },
-                { "$ref": "#/definitions/client/definitions/auth" },
-                { "$ref": "#/definitions/client/definitions/resources" },
-                { "$ref": "#/definitions/client/definitions/probe" },
-                { "$ref": "#/definitions/client/definitions/hello" },
-                { "$ref": "#/definitions/client/definitions/verify" },
-                { "$ref": "#/definitions/client/definitions/identify" },
-                { "$ref": "#/definitions/client/definitions/getData" },
-                { "$ref": "#/definitions/client/definitions/setData" },
-                { "$ref": "#/definitions/server/definitions/hello" },
-                { "$ref": "#/definitions/server/definitions/try" },
-                { "$ref": "#/definitions/server/definitions/data" }
-            ]
-        }
-    },
-
-    "definitions": {
-        "common": {
-            "definitions" : {
-                "nop": { "enum": [ "nop" ] },
-                "bye": { "enum": [ "bye" ] },
-                "status": { "type": "string" },
-                "resource": {
-                    "type": "object",
-                    "required": [ "rType", "rProperties" ],
-                    "properties": {
-                        "rType": { "enum": [ "video", "fp-scanner", "mic" ] },
-                        "rProperties": { "type": "string" }
-                    }
-                }
-            }
-        },
-        "server": {
-            "definitions" : {
-                "header": {
-                    "type": "object",
-                    "required": [ "protoVer", "token" ],
-                    "properties": {
-                        "seq": { "type": "number" },
-                        "protoVer": { "type": "string" },
-                        "token": { "type": "string" }
-                    }
-                },
-                "hello": {
-                    "type": "object",
-                    "required": [ "refreshToken", "ttl" ],
-                    "properties": {
-                        "refreshToken": { "type": "string" },
-                        "ttl": { "type": "number" },
-                        "key": { "type": "string" }
-                    }
-                },
-                "try": {
-                    "type": "object",
-                    "required": [ "resource" ],
-                    "properties": {
-                        "resource": { "$ref": "#/definitions/common/definitions/resource" },
-                        "samples": { "type": "number" }
-                    }
-                },
-                "data": {
-                    "type": "object",
-                    "required": [ "keys", "values" ],
-                    "properties": {
-                        "keys": {
-                            "type": "array",
-                            "items": { "type": "string" }
-                        },
-                        "values": {
-                            "type": "array",
-                            "items": { "type": "string" }
-                        }
-                    }
-                }
-            }
-        },
-        "client": {
-            "definitions": {
-                "header": {
-                    "type": "object",
-                    "required": [ "seq", "id", "protoVer", "osId", "appId" ],
-                    "properties": {
-                        "seq": { "type": "number" },
-                        "protoVer": { "type": "string" },
-                        "id": { "type": "string" },
-                        "appId": { "type": "string" },
-                        "osId": { "type": "string" },
-                        "devId": { "type": "string" },
-                        "token": { "type": "string" }
-                    }
-                },
-                "hello": {
-                    "type": "object",
-                    "properties": {
-                        "secret": { "type": "string" }
-                    }
-                },
-                "auth": { "type": "string" },
-                "again": { "enum": [ "again" ] },
-                "resources": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/common/definitions/resource"
-                    }
-                },
-                "image": {
-                    "media": {
-                        "type": "image/png",
-                        "binaryEncoding": "base64"
-                    },
-                    "type": "string"
-                },
-                "sound": {
-                    "media": {
-                        "type": "sound/waw",
-                        "binaryEncoding": "base64"
-                    },
-                    "type": "string"
-                },
-                "probe": {
-                    "type": "object",
-                    "required": [ "probeId", "samples" ],
-                    "properties": {
-                        "probeId": {
-                            "type": "number"  # fixed
-                        },
-                        "samples": {
-                            "type": "array",
-                            "items": {
-                                "oneOf": [
-                                    { "$ref": "#/definitions/server/definitions/image" },
-                                    { "$ref": "#/definitions/server/definitions/sound" }
-                                ]
-                            }
-                        }
-                    }
-                },
-                "verify": {
-                    "type": "object",
-                    "required": [ "id" ],
-                    "properties": {
-                        "id": { "type": "string" }
-                    }
-                },
-                "identify": { "enum": [ "identify" ] },
-                "getData": {
-                    "type": "object",
-                    "required": [ "keys" ],
-                    "properties": {
-                        "keys": {
-                            "type": "array",
-                            "items": { "type": "string" }
-                        },
-                        "onBehalfOf": { "type": "string" }
-                    }
-                },
-                "setData": {
-                    "type": "object",
-                    "required": [ "keys", "values" ],
-                    "properties": {
-                        "keys": {
-                            "type": "array",
-                            "items": { "type": "string" }
-                        },
-                        "values": {
-                            "type": "array",
-                            "items": { "type": "string" }
-                        }
-                    }
-                },
-                "rect": {
-                    "type": "object",
-                    "required": [ "x", "y", "width", "height" ],
-                    "properties": {
-                        "x": { "type": "number" },
-                        "y": { "type": "number" },
-                        "height": { "type": "number" },
-                        "width": { "type": "number" }
-                    }
-                },
-                "detected": {
-                    "type": "object",
-                    "required": [ "rects" ],
-                    "properties": {
-                        "distance": { "type": "number" },
-                        "rects": {
-                            "type": "array",
-                            "items": { "$ref": "#/definitions/server/definitions/rect" }
-                        },
-                        "labels": {
-                            "type": "array",
-                            "items": { "type": "string" }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-def biomio_send(message, websocket=None, close_connection=True):
-
-    if websocket is None:
-        websocket = create_connection("ws://127.0.0.1:8080/websocket")
-
-    websocket.send(message.dumps())
-    result = websocket.recv()
-
-    if close_connection:
-        websocket.close()
-
-    return result
-
-
-def verify_json(obj):
-    validate(obj, BIOMIO_protocol_json_schema)
-
-
-class TestServerHandshake:
+class BiomioTest:
     def __init__(self):
-        self.ws = None
+        self._ws = None
+        self._builder = None
+
+    @nottest
+    def new_connection(self, socket_timeout=5):
+        socket = create_connection("ws://127.0.0.1:8080/websocket")
+        socket.settimeout(socket_timeout)
+        return socket
+
+    @nottest
+    def read_message(self, websocket):
+        result = websocket.recv()
+        responce = BiomioMessageBuilder.create_message_from_json(result)
+        return responce
+
+    @nottest
+    def send_message(self, message, websocket=None, close_connection=True, wait_for_responce=True):
+
+        if websocket is None:
+            websocket = self.new_connection()
+
+        websocket.send(message.serialize())
+
+        responce = None
+        if wait_for_responce:
+            responce = self.read_message(websocket=websocket)
+
+        if close_connection:
+            websocket.close()
+
+        return responce
+
+    @nottest
+    def get_curr_connection(self):
+        """Helper method to get current connected websocket.
+           Should be used to get current websocket after some setup methods
+          (e.g. setup_test_with_handshake) that creates connection with server
+          and send messages to prepare test case.
+        """
+        if not self._ws:
+            self._ws = self.new_connection()
+        return self._ws
+
+    @nottest
+    def create_next_message(self, **kwargs):
+        """Helper method to create next new client message.
+        By default (if no parameters passed) it is initializes
+        client message header with correct default values and correct next
+        sequence number.
+        """
+        message = self._builder.create_message(**kwargs)
+        return message
+
+    @nottest
+    def setup_test(self):
+        """Default setup for test methods."""
+        self._builder = BiomioMessageBuilder(oid='clientHeader', seq=0, protoVer='1.0', id='id', osId='os id', appId='app Id')
+
+    @nottest
+    def teardown_test(self):
+        """Default teardown for test methods"""
+        if self._ws:
+            if self._ws.connected:
+                self._ws.close()
+        self._ws = None
+        self._builder = None
+
+    @nottest
+    def setup_test_with_hello(self):
+        self.setup_test()
+
+        # Send hello message
+        message = self.create_next_message(oid='clientHello', secret='secret')
+        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
+        eq_(response.msg.oid, 'serverHello', msg='Response does not contains helloServer message')
+        eq_(response.header.seq, int(message.header.seq) + 1,
+            'Responce sequence number is invalid (expected: %d, got: %d)' % (int(message.header.seq) + 1, response.header.seq))
+
+    @nottest
+    def setup_test_with_handshake(self):
+        """Setup method for tests to perform handshake"""
+        self.setup_test_with_hello()
+
+        # Send ack message
+        message = self.create_next_message(oid='ack')
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
+
+
+class TestTimeouts(BiomioTest):
+    def setup(self):
+        self.setup_test()
+
+    def teardown(self):
+        self.teardown_test()
+
+    @attr('slow')
+    def test_connection_timeout(self):
+        websocket = self.new_connection(socket_timeout=60)
+        response = self.read_message(websocket=websocket)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
+        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+
+    @attr('slow')
+    def test_connection_timer_restart(self):
+        self.setup_test_with_handshake()
+        message_timeout = 4
+        for i in range(10):
+            time.sleep(message_timeout)
+            connection = self.get_curr_connection()
+            ok_(connection.connected, msg='Socket is not in connected state')
+            message = self.create_next_message(oid='nop')
+            self.send_message(websocket=connection, message=message, close_connection=False, wait_for_responce=False)
+
+        # Finish test, send bye message
+        message = self.create_next_message(oid='bye')
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
+
+class TestConnectedState(BiomioTest):
+    def setup(self):
+        self.setup_test()
+
+    def teardown(self):
+        self.teardown_test()
 
     def test_hello_server(self):
-        message = BiomioClientMessage(seq=0, message_id='', proto_ver='', os_id='', app_id='')
-        message.hello(public_key='', private_key='')
-        verify_json(obj=message.json_obj())
-        responce_str = biomio_send(message=message)
-        response = BiomioServerMessage.from_string(responce_str)
-        verify_json(response.json_obj())
+        message = self.create_next_message(oid='clientHello', secret='secret')
+        response = self.send_message(message=message)
+        eq_(response.msg.oid, 'serverHello', msg='Response does not contains serverHello message')
 
+    def test_invalid_message(self):
+        websocket = self.new_connection()
+        invalid_message_str = '{}'
+        websocket.send(invalid_message_str)
+        response = self.read_message(websocket=websocket)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
+        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+
+    def test_invalid_json(self):
+        websocket = self.new_connection()
+        invalid_json_str = ''
+        websocket.send(invalid_json_str)
+        response = self.read_message(websocket=websocket)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
+        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+
+    def test_invalid_sequence(self):
+        message = self.create_next_message(oid='clientHello', secret='secret')
+        message.header.seq = 1
+        response = self.send_message(websocket=self.get_curr_connection(), message=message)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
+        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+        pass
+
+    def test_invalid_protocol_ver(self):
+        message = self.create_next_message(oid='clientHello', secret='secret')
+        message.header.protoVer = '2.0'
+        response = self.send_message(websocket=self.get_curr_connection(), message=message)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
+        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+
+    def test_nop_message_sent(self):
+        message = self.create_next_message(oid='nop')
+        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
+        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+
+
+class TestHandshakeState(BiomioTest):
+    def setup(self):
+        self.setup_test_with_hello()
+
+    def teardown(self):
+        self.teardown_test()
+
+    def test_ack_message(self):
+        # Send ack message
+        message = self.create_next_message(oid='ack')
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
+
+    def test_invalid_message(self):
+        websocket = self.get_curr_connection()
+        invalid_message_str = '{}'
+        websocket.send(invalid_message_str)
+        response = self.read_message(websocket=websocket)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
+        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+
+    def test_invalid_json(self):
+        websocket = self.get_curr_connection()
+        invalid_json_str = ''
+        websocket.send(invalid_json_str)
+        response = self.read_message(websocket=websocket)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
+        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+
+    def test_invalid_sequence(self):
+        message = self.create_next_message(oid='ack')
+        message.header.seq = 1
+        response = self.send_message(websocket=self.get_curr_connection(), message=message)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
+        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+        pass
+
+    def test_invalid_protocol_ver(self):
+        message = self.create_next_message(oid='ack')
+        message.header.protoVer = '2.0'
+        response = self.send_message(websocket=self.get_curr_connection(), message=message)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
+        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+
+    def test_any_other_message_received(self):
+        message = self.create_next_message(oid='nop')
+        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
+        ok_(hasattr(response, 'status'), msg='Response does not contains status message')
+
+
+class TestReadyState(BiomioTest):
+    def setup(self):
+        self.setup_test_with_handshake()
+
+    def teardown(self):
+        self.teardown_test()
+
+    def test_nop_message(self):
+        # Send nop message
+        message = self.create_next_message(oid='nop')
+        #TODO: add some test for existing connection
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
+
+    def test_bye_message(self):
+        # Send bye message
+        message = self.create_next_message(oid='bye')
+        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
+        ok_(hasattr(response, 'status'), msg='Response does not contains status message')
+
+    def test_invalid_sequence(self):
+        message = self.create_next_message(oid='nop')
+        message.header.seq = 1
+        socket = self.get_curr_connection()
+        response = self.send_message(websocket=socket, message=message, close_connection=False)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
+        ok_(hasattr(response, 'status'), msg='Response does not contains status message')
+
+    def test_invalid_message(self):
+        websocket = self.get_curr_connection()
+        invalid_message_str = '{}'
+        websocket.send(invalid_message_str)
+        response = self.read_message(websocket=websocket)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
+        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+
+    def test_invalid_json(self):
+        websocket = self.get_curr_connection()
+        invalid_json_str = ''
+        websocket.send(invalid_json_str)
+        response = self.read_message(websocket=websocket)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
+        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+
+    def test_invalid_protocol_ver(self):
+        message = self.create_next_message(oid='nop')
+        message.header.protoVer = '2.0'
+        response = self.send_message(websocket=self.get_curr_connection(), message=message)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
+        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+
+    def test_message_sequence_with_bye(self):
+        # Handshake done (setup method)
+        # Send few nop's in a row
+        message = self.create_next_message(oid='nop')
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
+        message = self.create_next_message(oid='nop')
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
+        message = self.create_next_message(oid='nop')
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
+
+        # Send 'bye' and check sequence number
+        message = self.create_next_message(oid='bye')
+        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
+        ok_(hasattr(response, 'status'), msg='Response does not contains status message')
+        eq_(response.header.seq, int(message.header.seq) + 1, msg='Bye responce has invalid sequence number')
 
 def main():
+    pass
 
-    print "Sent"
-    print "Reeiving..."
-    print "Received: '%s'" % result
-
+# Suppress logging in  python_jsonschema_objects module for bettter tests results readability
+logger = logging.getLogger("python_jsonschema_objects.classbuilder")
+logger.disabled = True
+logger = logging.getLogger("python_jsonschema_objects")
+logger.disabled = True
 
 if __name__ == '__main__':
     main()

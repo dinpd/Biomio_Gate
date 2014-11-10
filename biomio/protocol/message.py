@@ -1,150 +1,326 @@
 
 import json
-import jsonschema
+import python_jsonschema_objects as pjs
 
+import logging
+logger = logging.getLogger(__name__)
 
-### Common definitions
+BIOMIO_protocol_json_schema = {
+    "title": "Biomio Schema",
+    "id": "http://biom.io/entry-schema#",
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "description": "schema of BIOMIO communication protocol",
+    "type": "object",
+    "required": ["header", "msg"],
+    "properties": {
+        "header": {
+            "oneOf": [
+                {"$ref": "#/definitions/serverHeader"},
+                {"$ref": "#/definitions/clientHeader"}
+            ]
+        },
+        "msg": {
+            "oneOf": [
+                {"$ref": "#/definitions/bye"},
+                {"$ref": "#/definitions/ack"},
+                {"$ref": "#/definitions/nop"},
+                {"$ref": "#/definitions/clientHello"},
+                {"$ref": "#/definitions/resources"},
+                {"$ref": "#/definitions/again"},
+                {"$ref": "#/definitions/auth"},
+                {"$ref": "#/definitions/probe"},
+                {"$ref": "#/definitions/verify"},
+                {"$ref": "#/definitions/identify"},
+                {"$ref": "#/definitions/getData"},
+                {"$ref": "#/definitions/setData"},
+                {"$ref": "#/definitions/serverHello"},
+                {"$ref": "#/definitions/try"},
+                {"$ref": "#/definitions/data"}
+            ]
+        },
+        "status": { "type": "string" }
+    },
+    "definitions": {
+        "nop": {
+            "type": "object",
+            "required": ["oid"],
+            "properties": {
+                "oid": { "enum": ["nop"] }
+            }
+        },
+        "ack": {
+            "type": "object",
+            "required": ["oid"],
+            "properties": {
+                "oid": { "enum": ["ack"] }
+            }
+        },
+        "bye": {
+            "type": "object",
+            "required": ["oid"],
+            "properties": {
+                "oid": { "enum": ["bye"] }
+            }
+        },
+        "resource": {
+            "type": "object",
+            "required": ["rType", "rProperties"],
+            "properties": {
+                "rType": {"enum": ["video", "fp-scanner", "mic"]},
+                "rProperties": {"type": "string"}
+            }
+        },
+        "serverHeader": {
+            "type": "object",
+            "name": "serverHeader",
+            "required": ["oid","seq", "protoVer", "token"],
+            "properties": {
+                "oid": { "enum": ["serverHeader"] },
+                "seq": {"type": "number"},
+                "protoVer": {"type": "string"},
+                "token": {"type": "string"}
+            }
+        },
+        "serverHello": {
+            "type": "object",
+            "required": ["oid", "refreshToken", "ttl"],
+            "properties": {
+                "oid": { "enum": ["serverHello"] },
+                "refreshToken": {"type": "string"},
+                "ttl": {"type": "number"},
+                "key": {"type": "string"}
+            }
+        },
+        "try": {
+            "type": "object",
+            "required": ["oid", "resource"],
+            "properties": {
+            "oid": { "enum": ["try"] },
+                "resource": {"$ref": "#/definitions/resource"},
+                "samples": {"type": "number"}
+            }
+        },
+        "data": {
+            "type": "object",
+            "required": ["keys", "values"],
+            "properties": {
+            "oid": { "enum": ["data"] },
+                "keys": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                },
+                "values": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                }
+            }
+        },
+        "clientHeader": {
+            "type": "object",
+            "required": ["oid", "seq", "id", "protoVer", "osId", "appId"],
+            "properties": {
+                "oid": { "enum": ["clientHeader"] },
+                "seq": {"type": "number"},
+                "protoVer": {"type": "string"},
+                "id": {"type": "string"},
+                "appId": {"type": "string"},
+                "osId": {"type": "string"},
+                "devId": {"type": "string"},
+                "token": {"type": "string"}
+            }
+        },
+        "clientHello": {
+            "type": "object",
+            "required": ["oid", "secret"],
+            "properties": {
+                "oid": { "enum": ["clientHello"] },
+                "secret": {"type": "string"}
+            }
+        },
+        "auth": {
+            "type": "object",
+            "required": ["oid", "key"],
+            "properties": {
+            "oid": { "enum": ["auth"] },
+            "key": { "type": "string" }
+        }
+        },
+        "again": {
+            "type": "object",
+            "required": ["oid"],
+            "properties": {
+                "oid": { "enum": ["again"] }
+            }
+        },
+        "resources": {
+            "type": "object",
+        "required": ["oid", "data"],
+            "properties": {
+                "oid": { "enum": ["resources"] },
+                "data": {
+                        "type": "array",
+                        "items": {"$ref": "#/definitions/resource"}
+                }
+            }
+        },
+        "image": {
+            "media": {
+                "type": "image/png",
+                "binaryEncoding": "base64"
+            },
+            "type": "string"
+        },
+        "sound": {
+            "media": {
+                "type": "sound/waw",
+                "binaryEncoding": "base64"
+            },
+            "type": "string"
+        },
+        "probe": {
+            "type": "object",
+            "required": ["oid", "probeId", "samples"],
+            "properties": {
+            "oid": { "enum": ["probe"] },
+                "probeId": {"type": "number"},
+                "samples": {
+                    "oneOf": [
+                        {
+                            "type": "array",
+                            "items": {"$ref": "#/definitions/image"}
+                        },
+                        {
+                            "type": "array",
+                            "items": {"$ref": "#/definitions/sound"}
+                        }
+                    ]
+                }
+            }
+        },
+        "verify": {
+            "type": "object",
+            "required": ["oid", "id"],
+            "properties": {
+                "oid": { "enum": ["verify"] },
+                "id": {"type": "string"}
+            }
+        },
+        "identify": {
+            "type": "object",
+            "required": ["oid"],
+            "properties": {
+            "oid": { "enum": ["identify"] }
+            }
+        },
+        "getData": {
+            "type": "object",
+            "required": ["oid", "keys"],
+            "properties": {
+            "oid": { "enum": ["getData"] },
+                "keys": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                },
+                "onBehalfOf": {"type": "string"}
+            }
+        },
+        "setData": {
+            "type": "object",
+            "required": ["oid", "keys", "values"],
+            "properties": {
+            "oid": { "enum": ["setData"] },
+                "keys": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                },
+                "values": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                }
+            }
+        },
+        "rect": {
+            "type": "object",
+            "required": ["x", "y", "width", "height"],
+            "properties": {
+                "x": {"type": "number"},
+                "y": {"type": "number"},
+                "height": {"type": "number"},
+                "width": {"type": "number"}
+            }
+        },
+        "detected": {
+            "type": "object",
+            "required": ["oid", "rects"],
+            "properties": {
+            "oid": { "enum": ["detected"] },
+                "distance": {"type": "number"},
+                "rects": {
+                    "type": "array",
+                    "items": {"$ref": "#/definitions/rect"}
+                },
+                "labels": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                }
+            }
+        }
+    }
+}
 
-### Client definitions
-MSG_HEADER = 'header'
-MSG_OBJECT = 'msg'
+class BiomioMessageBuilder:
+    _ns = None
 
-# Header
-CLIENT_MSG_HEADER_SEQ = 'seq'
-CLIENT_MSG_HEADER_ID = 'id'
-CLIENT_MSG_HEADER_PROTO_VER = 'protoVer'
-CLIENT_MSG_HEADER_OS_ID = 'osId'
-CLIENT_MSG_HEADER_APP_ID = 'appId'
+    def __init__(self, **kwargs):
+        self._header = {}
+        self.set_header(**kwargs)
 
-# Hello
-CLIENT_MSG_HELLO = 'hello'
-CLIENT_MSG_HELLO_PUBLIC_KEY = 'pubKey'
-CLIENT_MSG_HELLO_SECRET_KEY = 'secret'
+    def set_header(self, **kwargs):
+        for k, v in kwargs.iteritems():
+            self._header[k] = v
 
-### Server definitions
+    def get_header_field_value(self, field_str):
+        return self._header.get(field_str, None)
 
-# Header
-SERVER_MSG_HEADER_SEQ = 'seq'
-SERVER_MSG_HEADER_PROTO_VER = 'protoVer'
-SERVER_MSG_HEADER_TOKEN = 'token'
+    @classmethod
+    def _get_ns(cls):
+        if not cls._ns:
+            # Suppress logging inside of python_jsonschema_objects module
+            logger = logging.getLogger("python_jsonschema_objects.classbuilder")
+            logger.disabled = True
 
-# Hello
-SERVER_MSG_HELLO = 'hello'
-SERVER_MSG_HELLO_REFRESH_TOKEN = 'refreshToken'
-SERVER_MSG_HELLO_TTL = 'ttl'
+            builder = pjs.ObjectBuilder(BIOMIO_protocol_json_schema)
+            cls._ns = builder.build_classes()
+        return cls._ns
 
-class BiomioMessage:
+    @staticmethod
+    def create_message_from_json(json_string):
+        biomio_message = None
+        try:
+            obj = json.loads(json_string)
+            ns = BiomioMessageBuilder._get_ns()
+            biomio_message = ns.BiomioSchema(**obj)
+        except ValueError:
+            return None
 
-    def __init__(self):
-        self._header = ''
-        self._msg = ''
-        self._msg_object = {}
+        return biomio_message
 
-    def _construct_message(self, msg_name, _msg_object):
+    def create_message(self, status=None, **kwargs):
+        msg = {}
+
+        for k, v in kwargs.iteritems():
+            msg[k] = v
+
         obj = {
-            MSG_HEADER: self._header,
-            MSG_OBJECT: {msg_name: self._msg_object}
-        }
-        return obj
-
-    def msg_sting(self):
-        return self._msg
-
-    @classmethod
-    def from_string(cls, message_string):
-        """
-        Creates Biomio message instance by string contaning JSON.
-        Method should be overridden by subclass
-        """
-        raise NotImplementedError
-
-
-    def json_obj(self):
-        return self._construct_message(self._msg, self._msg_object)
-
-    def dumps(self):
-        obj = self.json_obj()
-        return json.dumps(obj)
-
-
-class BiomioServerMessage(BiomioMessage):
-
-    def __init__(self, seq, proto_ver, token):
-        self._init_header(seq=seq, proto_ver=proto_ver, token=token)
-
-    @classmethod
-    def from_string(cls, message_string):
-        obj = json.loads(message_string)
-
-        # Get header
-        header_obj = obj[MSG_HEADER]
-        message = BiomioServerMessage(
-            header_obj[SERVER_MSG_HEADER_SEQ],
-            header_obj[SERVER_MSG_HEADER_PROTO_VER],
-            header_obj[SERVER_MSG_HEADER_TOKEN]
-        )
-
-        # Get message string and message object
-        (message._msg, message._msg_object) = obj[MSG_OBJECT].popitem()
-
-        return message
-
-    def _init_header(self, seq, proto_ver, token):
-        self._header = {
-            SERVER_MSG_HEADER_SEQ: seq,
-            SERVER_MSG_HEADER_PROTO_VER: proto_ver,
-            SERVER_MSG_HEADER_TOKEN: token
+            'header': self._header,
+            'msg': msg
         }
 
-    def hello(self, refresh_token, ttl):
-        self._msg = SERVER_MSG_HELLO
-        self._msg_object = {
-            SERVER_MSG_HELLO_REFRESH_TOKEN: refresh_token,
-            SERVER_MSG_HELLO_TTL: ttl
-        }
+        if status:
+            obj['status'] = status
 
+        ns = self._get_ns()
+        biomio_message = ns.BiomioSchema(**obj)
+        self._header['seq'] += 2
 
-class BiomioClientMessage(BiomioMessage):
-
-    def __init__(self, seq, message_id, proto_ver, os_id, app_id):
-        self._init_header(seq=seq, message_id=message_id, proto_ver=proto_ver, os_id=os_id, app_id=app_id)
-        self._msg = ''
-        self._msg_object = {}
-
-    @classmethod
-    def from_string(cls, message_string):
-        obj = json.loads(message_string)
-
-        # Get header
-        header_obj = obj.pop(MSG_HEADER)
-        message = cls(
-            header_obj[CLIENT_MSG_HEADER_SEQ],
-            header_obj[CLIENT_MSG_HEADER_ID],
-            header_obj[CLIENT_MSG_HEADER_PROTO_VER],
-            header_obj[CLIENT_MSG_HEADER_OS_ID],
-            header_obj[CLIENT_MSG_HEADER_APP_ID]
-        )
-
-        # Get message string and message object
-        (message._msg, message._msg_object) = obj[MSG_OBJECT].popitem()
-
-        return message
-
-
-    def _init_header(self, seq, message_id, proto_ver, os_id, app_id):
-        self._header = {
-            CLIENT_MSG_HEADER_SEQ: seq,
-            CLIENT_MSG_HEADER_ID: message_id,
-            CLIENT_MSG_HEADER_PROTO_VER: proto_ver,
-            CLIENT_MSG_HEADER_OS_ID: os_id,
-            CLIENT_MSG_HEADER_APP_ID: app_id
-        }
-
-    def hello(self, public_key, private_key):
-        self._msg = CLIENT_MSG_HELLO
-        self._msg_object = {
-            CLIENT_MSG_HELLO_PUBLIC_KEY: public_key,
-            CLIENT_MSG_HELLO_SECRET_KEY: private_key
-        }
-
-
+        return biomio_message
