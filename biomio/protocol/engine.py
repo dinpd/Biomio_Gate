@@ -62,6 +62,10 @@ class MessageHandler:
     def verify_bye_message(e):
         return STATE_DISCONNECTED
 
+    @staticmethod
+    def verify_auth_message(e):
+        return STATE_CONNECTED
+
 
 def handshake(e):
     message = e.protocol_instance.create_next_message(request_seq=e.request.header.seq, oid='serverHello', refreshToken='token', ttl=0)
@@ -110,6 +114,12 @@ biomio_states = {
             'src': [STATE_CONNECTED, STATE_HANDSHAKE, STATE_READY],
             'dst': STATE_DISCONNECTED,
             'decision': MessageHandler.verify_bye_message
+        },
+        {
+            'name': 'auth',
+            'src': STATE_HANDSHAKE,
+            'dst': [STATE_READY, STATE_DISCONNECTED],
+            'decision': MessageHandler.verify_auth_message
         }
     ],
     'callbacks': {

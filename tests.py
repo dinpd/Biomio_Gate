@@ -225,6 +225,10 @@ class TestHandshakeState(BiomioTest):
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
         ok_(hasattr(response, 'status'), msg='Response does not contains status message')
 
+    def test_auth_message(self):
+        message = self.create_next_message(oid='auth', key='authkey')
+        websocket = self.get_curr_connection()
+        self.send_message(websocket=websocket, message=message, wait_for_responce=False, close_connection=False)
 
 class TestReadyState(BiomioTest):
     def setup(self):
