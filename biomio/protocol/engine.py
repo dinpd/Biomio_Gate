@@ -64,8 +64,7 @@ class MessageHandler:
 
     @staticmethod
     def verify_auth_message(e):
-        if MessageHandler._is_header_valid(e) \
-                and (e.src == STATE_READY):
+        if MessageHandler._is_header_valid(e):
             return STATE_READY
         return STATE_DISCONNECTED
 
