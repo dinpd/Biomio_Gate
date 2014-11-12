@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-from websocket import create_connection
+from websocket import create_connection, WebSocketTimeoutException
 from biomio.protocol.message import BiomioMessageBuilder
-from nose.tools import ok_, eq_, nottest
+from nose.tools import ok_, eq_, nottest, raises
 from nose.plugins.attrib import attr
 import time
 import logging
@@ -188,6 +188,15 @@ class TestHandshakeState(BiomioTest):
         message = self.create_next_message(oid='ack')
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
 
+    @attr('slow')
+    @raises(WebSocketTimeoutException)
+    def test_ack_message_responce(self):
+        message = self.create_next_message(oid='ack')
+        # Send message and wait for responce,
+        # server should not respond and close connection,
+        # so WebsocketTimeoutException will be raised
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=True)
+
     def test_invalid_message(self):
         websocket = self.get_curr_connection()
         invalid_message_str = '{}'
@@ -230,6 +239,17 @@ class TestHandshakeState(BiomioTest):
         websocket = self.get_curr_connection()
         self.send_message(websocket=websocket, message=message, wait_for_responce=False, close_connection=False)
 
+    @attr('slow')
+    @raises(WebSocketTimeoutException)
+    def test_auth_message_responce(self):
+        message = self.create_next_message(oid='auth', key='authkey')
+        websocket = self.get_curr_connection()
+        # Send message and wait for responce,
+        # server should not respond and close connection,
+        # so WebsocketTimeoutException will be raised
+        self.send_message(websocket=websocket, message=message, close_connection=False)
+
+
 class TestReadyState(BiomioTest):
     def setup(self):
         self.setup_test_with_handshake()
@@ -240,8 +260,16 @@ class TestReadyState(BiomioTest):
     def test_nop_message(self):
         # Send nop message
         message = self.create_next_message(oid='nop')
-        #TODO: add some test for existing connection
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
+
+    @attr('slow')
+    @raises(WebSocketTimeoutException)
+    def test_nop_message_responce(self):
+        message = self.create_next_message(oid='nop')
+        # Send message and wait for responce,
+        # server should not respond and close connection,
+        # so WebsocketTimeoutException will be raised
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=True)
 
     def test_bye_message(self):
         # Send bye message
