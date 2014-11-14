@@ -154,12 +154,12 @@ BIOMIO_protocol_json_schema = {
         },
         "resources": {
             "type": "object",
-        "required": ["oid", "data"],
+            "required": ["oid", "data"],
             "properties": {
                 "oid": { "enum": ["resources"] },
                 "data": {
-                        "type": "array",
-                        "items": {"$ref": "#/definitions/resource"}
+                    "type": "array",
+                    "items": {"$ref": "#/definitions/resource"}
                 }
             }
         },

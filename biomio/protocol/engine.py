@@ -3,6 +3,7 @@
 from biomio.protocol.message import BiomioMessageBuilder
 from biomio.third_party.fysom import Fysom, FysomError
 from jsonschema import ValidationError
+from functools import wraps
 
 import logging
 logger = logging.getLogger(__name__)
@@ -13,7 +14,17 @@ STATE_HANDSHAKE = 'handshake'
 STATE_READY = 'ready'
 STATE_DISCONNECTED = 'disconnected'
 
+
+def verify_header(verify_func):
+    def _decorator(e, *args, **kwargs):
+        if not MessageHandler._is_header_valid(e, *args, **kwargs):
+            return STATE_DISCONNECTED
+        return verify_func(e, *args, **kwargs)
+    return wraps(verify_func)(_decorator)
+
+
 class MessageHandler:
+
     @staticmethod
     def _is_header_valid(e):
         """Helper method to verify header.
@@ -34,9 +45,9 @@ class MessageHandler:
         return is_valid
 
     @staticmethod
+    @verify_header
     def verify_hello_message(e):
-        if MessageHandler._is_header_valid(e) \
-                and (e.src == STATE_CONNECTED):
+        if e.src == STATE_CONNECTED:
             # "hello" received in connected state
             # and header is valid
             return STATE_HANDSHAKE
@@ -44,16 +55,14 @@ class MessageHandler:
         return STATE_DISCONNECTED
 
     @staticmethod
+    @verify_header
     def verify_ack_message(e):
-        if MessageHandler._is_header_valid(e):
-            return STATE_READY
-
-        return STATE_DISCONNECTED
+        return STATE_READY
 
     @staticmethod
+    @verify_header
     def verify_nop_message(e):
-        if MessageHandler._is_header_valid(e) \
-                and (e.src == STATE_READY):
+        if e.src == STATE_READY:
             return STATE_READY
 
         return STATE_DISCONNECTED
@@ -63,10 +72,9 @@ class MessageHandler:
         return STATE_DISCONNECTED
 
     @staticmethod
+    @verify_header
     def verify_auth_message(e):
-        if MessageHandler._is_header_valid(e):
-            return STATE_READY
-        return STATE_DISCONNECTED
+        return STATE_READY
 
 
 def handshake(e):
