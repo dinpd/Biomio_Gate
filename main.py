@@ -17,6 +17,11 @@ define('port', default=8080)
 
 CONNECTION_TIMEOUT = 10
 
+ssl_options = {
+        "certfile": "server.crt",
+        "keyfile": "server.key"
+}
+
 class WebSocketHandler(tornado.websocket.WebSocketHandler):
     connections = {}
     timeouts = {}
@@ -76,7 +81,7 @@ class Application(tornado.web.Application):
 
 def run_tornado():
     app = Application()
-    server = tornado.httpserver.HTTPServer(app)
+    server = tornado.httpserver.HTTPServer(app, ssl_options=ssl_options)
     logger.info('Running tornado server...')
     server.listen(options.port)
     tornado.ioloop.IOLoop.instance().start()
