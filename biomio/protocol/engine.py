@@ -4,6 +4,8 @@ from biomio.protocol.message import BiomioMessageBuilder
 from biomio.third_party.fysom import Fysom, FysomError
 from jsonschema import ValidationError
 from functools import wraps
+from os import urandom
+from hashlib import sha1
 
 import logging
 logger = logging.getLogger(__name__)
@@ -138,6 +140,8 @@ biomio_states = {
     }
 }
 
+def generate_session_token():
+    return sha1(urandom(128)).hexdigest()
 
 class BiomioProtocol:
     @staticmethod
@@ -150,7 +154,7 @@ class BiomioProtocol:
         self._start_connection_timer_callback = kwargs['start_connection_timer_callback']
         self._stop_connection_timer_callback = kwargs['stop_connection_timer_callback']
 
-        self._builder = BiomioMessageBuilder(oid='serverHeader', seq=1, protoVer='0.1', token='token')
+        self._builder = BiomioMessageBuilder(oid='serverHeader', seq=1, protoVer='0.1', token=generate_session_token())
 
         # Initialize state machine
         self._state_machine_instance = Fysom(biomio_states)
