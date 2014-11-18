@@ -2,10 +2,9 @@
 
 from biomio.protocol.message import BiomioMessageBuilder
 from biomio.third_party.fysom import Fysom, FysomError
+from biomio.protocol.session import Session
 from jsonschema import ValidationError
 from functools import wraps
-from os import urandom
-from hashlib import sha1
 
 import logging
 logger = logging.getLogger(__name__)
@@ -80,7 +79,12 @@ class MessageHandler:
 
 
 def handshake(e):
-    message = e.protocol_instance.create_next_message(request_seq=e.request.header.seq, oid='serverHello', refreshToken=generate_token(), ttl=0)
+    message = e.protocol_instance.create_next_message(
+        request_seq=e.request.header.seq,
+        oid='serverHello',
+        refreshToken=e.protocol_instance.get_current_session().refresh_token,
+        ttl=0
+    )
     e.protocol_instance.send_message(responce=message)
 
 
@@ -140,9 +144,6 @@ biomio_states = {
     }
 }
 
-def generate_token():
-    return sha1(urandom(128)).hexdigest()
-
 class BiomioProtocol:
     @staticmethod
     def print_state_change(e):
@@ -154,7 +155,8 @@ class BiomioProtocol:
         self._start_connection_timer_callback = kwargs['start_connection_timer_callback']
         self._stop_connection_timer_callback = kwargs['stop_connection_timer_callback']
 
-        self._builder = BiomioMessageBuilder(oid='serverHeader', seq=1, protoVer='0.1', token=generate_token())
+        self._session = Session()
+        self._builder = BiomioMessageBuilder(oid='serverHeader', seq=1, protoVer='0.1', token=self._session.session_token)
 
         # Initialize state machine
         self._state_machine_instance = Fysom(biomio_states)
@@ -215,6 +217,9 @@ class BiomioProtocol:
 
         # Close connection
         self._close_callback()
+
+    def get_current_session(self):
+        return self._session
 
     def is_sequence_valid(self, seq):
         curr_seq = self._builder.get_header_field_value(field_str='seq')
