@@ -79,11 +79,13 @@ class MessageHandler:
 
 
 def handshake(e):
+    session = e.protocol_instance.get_current_session()
+
     message = e.protocol_instance.create_next_message(
         request_seq=e.request.header.seq,
         oid='serverHello',
-        refreshToken=e.protocol_instance.get_current_session().refresh_token,
-        ttl=0
+        refreshToken=session.refresh_token,
+        ttl=session.ttl
     )
     e.protocol_instance.send_message(responce=message)
 

@@ -126,6 +126,12 @@ class TestTimeouts(BiomioTest):
         message = self.create_next_message(oid='bye')
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
 
+    def test_session_ttl_not_zero(self):
+        self.setup_test()
+        message = self.create_next_message(oid='clientHello', secret='secret')
+        response = self.send_message(message=message)
+        ok_(not response.msg.ttl == 0, msg='Session TTL == 0')
+
 class TestConnectedState(BiomioTest):
     def setup(self):
         self.setup_test()
