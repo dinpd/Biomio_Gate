@@ -80,7 +80,7 @@ class MessageHandler:
 
 
 def handshake(e):
-    message = e.protocol_instance.create_next_message(request_seq=e.request.header.seq, oid='serverHello', refreshToken='token', ttl=0)
+    message = e.protocol_instance.create_next_message(request_seq=e.request.header.seq, oid='serverHello', refreshToken=generate_token(), ttl=0)
     e.protocol_instance.send_message(responce=message)
 
 
@@ -140,7 +140,7 @@ biomio_states = {
     }
 }
 
-def generate_session_token():
+def generate_token():
     return sha1(urandom(128)).hexdigest()
 
 class BiomioProtocol:
@@ -154,7 +154,7 @@ class BiomioProtocol:
         self._start_connection_timer_callback = kwargs['start_connection_timer_callback']
         self._stop_connection_timer_callback = kwargs['stop_connection_timer_callback']
 
-        self._builder = BiomioMessageBuilder(oid='serverHeader', seq=1, protoVer='0.1', token=generate_session_token())
+        self._builder = BiomioMessageBuilder(oid='serverHeader', seq=1, protoVer='0.1', token=generate_token())
 
         # Initialize state machine
         self._state_machine_instance = Fysom(biomio_states)

@@ -184,6 +184,15 @@ class TestConnectedState(BiomioTest):
         ok_(second_response.header.token, msg='Server returns empty token string')
         ok_(not str(first_response.header.token) == str(second_response.header.token), msg='Token string sould be unique for every connection')
 
+    def test_refresh_token_generation(self):
+        message = self.create_next_message(oid='clientHello', secret='secret')
+        first_response = self.send_message(message=message, close_connection=True, websocket=self.new_connection())
+        ok_(first_response.msg.refreshToken, msg='Server returns empty refresh token string')
+
+        second_response = self.send_message(message=message, close_connection=True, websocket=self.new_connection())
+        ok_(second_response.msg.refreshToken, msg='Server returns empty refresh token string')
+        ok_(not str(first_response.msg.refreshToken) == str(second_response.msg.refreshToken), msg='Refresh token string sould be unique for every connection')
+
 class TestHandshakeState(BiomioTest):
     def setup(self):
         self.setup_test_with_hello()
