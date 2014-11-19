@@ -6,16 +6,10 @@ import tornado.httpserver
 import tornado.ioloop
 
 from biomio.protocol.engine import BiomioProtocol
+from biomio.protocol.settings import settings
 
 import logging
 logger = logging.getLogger(__name__)
-
-from tornado.options import define, options, parse_config_file
-
-define('connection_timeout', default=10, help='Number of seconds in which inactive connection will be closed.')
-define('port', default=8080)
-
-CONNECTION_TIMEOUT = 10
 
 class WebSocketHandler(tornado.websocket.WebSocketHandler):
     connections = {}
@@ -55,7 +49,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             logger.debug('Removing old timer for connection %d' % id(self))
             self.stop_connection_timer()
         logger.debug('Creating timer for connection %d' % id(self))
-        timeout_handle = tornado.ioloop.IOLoop.instance().call_later(delay=options.connection_timeout, callback=self.on_connection_timeout)
+        timeout_handle = tornado.ioloop.IOLoop.instance().call_later(delay=settings.connection_timeout, callback=self.on_connection_timeout)
         self.timeouts[self] = timeout_handle
 
     def on_connection_timeout(self):
@@ -78,7 +72,7 @@ def run_tornado():
     app = Application()
     server = tornado.httpserver.HTTPServer(app)
     logger.info('Running tornado server...')
-    server.listen(options.port)
+    server.listen(settings.port)
     tornado.ioloop.IOLoop.instance().start()
 
 
@@ -88,8 +82,6 @@ if __name__ == '__main__':
         format='%(levelname)-8s [%(asctime)s] %(message)s',
         level=logging.DEBUG
     )
-
-    parse_config_file(path='biomio.conf')
 
     # Run tornado application
     run_tornado()

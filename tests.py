@@ -132,6 +132,12 @@ class TestTimeouts(BiomioTest):
         response = self.send_message(message=message)
         ok_(not response.msg.ttl == 0, msg='Session TTL == 0')
 
+    def test_session_expire(self):
+        self.setup_test_with_handshake()
+        message = self.create_next_message(oid='nop')
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
+
+
 class TestConnectedState(BiomioTest):
     def setup(self):
         self.setup_test()
@@ -357,6 +363,8 @@ logger = logging.getLogger("python_jsonschema_objects.classbuilder")
 logger.disabled = True
 logger = logging.getLogger("python_jsonschema_objects")
 logger.disabled = True
+
+
 
 if __name__ == '__main__':
     main()
