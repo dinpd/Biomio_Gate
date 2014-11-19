@@ -2,6 +2,7 @@
 
 from websocket import create_connection, WebSocketTimeoutException
 from biomio.protocol.message import BiomioMessageBuilder
+from biomio.protocol.settings import settings
 from nose.tools import ok_, eq_, nottest, raises
 from nose.plugins.attrib import attr
 import time
@@ -114,8 +115,11 @@ class TestTimeouts(BiomioTest):
     @attr('slow')
     def test_connection_timer_restart(self):
         self.setup_test_with_handshake()
-        message_timeout = 4
-        for i in range(10):
+
+        message_timeout = 3  # Send a message every 3 seconds
+        message_count = (settings.connection_timeout / message_timeout) + 1
+
+        for i in range(message_count):
             time.sleep(message_timeout)
             connection = self.get_curr_connection()
             ok_(connection.connected, msg='Socket is not in connected state')
