@@ -1,6 +1,7 @@
 #!/usr/bin/env python
+from django.http import response
 
-from websocket import create_connection, WebSocketTimeoutException
+from websocket import create_connection, WebSocketTimeoutException, WebSocketConnectionClosedException
 from biomio.protocol.message import BiomioMessageBuilder
 from biomio.protocol.settings import settings
 from nose.tools import ok_, eq_, nottest, raises
@@ -136,11 +137,32 @@ class TestTimeouts(BiomioTest):
         response = self.send_message(message=message)
         ok_(not response.msg.ttl == 0, msg='Session TTL == 0')
 
+    @attr('slow')
     def test_session_expire(self):
-        self.setup_test_with_handshake()
-        message = self.create_next_message(oid='nop')
-        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
 
+        message_timeout = settings.connection_timeout / 2  # Send a message every 3 seconds
+        message_count = (settings.session_ttl / message_timeout) + 2
+
+        # We will wait for message from server,
+        # so we set timeout for blocking read socket operation to
+        # message_timeout value (we will use that timeout
+        # as a delay between messages)
+        self.setup_test_with_handshake()
+
+        expired = False
+        for i in range(message_count):
+            # Need to send nop messages to continue connection ttl,
+            # but messages will be sent with the same session token, so
+            # after a while session will be expired
+            message = self.create_next_message(oid='nop')
+            time.sleep(message_timeout)
+            try:
+                self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
+            except Exception, e:
+                expired = True
+                break
+
+        ok_(expired, msg='Session does not expired')
 
 class TestConnectedState(BiomioTest):
     def setup(self):

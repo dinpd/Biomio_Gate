@@ -2,7 +2,7 @@
 
 from biomio.protocol.message import BiomioMessageBuilder
 from biomio.third_party.fysom import Fysom, FysomError
-from biomio.protocol.session import Session
+from biomio.protocol.sessionmanager import SessionManager, Session
 from jsonschema import ValidationError
 from functools import wraps
 
@@ -51,7 +51,10 @@ class MessageHandler:
         if e.src == STATE_CONNECTED:
             # "hello" received in connected state
             # and header is valid
-            return STATE_HANDSHAKE
+            if not hasattr(e.request.header, "token")\
+                    or not e.request.header.token:
+                e.protocol_instance.start_new_session()
+                return STATE_HANDSHAKE
 
         return STATE_DISCONNECTED
 
@@ -79,8 +82,8 @@ class MessageHandler:
 
 
 def handshake(e):
+    # Send serverHello responce after entering handshake state
     session = e.protocol_instance.get_current_session()
-
     message = e.protocol_instance.create_next_message(
         request_seq=e.request.header.seq,
         oid='serverHello',
@@ -157,8 +160,8 @@ class BiomioProtocol:
         self._start_connection_timer_callback = kwargs['start_connection_timer_callback']
         self._stop_connection_timer_callback = kwargs['stop_connection_timer_callback']
 
-        self._session = Session()
-        self._builder = BiomioMessageBuilder(oid='serverHeader', seq=1, protoVer='0.1', token=self._session.session_token)
+        self._session = None
+        self._builder = BiomioMessageBuilder(oid='serverHeader', seq=1, protoVer='0.1')
 
         # Initialize state machine
         self._state_machine_instance = Fysom(biomio_states)
@@ -182,6 +185,9 @@ class BiomioProtocol:
                 #TODO: add restating connection timer on next correct message from client
                 make_transition = getattr(self._state_machine_instance, '%s' % input_msg.msg.oid, None)
                 if make_transition:
+                    if self._state_machine_instance.current == STATE_DISCONNECTED:
+                        return
+
                     make_transition(request=input_msg, protocol_instance=self)
 
                     if not (self._state_machine_instance.current == STATE_DISCONNECTED):
@@ -205,17 +211,22 @@ class BiomioProtocol:
         return message
 
     def send_message(self, responce):
-        logger.debug('SENT: %s' % responce.serialize())
         self._send_callback(responce.serialize())
+        logger.debug('SENT: %s' % responce.serialize())
 
     def close_connection(self, request_seq=None, status_message=None):
         logger.debug('CLOSING CONNECTION...')
         self._stop_connection_timer_callback()
 
+        if not self._session:
+            self.start_new_session()
+
         # Send bye message
         message = self.create_next_message(request_seq=request_seq, status=status_message, oid='bye')
-
         self.send_message(responce=message)
+
+        if self._session.is_open:
+            SessionManager.instance().close_session(session=self._session)
 
         # Close connection
         self._close_callback()
@@ -232,3 +243,10 @@ class BiomioProtocol:
         """Checks protocol version. Return true if it is current version; false otherwise"""
         return version == '1.0'
 
+    def on_session_closed(self):
+        self._state_machine_instance.bye(protocol_instance=self, status='Session expired')
+
+
+    def start_new_session(self):
+        self._session = SessionManager.instance().create_session(close_callback=self.on_session_closed)
+        self._builder.set_header(token=self._session.session_token)
