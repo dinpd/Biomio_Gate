@@ -32,7 +32,6 @@ class MessageHandler:
         Returns true if header information is valid, false otherwise
         Method attaches status attribute to the event parameter passed.
         Status contains error string in case when validation fails."""
-        #TODO: implement header validation
 
         is_valid = True
         if not e.protocol_instance.is_sequence_valid(e.request.header.seq):
@@ -159,6 +158,7 @@ class BiomioProtocol:
         self._send_callback = kwargs['send_callback']
         self._start_connection_timer_callback = kwargs['start_connection_timer_callback']
         self._stop_connection_timer_callback = kwargs['stop_connection_timer_callback']
+        self._check_connected_callback = kwargs['check_connected_callback']
 
         self._session = None
         self._builder = BiomioMessageBuilder(oid='serverHeader', seq=1, protoVer='0.1')
@@ -166,7 +166,6 @@ class BiomioProtocol:
         # Initialize state machine
         self._state_machine_instance = Fysom(biomio_states)
         self._state_machine_instance.onchangestate = BiomioProtocol.print_state_change
-        #TODO: use some kind of logger instead
         logger.debug(' --------- ')  # helpful to separate output when auto tests is running
 
     def process_next(self, msg_string):
@@ -182,7 +181,6 @@ class BiomioProtocol:
         if input_msg and input_msg.msg and input_msg.header:
             logger.debug('RECEIVED: "%s" ' % msg_string)
             try:
-                #TODO: add restating connection timer on next correct message from client
                 make_transition = getattr(self._state_machine_instance, '%s' % input_msg.msg.oid, None)
                 if make_transition:
                     if self._state_machine_instance.current == STATE_DISCONNECTED:
@@ -222,8 +220,9 @@ class BiomioProtocol:
             self.start_new_session()
 
         # Send bye message
-        message = self.create_next_message(request_seq=request_seq, status=status_message, oid='bye')
-        self.send_message(responce=message)
+        if self._check_connected_callback():
+            message = self.create_next_message(request_seq=request_seq, status=status_message, oid='bye')
+            self.send_message(responce=message)
 
         if self._session.is_open:
             SessionManager.instance().close_session(session=self._session)
@@ -245,7 +244,6 @@ class BiomioProtocol:
 
     def on_session_closed(self):
         self._state_machine_instance.bye(protocol_instance=self, status='Session expired')
-
 
     def start_new_session(self):
         self._session = SessionManager.instance().create_session(close_callback=self.on_session_closed)

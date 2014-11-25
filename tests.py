@@ -98,6 +98,19 @@ class BiomioTest:
         message = self.create_next_message(oid='ack')
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
 
+    @nottest
+    def setup_with_session_restore(self):
+        """Performs handshake and closes connection without 'bye',
+        so we could restore connection further"""
+        # Perform handshake
+        self.setup_test_with_handshake()
+
+        # Close websocket on client side,
+        # without sending bye message,
+        # so we could restore session futher
+        websocket = self.get_curr_connection()
+        websocket.close()
+
 
 class TestTimeouts(BiomioTest):
     def setup(self):
@@ -230,6 +243,9 @@ class TestConnectedState(BiomioTest):
         second_response = self.send_message(message=message, close_connection=True, websocket=self.new_connection())
         ok_(second_response.msg.refreshToken, msg='Server returns empty refresh token string')
         ok_(not str(first_response.msg.refreshToken) == str(second_response.msg.refreshToken), msg='Refresh token string sould be unique for every connection')
+
+    def test_session_restore(self):
+        self.setup_with_session_restore()
 
 class TestHandshakeState(BiomioTest):
     def setup(self):

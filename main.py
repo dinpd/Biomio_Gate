@@ -22,8 +22,8 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             close_callback=self.close,
             send_callback=self.write_message,
             start_connection_timer_callback=self.start_connection_timer,
-            stop_connection_timer_callback=self.stop_connection_timer#,
-            # check_connected_callback=self.check_connected
+            stop_connection_timer_callback=self.stop_connection_timer,
+            check_connected_callback=self.check_connected
         )
         self.connections[self] = biomio_protocol
         self.start_connection_timer()
@@ -62,7 +62,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             biomio_protocol.close_connection(status_message='Connection timeout')
 
     def check_connected(self):
-        return self.ws_connection.client_terminated
+        return bool(self.ws_connection)
 
 class Application(tornado.web.Application):
     def __init__(self):
