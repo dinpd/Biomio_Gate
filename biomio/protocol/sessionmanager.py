@@ -7,6 +7,8 @@ from collections import OrderedDict
 from biomio.protocol.session import Session
 from biomio.protocol.settings import settings
 
+from weakref import WeakValueDictionary
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -56,6 +58,9 @@ class TimeoutQueue:
         if ts_to_remove:
             del self.queue[ts_to_remove]
 
+    def iteritems(self):
+        return self.queue.iteritems()
+
     def __str__(self):
         s = ''
         for (t, item_list) in self.queue.iteritems():
@@ -66,8 +71,9 @@ class SessionManager:
     _instance = None
 
     def __init__(self):
-        self.sessions = TimeoutQueue()
-        self.timeout_handle = None
+        self._sessions = TimeoutQueue()
+        self._sessions_by_token = WeakValueDictionary()
+        self._timeout_handle = None
         self.interval = 1  # seconds
 
     @classmethod
@@ -85,21 +91,24 @@ class SessionManager:
         return ts - ts % self.interval
 
     def run_timer(self):
-        self.timeout_handle = tornado.ioloop.IOLoop.instance().call_later(callback=self.on_check_expired_sessions, delay=self.interval)
+        self._timeout_handle = tornado.ioloop.IOLoop.instance().call_later(callback=self.on_check_expired_sessions, delay=self.interval)
 
-    def create_session(self, close_callback = None):
+    def create_session(self, close_callback=None):
         # print self.sessions
-        session = Session(_close_callback=close_callback)
+        session = Session()
+        session.close_callback = close_callback
         logger.debug('Created session %s', session.refresh_token)
 
         ts = self.ts()
         ts += settings.session_ttl
         ts = self.adjust(ts)
 
-        if not self.sessions.has_ts(ts):
-            self.sessions.create_timeout(ts)
+        if not self._sessions.has_ts(ts):
+            self._sessions.create_timeout(ts)
 
-        self.sessions.append(ts, session)
+        self._sessions.append(ts, session)
+        self._sessions_by_token[session.session_token] = session
+        self._sessions_by_token[session.refresh_token] = session
         # print strftime('%H:%M:%S', gmtime(time()))
         # print strftime('%H:%M:%S', gmtime(ts))
 
@@ -107,15 +116,22 @@ class SessionManager:
 
         return session
 
+    def get_session(self, token):
+        return self._sessions_by_token.get(token, '')
+
+    def get_protocol_state(self, token):
+        #TODO: read state from redis
+        return 'ready'
+
     def close_session(self, session):
         logger.debug('Closing session %s' % session.refresh_token)
-        self.sessions.remove(session)
-        if not self.sessions:
-            tornado.ioloop.IOLoop.instance().remove_timeout(timeout=self.timeout_handle)
+        self._sessions.remove(session)
+        if not self._sessions:
+            tornado.ioloop.IOLoop.instance().remove_timeout(timeout=self._timeout_handle)
 
     def on_check_expired_sessions(self):
         # logger.debug('Checking for expired sessions ...')
-        expires_sessions = self.sessions.take_expired(ts=self.ts())
+        expires_sessions = self._sessions.take_expired(ts=self.ts())
         for session in expires_sessions:
             logger.debug(msg='Session expired - closing: %s' % session.refresh_token)
             session.close()

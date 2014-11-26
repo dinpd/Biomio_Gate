@@ -18,7 +18,7 @@ class Session:
         self.ttl = settings.session_ttl
         self.redis = tornadoredis.Client(host=settings.redis_host, port=settings.redis_port)
         self._start_session()
-        self._close_callback = _close_callback
+        self.close_callback = None
         self.is_open = True
 
     def redis_session_name(self):
@@ -32,8 +32,8 @@ class Session:
 
     def close(self):
         self.is_open = False
-        if self._close_callback:
-            self._close_callback()
+        if self.close_callback:
+            self.close_callback()
 
     @staticmethod
     def generate_token():

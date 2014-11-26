@@ -13,6 +13,7 @@ class BiomioTest:
     def __init__(self):
         self._ws = None
         self._builder = None
+        self.last_server_message = None
 
     @nottest
     def new_connection(self, socket_timeout=5):
@@ -24,6 +25,7 @@ class BiomioTest:
     def read_message(self, websocket):
         result = websocket.recv()
         responce = BiomioMessageBuilder.create_message_from_json(result)
+        self.last_server_message = responce
         return responce
 
     @nottest
@@ -37,11 +39,19 @@ class BiomioTest:
         responce = None
         if wait_for_responce:
             responce = self.read_message(websocket=websocket)
+            self.last_server_message = responce
 
         if close_connection:
             websocket.close()
 
         return responce
+
+    @nottest
+    def set_session_token(self, token):
+        if self._builder:
+            self._builder.set_header(token=token)
+        else:
+            raise 'Run BiomioTest.setup_test() first to prepare for communication with server'
 
     @nottest
     def get_curr_connection(self):
@@ -68,6 +78,7 @@ class BiomioTest:
     def setup_test(self):
         """Default setup for test methods."""
         self._builder = BiomioMessageBuilder(oid='clientHeader', seq=0, protoVer='1.0', id='id', osId='os id', appId='app Id')
+        self.last_server_message = None
 
     @nottest
     def teardown_test(self):
@@ -77,6 +88,7 @@ class BiomioTest:
                 self._ws.close()
         self._ws = None
         self._builder = None
+        self.last_server_message = None
 
     @nottest
     def setup_test_with_hello(self):
@@ -110,7 +122,6 @@ class BiomioTest:
         # so we could restore session futher
         websocket = self.get_curr_connection()
         websocket.close()
-
 
 class TestTimeouts(BiomioTest):
     def setup(self):
@@ -244,8 +255,25 @@ class TestConnectedState(BiomioTest):
         ok_(second_response.msg.refreshToken, msg='Server returns empty refresh token string')
         ok_(not str(first_response.msg.refreshToken) == str(second_response.msg.refreshToken), msg='Refresh token string sould be unique for every connection')
 
+    @attr('slow')
+    # @raises(WebSocketTimeoutException)
     def test_session_restore(self):
         self.setup_with_session_restore()
+        token = str(self.last_server_message.header.token)
+
+        self.teardown_test()
+        self.setup_test()
+        # Send message and wait for responce,
+        # server should not respond and close connection,
+        # so WebsocketTimeoutException will be raised
+        self.set_session_token(token)
+        message = self.create_next_message(oid='nop')
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
+        message = self.create_next_message(oid='bye')
+        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
+        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+
 
 class TestHandshakeState(BiomioTest):
     def setup(self):

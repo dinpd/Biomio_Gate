@@ -37,6 +37,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         # Remove protocol instance from connection dictionary
         self.stop_connection_timer()
         biomio_protocol = self.connections[self]
+        biomio_protocol.connection_closed()
         if biomio_protocol:
             del self.connections[self]
 
