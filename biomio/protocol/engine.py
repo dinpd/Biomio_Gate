@@ -6,6 +6,8 @@ from biomio.protocol.sessionmanager import SessionManager, Session
 from jsonschema import ValidationError
 from functools import wraps
 
+import tornado.gen
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -168,7 +170,8 @@ class BiomioProtocol:
         self._state_machine_instance.onchangestate = BiomioProtocol.print_state_change
         logger.debug(' --------- ')  # helpful to separate output when auto tests is running
 
-    def process_next(self, msg_string):
+    @tornado.gen.engine
+    def process_next(self, msg_string, callback=None):
 
         self._stop_connection_timer_callback()
 
@@ -182,27 +185,29 @@ class BiomioProtocol:
             logger.debug('RECEIVED: "%s" ' % msg_string)
 
             if not self._session and hasattr(input_msg.header, 'token') and input_msg.header.token:
-                self.restore_state(str(input_msg.header.token))
-            else:
-                try:
-                    make_transition = getattr(self._state_machine_instance, '%s' % input_msg.msg.oid, None)
-                    if make_transition:
-                        if self._state_machine_instance.current == STATE_DISCONNECTED:
-                            return
+                yield tornado.gen.Task(self.restore_state, str(input_msg.header.token))
+                if self._state_machine_instance.current == STATE_DISCONNECTED:
+                    return
 
-                        make_transition(request=input_msg, protocol_instance=self)
+            try:
+                make_transition = getattr(self._state_machine_instance, '%s' % input_msg.msg.oid, None)
+                if make_transition:
+                    if self._state_machine_instance.current == STATE_DISCONNECTED:
+                        return
 
-                        if not (self._state_machine_instance.current == STATE_DISCONNECTED):
-                            self._start_connection_timer_callback()
-                    else:
-                        self._state_machine_instance.bye(request=input_msg, protocol_instance=self, status='Could not process message: %s' % input_msg.msg.oid)
-                except FysomError, e:
-                    logger.exception('State event for method not defined')
-                    self._state_machine_instance.bye(request=input_msg, protocol_instance=self, status=str(e))
-                except AttributeError:
-                    status_message = 'Internal error during processing next message'
-                    logger.exception(status_message)
-                    self._state_machine_instance.bye(request=input_msg, protocol_instance=self, status=status_message)
+                    make_transition(request=input_msg, protocol_instance=self)
+
+                    if not (self._state_machine_instance.current == STATE_DISCONNECTED):
+                        self._start_connection_timer_callback()
+                else:
+                    self._state_machine_instance.bye(request=input_msg, protocol_instance=self, status='Could not process message: %s' % input_msg.msg.oid)
+            except FysomError, e:
+                logger.exception('State event for method not defined')
+                self._state_machine_instance.bye(request=input_msg, protocol_instance=self, status=str(e))
+            except AttributeError:
+                status_message = 'Internal error during processing next message'
+                logger.exception(status_message)
+                self._state_machine_instance.bye(request=input_msg, protocol_instance=self, status=status_message)
         else:
             self._state_machine_instance.bye(protocol_instance=self, status_message='Invalid message sent')
 
@@ -256,17 +261,26 @@ class BiomioProtocol:
     def connection_closed(self):
         if self._session:
             self._session.close_callback = None
+            SessionManager.instance().set_protocol_state(token=self._session.refresh_token, current_state=self._state_machine_instance.current)
         logger.debug('Connection closed by client')
 
-    def restore_state(self, token):
+    @tornado.gen.engine
+    def restore_state(self, token, **kwargs):
         session_manager = SessionManager.instance()
         self._session = session_manager.get_session(token)
 
         if self._session:
             logger.debug('Continue session %s...' % token)
             self._builder.set_header(token=self._session.session_token)
-            state = session_manager.get_protocol_state(token)
+            state = yield tornado.gen.Task(session_manager.get_protocol_state, self._session.refresh_token)
             if state:
                 logger.debug('State : %s' % state)
                 # logger.debug('State restored: %s' % state)
                 self._state_machine_instance.current = state
+
+
+
+        #     else:
+        #         self._state_machine_instance.bye(protocol_instance=self, status_message='Internal error: Could not restore protpcol state after last disconnection')
+        # else:
+        #     self._state_machine_instance.bye(protocol_instance=self, status_message='Invalid token')

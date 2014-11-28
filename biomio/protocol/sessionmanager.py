@@ -1,6 +1,7 @@
 
 from time import time, strftime, gmtime
 import tornado.ioloop
+import tornado.gen
 
 from collections import OrderedDict
 
@@ -8,6 +9,9 @@ from biomio.protocol.session import Session
 from biomio.protocol.settings import settings
 
 from weakref import WeakValueDictionary
+
+import tornadoredis
+import ast
 
 import logging
 logger = logging.getLogger(__name__)
@@ -75,6 +79,7 @@ class SessionManager:
         self._sessions_by_token = WeakValueDictionary()
         self._timeout_handle = None
         self.interval = 1  # seconds
+        self.redis = tornadoredis.Client(host=settings.redis_host, port=settings.redis_port)
 
     @classmethod
     def instance(cls):
@@ -82,6 +87,9 @@ class SessionManager:
             cls._instance = SessionManager()
 
         return cls._instance
+
+    def _redis_session_name(self, session_token):
+        return 'token:%s' % session_token
 
     @classmethod
     def ts(cls):
@@ -92,6 +100,34 @@ class SessionManager:
 
     def run_timer(self):
         self._timeout_handle = tornado.ioloop.IOLoop.instance().call_later(callback=self.on_check_expired_sessions, delay=self.interval)
+
+    @tornado.gen.engine
+    def get_session_data(self, refresh_token, key, callback=None):
+        data = yield tornado.gen.Task(self.redis.get, self._redis_session_name(session_token=refresh_token))
+        if not data:
+            data = {}
+        else:
+            data = ast.literal_eval(data)
+        # print 'data: ', data
+        # raise tornado.gen.Return(data.get(key, None))
+        callback(data.get(key, None))
+
+    @tornado.gen.engine
+    def store_session_data(self, refresh_token, **kwargs):
+        current_data = yield tornado.gen.Task(self.redis.get, self._redis_session_name(session_token=refresh_token))
+
+        if not current_data:
+            current_data = {}
+        else:
+            current_data = ast.literal_eval(current_data)
+
+        for (k, v) in kwargs.iteritems():
+            current_data[k] = v
+
+        yield tornado.gen.Task(self.redis.set, self._redis_session_name(session_token=refresh_token), current_data)
+
+    def remove_session_data(self, token):
+        self.redis.delete(key=self._redis_session_name(session_token=token))
 
     def create_session(self, close_callback=None):
         # print self.sessions
@@ -109,6 +145,7 @@ class SessionManager:
         self._sessions.append(ts, session)
         self._sessions_by_token[session.session_token] = session
         self._sessions_by_token[session.refresh_token] = session
+
         # print strftime('%H:%M:%S', gmtime(time()))
         # print strftime('%H:%M:%S', gmtime(ts))
 
@@ -117,11 +154,15 @@ class SessionManager:
         return session
 
     def get_session(self, token):
-        return self._sessions_by_token.get(token, '')
+        return self._sessions_by_token.get(token, None)
 
-    def get_protocol_state(self, token):
-        #TODO: read state from redis
-        return 'ready'
+    def get_protocol_state(self, token, callback=None):
+        self.get_session_data(refresh_token=token, key='state', callback=callback)
+
+    def set_protocol_state(self, token, current_state):
+        session = self._sessions_by_token.get(token, None)
+        refresh_token = session.refresh_token
+        self.store_session_data(refresh_token=refresh_token, state=current_state)
 
     def close_session(self, session):
         logger.debug('Closing session %s' % session.refresh_token)

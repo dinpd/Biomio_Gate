@@ -263,12 +263,11 @@ class TestConnectedState(BiomioTest):
 
         self.teardown_test()
         self.setup_test()
-        # Send message and wait for responce,
-        # server should not respond and close connection,
-        # so WebsocketTimeoutException will be raised
+
         self.set_session_token(token)
         message = self.create_next_message(oid='nop')
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
+        time.sleep(settings.connection_timeout / 2)
         message = self.create_next_message(oid='bye')
         response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')

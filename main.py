@@ -4,6 +4,7 @@ import tornado.web
 import tornado.websocket
 import tornado.httpserver
 import tornado.ioloop
+import tornado.gen
 
 from biomio.protocol.engine import BiomioProtocol
 from biomio.protocol.settings import settings
@@ -28,10 +29,12 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         self.connections[self] = biomio_protocol
         self.start_connection_timer()
 
+    @tornado.web.asynchronous
+    @tornado.gen.engine
     def on_message(self, message_string):
         biomio_protocol = self.connections.get(self, None)
         if biomio_protocol:
-            biomio_protocol.process_next(message_string)
+            yield tornado.gen.Task(biomio_protocol.process_next, message_string)
 
     def on_close(self):
         # Remove protocol instance from connection dictionary
@@ -72,7 +75,6 @@ class Application(tornado.web.Application):
         ]
 
         tornado.web.Application.__init__(self, handlers)
-
 
 def run_tornado():
     app = Application()
