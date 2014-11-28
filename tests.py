@@ -14,6 +14,8 @@ class BiomioTest:
         self._ws = None
         self._builder = None
         self.last_server_message = None
+        self.current_session_token = None
+        self.session_refresh_token = None
 
     @nottest
     def new_connection(self, socket_timeout=5):
@@ -26,6 +28,10 @@ class BiomioTest:
         result = websocket.recv()
         responce = BiomioMessageBuilder.create_message_from_json(result)
         self.last_server_message = responce
+        if not responce.header.token == self.current_session_token:
+            self.set_session_token(str(responce.header.token))
+        if responce.msg.oid == 'serverHello':
+            self.session_refresh_token = str(responce.msg.refreshToken)
         return responce
 
     @nottest
@@ -50,6 +56,7 @@ class BiomioTest:
     def set_session_token(self, token):
         if self._builder:
             self._builder.set_header(token=token)
+            self.current_session_token = token
         else:
             raise 'Run BiomioTest.setup_test() first to prepare for communication with server'
 
@@ -79,6 +86,8 @@ class BiomioTest:
         """Default setup for test methods."""
         self._builder = BiomioMessageBuilder(oid='clientHeader', seq=0, protoVer='1.0', id='id', osId='os id', appId='app Id')
         self.last_server_message = None
+        self.session_refresh_token = None
+        self.current_session_token = None
 
     @nottest
     def teardown_test(self):
@@ -89,6 +98,8 @@ class BiomioTest:
         self._ws = None
         self._builder = None
         self.last_server_message = None
+        self.session_refresh_token = None
+        self.current_session_token = None
 
     @nottest
     def setup_test_with_hello(self):
@@ -435,6 +446,44 @@ class TestReadyState(BiomioTest):
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
         ok_(hasattr(response, 'status'), msg='Response does not contains status message')
         eq_(response.header.seq, int(message.header.seq) + 1, msg='Bye responce has invalid sequence number')
+
+    @attr('slow')
+    def test_session_refresh(self):
+        message_timeout = settings.connection_timeout / 2
+        message_count = (settings.session_ttl / message_timeout) - 1
+
+        expired = False
+        for i in range(message_count):
+            # Need to send nop messages to continue connection ttl,
+            # but messages will be sent with the same session token, so
+            # after a while session will be expired
+            message = self.create_next_message(oid='nop')
+            time.sleep(message_timeout)
+            try:
+                self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
+            except Exception, e:
+                expired = True
+                break
+
+        message = self.create_next_message(oid='nop')
+        message.header.token = self.session_refresh_token
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
+        print self.session_refresh_token
+
+        for i in range(message_count):
+            # Need to send nop messages to continue connection ttl,
+            # but messages will be sent with the same session token, so
+            # after a while session will be expired
+            message = self.create_next_message(oid='nop')
+            time.sleep(message_timeout)
+            try:
+                self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
+            except Exception, e:
+                expired = True
+                break
+
+        ok_(not expired, msg='Session expired instead of refresh')
+
 
 def main():
     pass

@@ -109,8 +109,6 @@ class SessionManager:
             data = {}
         else:
             data = ast.literal_eval(data)
-        # print 'data: ', data
-        # raise tornado.gen.Return(data.get(key, None))
         callback(data.get(key, None))
 
     @tornado.gen.engine
@@ -130,12 +128,7 @@ class SessionManager:
     def remove_session_data(self, token):
         self.redis.delete(key=self._redis_session_name(session_token=token))
 
-    def create_session(self, close_callback=None):
-        # print self.sessions
-        session = Session()
-        session.close_callback = close_callback
-        logger.debug('Created session %s', session.refresh_token)
-
+    def _enqueue_session(self, session):
         ts = self.ts()
         ts += settings.session_ttl
         ts = self.adjust(ts)
@@ -146,6 +139,20 @@ class SessionManager:
         self._sessions.append(ts, session)
         self._sessions_by_token[session.session_token] = session
         self._sessions_by_token[session.refresh_token] = session
+
+    def _dequeue_session(self, session):
+        self._sessions.remove(item=session)
+        del self._sessions_by_token[session.session_token]
+        del self._sessions_by_token[session.refresh_token]
+
+
+    def create_session(self, close_callback=None):
+        # print self.sessions
+        session = Session()
+        session.close_callback = close_callback
+        logger.debug('Created session %s', session.refresh_token)
+
+        self._enqueue_session(session)
 
         # print strftime('%H:%M:%S', gmtime(time()))
         # print strftime('%H:%M:%S', gmtime(ts))
@@ -165,9 +172,16 @@ class SessionManager:
         refresh_token = session.refresh_token
         self.store_session_data(refresh_token=refresh_token, state=current_state)
 
+    def refresh_session(self, session, **kwargs):
+        logger.debug('Refreshing session %s...' % session.refresh_token)
+        self._dequeue_session(session)
+        session.refresh()
+        logger.debug('New session token: %s' % session.session_token)
+        self._enqueue_session(session)
+
     def close_session(self, session):
         logger.debug('Closing session %s' % session.refresh_token)
-        self._sessions.remove(session)
+        self._dequeue_session(session)
         if not self._sessions:
             tornado.ioloop.IOLoop.instance().remove_timeout(timeout=self._timeout_handle)
 

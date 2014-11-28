@@ -171,8 +171,7 @@ class BiomioProtocol:
         logger.debug(' --------- ')  # helpful to separate output when auto tests is running
 
     @tornado.gen.engine
-    def process_next(self, msg_string, callback=None):
-
+    def process_next(self, msg_string, **kwargs):
         self._stop_connection_timer_callback()
 
         input_msg = None
@@ -186,6 +185,9 @@ class BiomioProtocol:
 
             if not self._session and hasattr(input_msg.header, 'token') and input_msg.header.token:
                 yield tornado.gen.Task(self.restore_state, str(input_msg.header.token))
+
+            if self._session and hasattr(input_msg.header, 'token') and self._session.refresh_token == input_msg.header.token:
+                self._refresh_session()
 
             if not self._state_machine_instance.current == STATE_DISCONNECTED:
                 self._process_message(input_msg)
@@ -244,6 +246,10 @@ class BiomioProtocol:
 
     def get_current_session(self):
         return self._session
+
+    def _refresh_session(self, **kwargs):
+        SessionManager.instance().refresh_session(self._session)
+        self._builder.set_header(token=self._session.session_token)
 
     def is_sequence_valid(self, seq):
         curr_seq = self._builder.get_header_field_value(field_str='seq')

@@ -22,3 +22,6 @@ class Session:
     @staticmethod
     def generate_token():
         return sha1(urandom(128)).hexdigest()
+
+    def refresh(self):
+        self.session_token = Session.generate_token()
