@@ -186,30 +186,33 @@ class BiomioProtocol:
 
             if not self._session and hasattr(input_msg.header, 'token') and input_msg.header.token:
                 yield tornado.gen.Task(self.restore_state, str(input_msg.header.token))
+
+            if not self._state_machine_instance.current == STATE_DISCONNECTED:
+                self._process_message(input_msg)
+        else:
+            self._state_machine_instance.bye(protocol_instance=self, status_message='Invalid message sent')
+
+    @tornado.gen.engine
+    def _process_message(self, input_msg, **kwargs):
+        try:
+            make_transition = getattr(self._state_machine_instance, '%s' % input_msg.msg.oid, None)
+            if make_transition:
                 if self._state_machine_instance.current == STATE_DISCONNECTED:
                     return
 
-            try:
-                make_transition = getattr(self._state_machine_instance, '%s' % input_msg.msg.oid, None)
-                if make_transition:
-                    if self._state_machine_instance.current == STATE_DISCONNECTED:
-                        return
+                make_transition(request=input_msg, protocol_instance=self)
 
-                    make_transition(request=input_msg, protocol_instance=self)
-
-                    if not (self._state_machine_instance.current == STATE_DISCONNECTED):
-                        self._start_connection_timer_callback()
-                else:
-                    self._state_machine_instance.bye(request=input_msg, protocol_instance=self, status='Could not process message: %s' % input_msg.msg.oid)
-            except FysomError, e:
-                logger.exception('State event for method not defined')
-                self._state_machine_instance.bye(request=input_msg, protocol_instance=self, status=str(e))
-            except AttributeError:
-                status_message = 'Internal error during processing next message'
-                logger.exception(status_message)
-                self._state_machine_instance.bye(request=input_msg, protocol_instance=self, status=status_message)
-        else:
-            self._state_machine_instance.bye(protocol_instance=self, status_message='Invalid message sent')
+                if not (self._state_machine_instance.current == STATE_DISCONNECTED):
+                    self._start_connection_timer_callback()
+            else:
+                self._state_machine_instance.bye(request=input_msg, protocol_instance=self, status='Could not process message: %s' % input_msg.msg.oid)
+        except FysomError, e:
+            logger.exception('State event for method not defined')
+            self._state_machine_instance.bye(request=input_msg, protocol_instance=self, status=str(e))
+        except AttributeError:
+            status_message = 'Internal error during processing next message'
+            logger.exception(status_message)
+            self._state_machine_instance.bye(request=input_msg, protocol_instance=self, status=status_message)
 
     def create_next_message(self, request_seq=None, status=None, **kwargs):
         if request_seq:
@@ -277,10 +280,7 @@ class BiomioProtocol:
                 logger.debug('State : %s' % state)
                 # logger.debug('State restored: %s' % state)
                 self._state_machine_instance.current = state
-
-
-
-        #     else:
-        #         self._state_machine_instance.bye(protocol_instance=self, status_message='Internal error: Could not restore protpcol state after last disconnection')
-        # else:
-        #     self._state_machine_instance.bye(protocol_instance=self, status_message='Invalid token')
+            else:
+                self._state_machine_instance.bye(protocol_instance=self, status='Internal error: Could not restore protpcol state after last disconnection')
+        else:
+            self._state_machine_instance.bye(protocol_instance=self, status='Invalid token')

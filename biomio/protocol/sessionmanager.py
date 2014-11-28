@@ -79,6 +79,7 @@ class SessionManager:
         self._sessions_by_token = WeakValueDictionary()
         self._timeout_handle = None
         self.interval = 1  # seconds
+        #TODO: maybe better to use connection pool, and separate connections per operation
         self.redis = tornadoredis.Client(host=settings.redis_host, port=settings.redis_port)
 
     @classmethod

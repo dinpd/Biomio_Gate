@@ -256,7 +256,6 @@ class TestConnectedState(BiomioTest):
         ok_(not str(first_response.msg.refreshToken) == str(second_response.msg.refreshToken), msg='Refresh token string sould be unique for every connection')
 
     @attr('slow')
-    # @raises(WebSocketTimeoutException)
     def test_session_restore(self):
         self.setup_with_session_restore()
         token = str(self.last_server_message.header.token)
@@ -273,6 +272,19 @@ class TestConnectedState(BiomioTest):
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
         ok_(hasattr(response, 'status'), msg='Response does not contains status string')
 
+
+    def test_session_restore_error_with_invalid_token(self):
+        self.setup_with_session_restore()
+
+        self.teardown_test()
+        self.setup_test()
+
+        invalid_token = 'invalid_token_123'
+        self.set_session_token(invalid_token)
+        message = self.create_next_message(oid='nop')
+        responce = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=True)
+        eq_(responce.msg.oid, 'bye', msg='Response does not contains bye message')
+        ok_(hasattr(responce, 'status'), msg='Response does not contains status string')
 
 class TestHandshakeState(BiomioTest):
     def setup(self):
