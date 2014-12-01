@@ -26,8 +26,7 @@ class BiomioTest:
     @nottest
     def new_connection(self, socket_timeout=5):
         socket = WebSocket(sslopt=ssl_options)
-        # socket = create_connection("ws://127.0.0.1:8080/websocket")
-        socket.connect("wss://gb.vakoms.com:8080/websocket")
+        socket.connect("wss://{host}:{port}/websocket".format(host=settings.host, port=settings.port))
         socket.settimeout(socket_timeout)
         return socket
 
@@ -476,7 +475,6 @@ class TestReadyState(BiomioTest):
         message = self.create_next_message(oid='nop')
         message.header.token = self.session_refresh_token
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
-        print self.session_refresh_token
 
         for i in range(message_count):
             # Need to send nop messages to continue connection ttl,
