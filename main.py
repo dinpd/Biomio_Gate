@@ -9,10 +9,13 @@ import tornado.gen
 from biomio.protocol.engine import BiomioProtocol
 from biomio.protocol.settings import settings
 
-from websocket import WebSocketConnectionClosedException
-
 import logging
 logger = logging.getLogger(__name__)
+
+ssl_options = {
+        "certfile": "server.crt",
+        "keyfile": "server.key"
+}
 
 class WebSocketHandler(tornado.websocket.WebSocketHandler):
     connections = {}
@@ -78,7 +81,7 @@ class Application(tornado.web.Application):
 
 def run_tornado():
     app = Application()
-    server = tornado.httpserver.HTTPServer(app)
+    server = tornado.httpserver.HTTPServer(app, ssl_options=ssl_options)
     logger.info('Running tornado server...')
     server.listen(settings.port)
     tornado.ioloop.IOLoop.instance().start()

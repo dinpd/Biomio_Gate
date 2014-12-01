@@ -1,13 +1,17 @@
 #!/usr/bin/env python
 from django.http import response
 
-from websocket import create_connection, WebSocketTimeoutException, WebSocketConnectionClosedException
+from websocket import WebSocketTimeoutException, WebSocket
 from biomio.protocol.message import BiomioMessageBuilder
 from biomio.protocol.settings import settings
 from nose.tools import ok_, eq_, nottest, raises
 from nose.plugins.attrib import attr
 import time
 import logging
+
+ssl_options = {
+        "ca_certs": "server.pem"
+}
 
 class BiomioTest:
     def __init__(self):
@@ -19,7 +23,9 @@ class BiomioTest:
 
     @nottest
     def new_connection(self, socket_timeout=5):
-        socket = create_connection("ws://127.0.0.1:8080/websocket")
+        socket = WebSocket(sslopt=ssl_options)
+        # socket = create_connection("wss://127.0.0.1:8080/websocket")
+        socket.connect("wss://127.0.0.1:8080/websocket")
         socket.settimeout(socket_timeout)
         return socket
 
