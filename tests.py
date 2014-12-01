@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 from django.http import response
 
-from websocket import WebSocketTimeoutException, WebSocket
+from ssl import SSLError
+from websocket import create_connection, WebSocketTimeoutException, WebSocket
 from biomio.protocol.message import BiomioMessageBuilder
 from biomio.protocol.settings import settings
 from nose.tools import ok_, eq_, nottest, raises
@@ -12,6 +13,7 @@ import logging
 ssl_options = {
         "ca_certs": "server.pem"
 }
+
 
 class BiomioTest:
     def __init__(self):
@@ -24,8 +26,8 @@ class BiomioTest:
     @nottest
     def new_connection(self, socket_timeout=5):
         socket = WebSocket(sslopt=ssl_options)
-        # socket = create_connection("wss://127.0.0.1:8080/websocket")
-        socket.connect("wss://127.0.0.1:8080/websocket")
+        # socket = create_connection("ws://127.0.0.1:8080/websocket")
+        socket.connect("wss://gb.vakoms.com:8080/websocket")
         socket.settimeout(socket_timeout)
         return socket
 
@@ -316,7 +318,7 @@ class TestHandshakeState(BiomioTest):
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
 
     @attr('slow')
-    @raises(WebSocketTimeoutException)
+    @raises(WebSocketTimeoutException, SSLError)
     def test_ack_message_responce(self):
         message = self.create_next_message(oid='ack')
         # Send message and wait for responce,
@@ -367,7 +369,7 @@ class TestHandshakeState(BiomioTest):
         self.send_message(websocket=websocket, message=message, wait_for_responce=False, close_connection=False)
 
     @attr('slow')
-    @raises(WebSocketTimeoutException)
+    @raises(WebSocketTimeoutException, SSLError)
     def test_auth_message_responce(self):
         message = self.create_next_message(oid='auth', key='authkey')
         websocket = self.get_curr_connection()
@@ -390,7 +392,7 @@ class TestReadyState(BiomioTest):
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
 
     @attr('slow')
-    @raises(WebSocketTimeoutException)
+    @raises(WebSocketTimeoutException, SSLError)
     def test_nop_message_responce(self):
         message = self.create_next_message(oid='nop')
         # Send message and wait for responce,
