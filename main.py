@@ -32,12 +32,10 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         self.connections[self] = biomio_protocol
         self.start_connection_timer()
 
-    @tornado.web.asynchronous
-    @tornado.gen.engine
     def on_message(self, message_string):
         biomio_protocol = self.connections.get(self, None)
         if biomio_protocol:
-            yield tornado.gen.Task(biomio_protocol.process_next, message_string)
+            biomio_protocol.process_next(message_string)
 
     def on_close(self):
         # Remove protocol instance from connection dictionary

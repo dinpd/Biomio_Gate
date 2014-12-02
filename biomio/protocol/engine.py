@@ -170,8 +170,7 @@ class BiomioProtocol:
         self._state_machine_instance.onchangestate = BiomioProtocol.print_state_change
         logger.debug(' --------- ')  # helpful to separate output when auto tests is running
 
-    @tornado.gen.engine
-    def process_next(self, msg_string, **kwargs):
+    def process_next(self, msg_string):
         self._stop_connection_timer_callback()
 
         input_msg = None
@@ -184,7 +183,7 @@ class BiomioProtocol:
             logger.debug('RECEIVED: "%s" ' % msg_string)
 
             if not self._session and hasattr(input_msg.header, 'token') and input_msg.header.token:
-                yield tornado.gen.Task(self.restore_state, str(input_msg.header.token))
+                self.restore_state(str(input_msg.header.token))
 
             if self._session and hasattr(input_msg.header, 'token') and self._session.refresh_token == input_msg.header.token:
                 self._refresh_session()
@@ -194,8 +193,7 @@ class BiomioProtocol:
         else:
             self._state_machine_instance.bye(protocol_instance=self, status_message='Invalid message sent')
 
-    @tornado.gen.engine
-    def _process_message(self, input_msg, **kwargs):
+    def _process_message(self, input_msg):
         try:
             make_transition = getattr(self._state_machine_instance, '%s' % input_msg.msg.oid, None)
             if make_transition:
@@ -247,7 +245,7 @@ class BiomioProtocol:
     def get_current_session(self):
         return self._session
 
-    def _refresh_session(self, **kwargs):
+    def _refresh_session(self):
         SessionManager.instance().refresh_session(self._session)
         self._builder.set_header(token=self._session.session_token)
 
@@ -273,15 +271,14 @@ class BiomioProtocol:
             SessionManager.instance().set_protocol_state(token=self._session.refresh_token, current_state=self._state_machine_instance.current)
         logger.debug('Connection closed by client')
 
-    @tornado.gen.engine
-    def restore_state(self, token, **kwargs):
+    def restore_state(self, token):
         session_manager = SessionManager.instance()
         self._session = session_manager.get_session(token)
 
         if self._session:
             logger.debug('Continue session %s...' % token)
             self._builder.set_header(token=self._session.session_token)
-            state = yield tornado.gen.Task(session_manager.get_protocol_state, self._session.refresh_token)
+            state = session_manager.get_protocol_state(token=self._session.refresh_token)
             if state:
                 logger.debug('State : %s' % state)
                 # logger.debug('State restored: %s' % state)

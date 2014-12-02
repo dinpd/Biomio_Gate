@@ -1,75 +1,16 @@
 
 from time import time, strftime, gmtime
 import tornado.ioloop
-import tornado.gen
-
-from collections import OrderedDict
+from weakref import WeakValueDictionary
 
 from biomio.protocol.session import Session
 from biomio.protocol.settings import settings
-
-from weakref import WeakValueDictionary
-
-import tornadoredis
-import ast
+from biomio.protocol.redisstore import RedisStore
+from biomio.utils.timeoutqueue import TimeoutQueue
 
 import logging
 logger = logging.getLogger(__name__)
 
-class TimeoutQueue:
-    def __init__(self):
-        self.queue = OrderedDict()
-
-    def __nonzero__(self):
-        return bool(self.queue)
-
-    def create_timeout(self, ts):
-        self.queue[ts] = []
-
-    def has_ts(self, ts):
-        return ts in self.queue
-
-    def append(self, ts, item):
-        self.queue[ts].append(item)
-
-    def has_expired(self, ts):
-        (timestamp, item_list) = self.queue.itervalues().next()
-        return timestamp < ts
-
-    def take_expired(self, ts):
-        expired = []
-        expired_ts = []
-        for (t, item_list) in self.queue.iteritems():
-            if t <= ts:
-                expired.extend(item_list)
-                expired_ts.append(t)
-            else:
-                break
-
-        for t in expired_ts:
-            del self.queue[t]
-
-        return expired
-
-    def remove(self, item):
-        ts_to_remove = None
-        for (t, item_list) in self.queue.iteritems():
-            if item in item_list:
-                item_list.remove(item)
-                if not item_list:
-                    ts_to_remove = t
-                break
-        if ts_to_remove:
-            del self.queue[ts_to_remove]
-
-    def iteritems(self):
-        return self.queue.iteritems()
-
-    def __str__(self):
-        s = ''
-        for (t, item_list) in self.queue.iteritems():
-            s += '%s  %s\n' % (str(t), str(item_list))
-        return s
 
 class SessionManager:
     _instance = None
@@ -79,8 +20,7 @@ class SessionManager:
         self._sessions_by_token = WeakValueDictionary()
         self._timeout_handle = None
         self.interval = 1  # seconds
-        #TODO: maybe better to use connection pool, and separate connections per operation
-        self.redis = tornadoredis.Client(host=settings.redis_host, port=settings.redis_port)
+        self._redis_session_store = RedisStore.instance()
 
     @classmethod
     def instance(cls):
@@ -88,9 +28,6 @@ class SessionManager:
             cls._instance = SessionManager()
 
         return cls._instance
-
-    def _redis_session_name(self, session_token):
-        return 'token:%s' % session_token
 
     @classmethod
     def ts(cls):
@@ -101,32 +38,6 @@ class SessionManager:
 
     def run_timer(self):
         self._timeout_handle = tornado.ioloop.IOLoop.instance().call_later(callback=self.on_check_expired_sessions, delay=self.interval)
-
-    @tornado.gen.engine
-    def get_session_data(self, refresh_token, key, callback=None):
-        data = yield tornado.gen.Task(self.redis.get, self._redis_session_name(session_token=refresh_token))
-        if not data:
-            data = {}
-        else:
-            data = ast.literal_eval(data)
-        callback(data.get(key, None))
-
-    @tornado.gen.engine
-    def store_session_data(self, refresh_token, **kwargs):
-        current_data = yield tornado.gen.Task(self.redis.get, self._redis_session_name(session_token=refresh_token))
-
-        if not current_data:
-            current_data = {}
-        else:
-            current_data = ast.literal_eval(current_data)
-
-        for (k, v) in kwargs.iteritems():
-            current_data[k] = v
-
-        yield tornado.gen.Task(self.redis.set, self._redis_session_name(session_token=refresh_token), current_data)
-
-    def remove_session_data(self, token):
-        self.redis.delete(key=self._redis_session_name(session_token=token))
 
     def _enqueue_session(self, session):
         ts = self.ts()
@@ -145,14 +56,13 @@ class SessionManager:
         del self._sessions_by_token[session.session_token]
         del self._sessions_by_token[session.refresh_token]
 
-
     def create_session(self, close_callback=None):
-        # print self.sessions
         session = Session()
         session.close_callback = close_callback
-        logger.debug('Created session %s', session.refresh_token)
 
+        self._redis_session_store.store_session_data(refresh_token=session.refresh_token)
         self._enqueue_session(session)
+        logger.debug('Created session %s', session.refresh_token)
 
         # print strftime('%H:%M:%S', gmtime(time()))
         # print strftime('%H:%M:%S', gmtime(ts))
@@ -164,15 +74,15 @@ class SessionManager:
     def get_session(self, token):
         return self._sessions_by_token.get(token, None)
 
-    def get_protocol_state(self, token, callback=None):
-        self.get_session_data(refresh_token=token, key='state', callback=callback)
+    def get_protocol_state(self, token):
+        self._redis_session_store.get_session_data(refresh_token=token, key='state')
 
     def set_protocol_state(self, token, current_state):
         session = self._sessions_by_token.get(token, None)
         refresh_token = session.refresh_token
-        self.store_session_data(refresh_token=refresh_token, state=current_state)
+        self._redis_session_store.store_session_data(refresh_token=refresh_token, state=current_state)
 
-    def refresh_session(self, session, **kwargs):
+    def refresh_session(self, session):
         logger.debug('Refreshing session %s...' % session.refresh_token)
         self._dequeue_session(session)
         session.refresh()

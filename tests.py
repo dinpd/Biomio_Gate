@@ -25,7 +25,9 @@ class BiomioTest:
 
     @nottest
     def new_connection(self, socket_timeout=5):
+        # socket = WebSocket()
         socket = WebSocket(sslopt=ssl_options)
+        # socket.connect("ws://gb.vakoms.com:{port}/websocket".format(port=settings.port))
         socket.connect("wss://{host}:{port}/websocket".format(host=settings.host, port=settings.port))
         socket.settimeout(socket_timeout)
         return socket
