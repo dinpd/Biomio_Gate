@@ -31,7 +31,7 @@ class RedisStore:
             data = ast.literal_eval(data)
         return data.get(key, None)
 
-    def store_session_data(self, refresh_token, **kwargs):
+    def store_session_data(self, refresh_token, ttl=None, **kwargs):
         current_data = self._redis.get(self._redis_session_name(refresh_token=refresh_token))
 
         if not current_data:
@@ -42,7 +42,7 @@ class RedisStore:
         for (k, v) in kwargs.iteritems():
             current_data[k] = v
 
-        self._redis.set(name=self._redis_session_name(refresh_token=refresh_token), value=current_data)
+        self._redis.set(name=self._redis_session_name(refresh_token=refresh_token), value=current_data, ex=ttl)
 
     def remove_session_data(self, token):
         self._redis.delete(self._redis_session_name(refresh_token=token))

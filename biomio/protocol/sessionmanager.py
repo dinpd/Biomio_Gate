@@ -59,7 +59,6 @@ class SessionManager:
         session = Session()
         session.close_callback = close_callback
 
-        self._redis_session_store.store_session_data(refresh_token=session.refresh_token)
         self._enqueue_session(session)
         logger.debug('Created session %s', session.refresh_token)
 
@@ -77,6 +76,7 @@ class SessionManager:
             session = Session()
             session.refresh_token = token
             self._enqueue_session(session=session)
+            self._redis_session_store.refresh_session()
 
         return session
 
@@ -86,7 +86,7 @@ class SessionManager:
     def set_protocol_state(self, token, current_state):
         session = self._sessions_by_token.get(token, None)
         refresh_token = session.refresh_token
-        self._redis_session_store.store_session_data(refresh_token=refresh_token, state=current_state)
+        self._redis_session_store.store_session_data(refresh_token=refresh_token, state=current_state, ttl=settings.session_ttl)
 
     def refresh_session(self, session):
         logger.debug('Refreshing session %s...' % session.refresh_token)
@@ -107,5 +107,4 @@ class SessionManager:
         for session in expires_sessions:
             logger.debug(msg='Session expired - closing: %s' % session.refresh_token)
             session.close()
-            self._redis_session_store.remove_session_data(session.refresh_token)
         self.run_timer()
