@@ -24,8 +24,8 @@ BIOMIO_protocol_json_schema = {
                 {"$ref": "#/definitions/probe"},
                 {"$ref": "#/definitions/verify"},
                 {"$ref": "#/definitions/identify"},
-                {"$ref": "#/definitions/getData"},
-                {"$ref": "#/definitions/setData"},
+                {"$ref": "#/definitions/rpcReq"},
+                {"$ref": "#/definitions/rpcResp"},
                 {"$ref": "#/definitions/serverHello"},
                 {"$ref": "#/definitions/try"},
                 {"$ref": "#/definitions/data"}
@@ -205,23 +205,10 @@ BIOMIO_protocol_json_schema = {
             "oid": { "enum": ["identify"] }
             }
         },
-        "getData": {
+        "rpcData": {
             "type": "object",
-            "required": ["oid", "keys"],
+            "required": ["keys", "values"],
             "properties": {
-            "oid": { "enum": ["getData"] },
-                "keys": {
-                    "type": "array",
-                    "items": {"type": "string"}
-                },
-                "onBehalfOf": {"type": "string"}
-            }
-        },
-        "setData": {
-            "type": "object",
-            "required": ["oid", "keys", "values"],
-            "properties": {
-            "oid": { "enum": ["setData"] },
                 "keys": {
                     "type": "array",
                     "items": {"type": "string"}
@@ -230,6 +217,26 @@ BIOMIO_protocol_json_schema = {
                     "type": "array",
                     "items": {"type": "string"}
                 }
+            }
+        },
+        "rpcReq": {
+            "type": "object",
+            "required": ["oid", "namespace", "func"],
+            "properties": {
+                "oid": { "enum": ["rpcReq"] },
+                "namespace": {"type": "string"},
+                "func": {"type": "string"},
+                "data": {"$ref": "#/definitions/rpcData"}
+            }
+        },
+        "rpcResp": {
+            "type": "object",
+            "required": ["oid", "namespace", "func", "data"],
+            "properties": {
+                "oid": { "enum": ["rpcResp"] },
+                "namespace": {"type": "string"},
+                "func": {"type": "string"},
+                "data": {"$ref": "#/definitions/rpcData"}
             }
         },
         "rect": {
