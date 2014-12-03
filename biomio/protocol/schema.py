@@ -221,21 +221,21 @@ BIOMIO_protocol_json_schema = {
         },
         "rpcReq": {
             "type": "object",
-            "required": ["oid", "namespace", "func"],
+            "required": ["oid", "namespace", "call"],
             "properties": {
                 "oid": { "enum": ["rpcReq"] },
                 "namespace": {"type": "string"},
-                "func": {"type": "string"},
+                "call": {"type": "string"},
                 "data": {"$ref": "#/definitions/rpcData"}
             }
         },
         "rpcResp": {
             "type": "object",
-            "required": ["oid", "namespace", "func", "data"],
+            "required": ["oid", "namespace", "call", "data"],
             "properties": {
                 "oid": { "enum": ["rpcResp"] },
                 "namespace": {"type": "string"},
-                "func": {"type": "string"},
+                "call": {"type": "string"},
                 "data": {"$ref": "#/definitions/rpcData"}
             }
         },
