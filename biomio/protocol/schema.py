@@ -26,6 +26,10 @@ BIOMIO_protocol_json_schema = {
                 {"$ref": "#/definitions/identify"},
                 {"$ref": "#/definitions/rpcReq"},
                 {"$ref": "#/definitions/rpcResp"},
+                {"$ref": "#/definitions/rpcEnumNsReq"},
+                {"$ref": "#/definitions/rpcEnumNsResp"},
+                {"$ref": "#/definitions/rpcEnumCallsReq"},
+                {"$ref": "#/definitions/rpcEnumCallsResp"},
                 {"$ref": "#/definitions/serverHello"},
                 {"$ref": "#/definitions/try"},
                 {"$ref": "#/definitions/data"}
@@ -216,6 +220,50 @@ BIOMIO_protocol_json_schema = {
                 "values": {
                     "type": "array",
                     "items": {"type": "string"}
+                }
+            }
+        },
+        "rpcEnumNsReq": {
+            "type": "object",
+            "required": ["oid"],
+            "properties": {
+                "oid": { "enum": ["rpcEnumNsReq"] }
+            }
+        },
+        "rpcEnumNsResp": {
+            "type": "object",
+            "required": ["oid", "namespaces"],
+            "properties": {
+                "oid": { "enum": ["rpcEnumNsResp"] },
+                "namespaces": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                }
+            }
+        },
+        "rpcEnumCallsReq": {
+            "type": "object",
+            "required": ["oid", "ns"],
+            "properties": {
+                "oid": { "enum": ["rpcEnumNsReq"] },
+                "ns": {"type": "string"}
+            }
+        },
+        "rpcEnumCallsResp": {
+            "type": "object",
+            "required": ["oid", "calls"],
+            "properties": {
+                "oid": { "enum": ["rpcEnumCallsResp"] },
+                "calls": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                },
+                "params": {
+                    "type": "array",
+                    "items": {
+                        "type": "array",
+                        "items": {"type": "string"}
+                    }
                 }
             }
         },
