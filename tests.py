@@ -278,20 +278,25 @@ class TestConnectedState(BiomioTest):
     @attr('slow')
     def test_session_restore(self):
         self.setup_with_session_restore()
-        token = str(self.last_server_message.header.token)
+        token = str(self.session_refresh_token)
 
         self.teardown_test()
         self.setup_test()
 
         self.set_session_token(token)
         message = self.create_next_message(oid='nop')
-        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
+        responce = None
+        try:
+            responce = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=True)
+        except (WebSocketTimeoutException, SSLError):
+            pass
+        ok_(not responce, msg='Unexpected responce on nop message')
+
         time.sleep(settings.connection_timeout / 2)
         message = self.create_next_message(oid='bye')
         response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
         ok_(hasattr(response, 'status'), msg='Response does not contains status string')
-
 
     def test_session_restore_error_with_invalid_token(self):
         self.setup_with_session_restore()

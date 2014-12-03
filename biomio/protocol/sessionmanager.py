@@ -48,13 +48,12 @@ class SessionManager:
             self._sessions.create_timeout(ts)
 
         self._sessions.append(ts, session)
-        self._sessions_by_token[session.session_token] = session
         self._sessions_by_token[session.refresh_token] = session
 
     def _dequeue_session(self, session):
         self._sessions.remove(item=session)
-        del self._sessions_by_token[session.session_token]
-        del self._sessions_by_token[session.refresh_token]
+        if session.session_token in self._sessions_by_token:
+            del self._sessions_by_token[session.refresh_token]
 
     def create_session(self, close_callback=None):
         session = Session()
@@ -71,11 +70,18 @@ class SessionManager:
 
         return session
 
-    def get_session(self, token):
-        return self._sessions_by_token.get(token, None)
+    def restore_session(self, token):
+        session = self._sessions_by_token.get(token, None)
+
+        if not session and self._redis_session_store.has_session(refresh_token=token):
+            session = Session()
+            session.refresh_token = token
+            self._enqueue_session(session=session)
+
+        return session
 
     def get_protocol_state(self, token):
-        self._redis_session_store.get_session_data(refresh_token=token, key='state')
+        return self._redis_session_store.get_session_data(refresh_token=token, key='state')
 
     def set_protocol_state(self, token, current_state):
         session = self._sessions_by_token.get(token, None)
@@ -92,7 +98,7 @@ class SessionManager:
     def close_session(self, session):
         logger.debug('Closing session %s' % session.refresh_token)
         self._dequeue_session(session)
-        if not self._sessions:
+        if not self._sessions and self._timeout_handle:
             tornado.ioloop.IOLoop.instance().remove_timeout(timeout=self._timeout_handle)
 
     def on_check_expired_sessions(self):
@@ -101,5 +107,5 @@ class SessionManager:
         for session in expires_sessions:
             logger.debug(msg='Session expired - closing: %s' % session.refresh_token)
             session.close()
-
+            self._redis_session_store.remove_session_data(session.refresh_token)
         self.run_timer()

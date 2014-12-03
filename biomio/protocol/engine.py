@@ -273,7 +273,7 @@ class BiomioProtocol:
 
     def restore_state(self, token):
         session_manager = SessionManager.instance()
-        self._session = session_manager.get_session(token)
+        self._session = session_manager.restore_session(token)
 
         if self._session:
             logger.debug('Continue session %s...' % token)
