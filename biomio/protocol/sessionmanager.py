@@ -75,10 +75,12 @@ class SessionManager:
         session = Session()
         session.close_callback = close_callback
 
+        should_run_timer = not bool(self._sessions)
         self._enqueue_session(session)
         logger.debug('Created session %s', session.refresh_token)
 
-        self.run_timer()
+        if should_run_timer:
+            self.run_timer()
 
         return session
 
