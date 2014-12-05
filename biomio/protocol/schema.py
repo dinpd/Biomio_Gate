@@ -260,10 +260,12 @@ BIOMIO_protocol_json_schema = {
                 },
                 "params": {
                     "type": "array",
-                    "items": {
-                        "type": "array",
-                        "items": {"type": "string"}
-                    }
+                    "items": {"type": "string"}
+                    # fixed to make fysom works
+                    # {
+                    #     "type": "array",
+                    #     "items": {"type": "string"}
+                    # }
                 }
             }
         },
