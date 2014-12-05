@@ -290,7 +290,6 @@ class TestConnectedState(BiomioTest):
             responce = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=True)
         except (WebSocketTimeoutException, SSLError):
             pass
-        ok_(not responce, msg='Unexpected responce on nop message')
 
         time.sleep(settings.connection_timeout / 2)
         message = self.create_next_message(oid='bye')
@@ -397,14 +396,15 @@ class TestReadyState(BiomioTest):
         message = self.create_next_message(oid='nop')
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
 
-    @attr('slow')
-    @raises(WebSocketTimeoutException, SSLError)
+    # @attr('slow')
+    # @raises(WebSocketTimeoutException, SSLError)
     def test_nop_message_responce(self):
         message = self.create_next_message(oid='nop')
         # Send message and wait for responce,
         # server should not respond and close connection,
         # so WebsocketTimeoutException will be raised
-        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=True)
+        responce = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=True)
+        eq_(responce.msg.oid, 'nop', msg='Response does not contains nop message')
 
     def test_bye_message(self):
         # Send bye message
@@ -448,11 +448,11 @@ class TestReadyState(BiomioTest):
         # Handshake done (setup method)
         # Send few nop's in a row
         message = self.create_next_message(oid='nop')
-        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=True)
         message = self.create_next_message(oid='nop')
-        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=True)
         message = self.create_next_message(oid='nop')
-        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=True)
 
         # Send 'bye' and check sequence number
         message = self.create_next_message(oid='bye')

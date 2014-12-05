@@ -72,6 +72,11 @@ class MessageHandler:
     @verify_header
     def on_nop_message(e):
         if e.src == STATE_READY:
+            message = e.protocol_instance.create_next_message(
+                request_seq=e.request.header.seq,
+                oid='nop'
+            )
+            e.protocol_instance.send_message(responce=message)
             return STATE_READY
 
         return STATE_DISCONNECTED
