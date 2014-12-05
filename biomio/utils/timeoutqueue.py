@@ -23,17 +23,12 @@ class TimeoutQueue:
 
     def take_expired(self, ts):
         expired = []
-        expired_ts = []
-        for (t, item_list) in self.queue.iteritems():
+        for t in self.queue.keys():
             if t <= ts:
-                expired.extend(item_list)
-                expired_ts.append(t)
+                expired.extend(self.queue[t])
+                del self.queue[t]
             else:
                 break
-
-        for t in expired_ts:
-            del self.queue[t]
-
         return expired
 
     def remove(self, item):
@@ -51,7 +46,7 @@ class TimeoutQueue:
         return self.queue.iteritems()
 
     def __str__(self):
-        s = ''
-        for (t, item_list) in self.queue.iteritems():
-            s += '%s  %s\n' % (str(t), str(item_list))
+        s = "\n"
+        for item in self.queue.iteritems():
+            s.join('%s %s' % item)
         return s
