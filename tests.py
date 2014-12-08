@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-from django.http import response
 
 from ssl import SSLError
 from websocket import create_connection, WebSocketTimeoutException, WebSocket
@@ -35,31 +34,31 @@ class BiomioTest:
     @nottest
     def read_message(self, websocket):
         result = websocket.recv()
-        responce = BiomioMessageBuilder.create_message_from_json(result)
-        self.last_server_message = responce
-        if not responce.header.token == self.current_session_token:
-            self.set_session_token(str(responce.header.token))
-        if responce.msg.oid == 'serverHello':
-            self.session_refresh_token = str(responce.msg.refreshToken)
-        return responce
+        response = BiomioMessageBuilder.create_message_from_json(result)
+        self.last_server_message = response
+        if not response.header.token == self.current_session_token:
+            self.set_session_token(str(response.header.token))
+        if response.msg.oid == 'serverHello':
+            self.session_refresh_token = str(response.msg.refreshToken)
+        return response
 
     @nottest
-    def send_message(self, message, websocket=None, close_connection=True, wait_for_responce=True):
+    def send_message(self, message, websocket=None, close_connection=True, wait_for_response=True):
 
         if websocket is None:
             websocket = self.new_connection()
 
         websocket.send(message.serialize())
 
-        responce = None
-        if wait_for_responce:
-            responce = self.read_message(websocket=websocket)
-            self.last_server_message = responce
+        response = None
+        if wait_for_response:
+            response = self.read_message(websocket=websocket)
+            self.last_server_message = response
 
         if close_connection:
             websocket.close()
 
-        return responce
+        return response
 
     @nottest
     def set_session_token(self, token):
@@ -126,7 +125,7 @@ class BiomioTest:
         response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
         eq_(response.msg.oid, 'serverHello', msg='Response does not contains helloServer message')
         eq_(response.header.seq, int(message.header.seq) + 1,
-            'Responce sequence number is invalid (expected: %d, got: %d)' % (int(message.header.seq) + 1, response.header.seq))
+            'Response sequence number is invalid (expected: %d, got: %d)' % (int(message.header.seq) + 1, response.header.seq))
 
     @nottest
     def setup_test_with_handshake(self, secret=None):
@@ -135,7 +134,7 @@ class BiomioTest:
 
         # Send ack message
         message = self.create_next_message(oid='ack')
-        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=False)
 
     @nottest
     def setup_with_session_restore(self, secret=None):
@@ -162,7 +161,7 @@ class TestTimeouts(BiomioTest):
         websocket = self.new_connection(socket_timeout=60)
         response = self.read_message(websocket=websocket)
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
-        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+        ok_(hasattr(response, 'status') and response.status, msg='Response does not contains status string')
 
     @attr('slow')
     def test_connection_timer_restart(self):
@@ -176,7 +175,7 @@ class TestTimeouts(BiomioTest):
             connection = self.get_curr_connection()
             ok_(connection.connected, msg='Socket is not in connected state')
             message = self.create_next_message(oid='nop')
-            self.send_message(websocket=connection, message=message, close_connection=False, wait_for_responce=False)
+            self.send_message(websocket=connection, message=message, close_connection=False, wait_for_response=False)
 
         # Finish test, send bye message
         message = self.create_next_message(oid='bye')
@@ -208,7 +207,7 @@ class TestTimeouts(BiomioTest):
             message = self.create_next_message(oid='nop')
             time.sleep(message_timeout)
             try:
-                self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
+                self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=False)
             except Exception, e:
                 expired = True
                 break
@@ -233,7 +232,7 @@ class TestConnectedState(BiomioTest):
         websocket.send(invalid_message_str)
         response = self.read_message(websocket=websocket)
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
-        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+        ok_(hasattr(response, 'status') and response.status, msg='Response does not contains status string')
 
     def test_invalid_json(self):
         websocket = self.new_connection()
@@ -241,14 +240,14 @@ class TestConnectedState(BiomioTest):
         websocket.send(invalid_json_str)
         response = self.read_message(websocket=websocket)
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
-        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+        ok_(hasattr(response, 'status') and response.status, msg='Response does not contains status string')
 
     def test_invalid_sequence(self):
         message = self.create_next_message(oid='clientHello')
         message.header.seq = 1
         response = self.send_message(websocket=self.get_curr_connection(), message=message)
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
-        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+        ok_(hasattr(response, 'status') and response.status, msg='Response does not contains status string')
         pass
 
     def test_invalid_protocol_ver(self):
@@ -256,13 +255,13 @@ class TestConnectedState(BiomioTest):
         message.header.protoVer = '2.0'
         response = self.send_message(websocket=self.get_curr_connection(), message=message)
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
-        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+        ok_(hasattr(response, 'status') and response.status, msg='Response does not contains status string')
 
     def test_nop_message_sent(self):
         message = self.create_next_message(oid='nop')
         response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
-        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+        ok_(hasattr(response, 'status') and response.status, msg='Response does not contains status string')
 
     def test_token_generation(self):
         message = self.create_next_message(oid='clientHello')
@@ -292,9 +291,9 @@ class TestConnectedState(BiomioTest):
 
         self.set_session_token(token)
         message = self.create_next_message(oid='nop')
-        responce = None
+        response = None
         try:
-            responce = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=True)
+            response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=True)
         except (WebSocketTimeoutException, SSLError):
             pass
 
@@ -302,7 +301,6 @@ class TestConnectedState(BiomioTest):
         message = self.create_next_message(oid='bye')
         response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
-        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
 
     def test_session_restore_error_with_invalid_token(self):
         self.setup_with_session_restore()
@@ -313,9 +311,9 @@ class TestConnectedState(BiomioTest):
         invalid_token = 'invalid_token_123'
         self.set_session_token(invalid_token)
         message = self.create_next_message(oid='nop')
-        responce = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=True)
-        eq_(responce.msg.oid, 'bye', msg='Response does not contains bye message')
-        ok_(hasattr(responce, 'status'), msg='Response does not contains status string')
+        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=True)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
+        ok_(hasattr(response, 'status') and response.status, msg='Response does not contains status string')
 
 class TestHandshakeState(BiomioTest):
     def setup(self):
@@ -327,16 +325,16 @@ class TestHandshakeState(BiomioTest):
     def test_ack_message(self):
         # Send ack message
         message = self.create_next_message(oid='ack')
-        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=False)
 
     @attr('slow')
     @raises(WebSocketTimeoutException, SSLError)
-    def test_ack_message_responce(self):
+    def test_ack_message_response(self):
         message = self.create_next_message(oid='ack')
-        # Send message and wait for responce,
+        # Send message and wait for response,
         # server should not respond and close connection,
         # so WebsocketTimeoutException will be raised
-        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=True)
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=True)
 
     def test_invalid_message(self):
         websocket = self.get_curr_connection()
@@ -344,7 +342,7 @@ class TestHandshakeState(BiomioTest):
         websocket.send(invalid_message_str)
         response = self.read_message(websocket=websocket)
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
-        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+        ok_(hasattr(response, 'status') and response.status, msg='Response does not contains status string')
 
     def test_invalid_json(self):
         websocket = self.get_curr_connection()
@@ -352,14 +350,14 @@ class TestHandshakeState(BiomioTest):
         websocket.send(invalid_json_str)
         response = self.read_message(websocket=websocket)
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
-        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+        ok_(hasattr(response, 'status') and response.status, msg='Response does not contains status string')
 
     def test_invalid_sequence(self):
         message = self.create_next_message(oid='ack')
         message.header.seq = 1
         response = self.send_message(websocket=self.get_curr_connection(), message=message)
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
-        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+        ok_(hasattr(response, 'status') and response.status, msg='Response does not contains status string')
         pass
 
     def test_invalid_protocol_ver(self):
@@ -367,25 +365,25 @@ class TestHandshakeState(BiomioTest):
         message.header.protoVer = '2.0'
         response = self.send_message(websocket=self.get_curr_connection(), message=message)
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
-        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+        ok_(hasattr(response, 'status') and response.status, msg='Response does not contains status string')
 
     def test_any_other_message_received(self):
         message = self.create_next_message(oid='nop')
         response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
-        ok_(hasattr(response, 'status'), msg='Response does not contains status message')
+        ok_(hasattr(response, 'status') and response.status, msg='Response does not contains status message')
 
     def test_auth_message(self):
         message = self.create_next_message(oid='auth', key='authkey')
         websocket = self.get_curr_connection()
-        self.send_message(websocket=websocket, message=message, wait_for_responce=False, close_connection=False)
+        self.send_message(websocket=websocket, message=message, wait_for_response=False, close_connection=False)
 
     @attr('slow')
     @raises(WebSocketTimeoutException, SSLError)
-    def test_auth_message_responce(self):
+    def test_auth_message_response(self):
         message = self.create_next_message(oid='auth', key='authkey')
         websocket = self.get_curr_connection()
-        # Send message and wait for responce,
+        # Send message and wait for response,
         # server should not respond and close connection,
         # so WebsocketTimeoutException will be raised
         self.send_message(websocket=websocket, message=message, close_connection=False)
@@ -401,24 +399,21 @@ class TestReadyState(BiomioTest):
     def test_nop_message(self):
         # Send nop message
         message = self.create_next_message(oid='nop')
-        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=False)
 
-    # @attr('slow')
-    # @raises(WebSocketTimeoutException, SSLError)
-    def test_nop_message_responce(self):
+    def test_nop_message_response(self):
         message = self.create_next_message(oid='nop')
-        # Send message and wait for responce,
+        # Send message and wait for response,
         # server should not respond and close connection,
         # so WebsocketTimeoutException will be raised
-        responce = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=True)
-        eq_(responce.msg.oid, 'nop', msg='Response does not contains nop message')
+        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=True)
+        eq_(response.msg.oid, 'nop', msg='Response does not contains nop message')
 
     def test_bye_message(self):
         # Send bye message
         message = self.create_next_message(oid='bye')
         response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
-        ok_(hasattr(response, 'status'), msg='Response does not contains status message')
 
     def test_invalid_sequence(self):
         message = self.create_next_message(oid='nop')
@@ -426,7 +421,7 @@ class TestReadyState(BiomioTest):
         socket = self.get_curr_connection()
         response = self.send_message(websocket=socket, message=message, close_connection=False)
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
-        ok_(hasattr(response, 'status'), msg='Response does not contains status message')
+        ok_(hasattr(response, 'status') and response.status, msg='Response does not contains status message')
 
     def test_invalid_message(self):
         websocket = self.get_curr_connection()
@@ -434,7 +429,7 @@ class TestReadyState(BiomioTest):
         websocket.send(invalid_message_str)
         response = self.read_message(websocket=websocket)
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
-        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+        ok_(hasattr(response, 'status') and response.status, msg='Response does not contains status string')
 
     def test_invalid_json(self):
         websocket = self.get_curr_connection()
@@ -442,36 +437,37 @@ class TestReadyState(BiomioTest):
         websocket.send(invalid_json_str)
         response = self.read_message(websocket=websocket)
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
-        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+        ok_(hasattr(response, 'status') and response.status, msg='Response does not contains status string')
 
     def test_invalid_protocol_ver(self):
         message = self.create_next_message(oid='nop')
         message.header.protoVer = '2.0'
         response = self.send_message(websocket=self.get_curr_connection(), message=message)
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
-        ok_(hasattr(response, 'status'), msg='Response does not contains status string')
+        ok_(hasattr(response, 'status') and response.status, msg='Response does not contains status string')
 
     def test_message_sequence_with_bye(self):
         # Handshake done (setup method)
         # Send few nop's in a row
         message = self.create_next_message(oid='nop')
-        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=True)
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=True)
         message = self.create_next_message(oid='nop')
-        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=True)
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=True)
         message = self.create_next_message(oid='nop')
-        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=True)
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=True)
 
         # Send 'bye' and check sequence number
         message = self.create_next_message(oid='bye')
         response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
-        ok_(hasattr(response, 'status'), msg='Response does not contains status message')
-        eq_(response.header.seq, int(message.header.seq) + 1, msg='Bye responce has invalid sequence number')
+        eq_(response.header.seq, int(message.header.seq) + 1, msg='Bye response has invalid sequence number')
 
     @attr('slow')
     def test_session_refresh(self):
         message_timeout = settings.connection_timeout / 2
         message_count = (settings.session_ttl / message_timeout) - 1
+
+        old_session_token = self.current_session_token
 
         expired = False
         for i in range(message_count):
@@ -481,14 +477,14 @@ class TestReadyState(BiomioTest):
             message = self.create_next_message(oid='nop')
             time.sleep(message_timeout)
             try:
-                self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
+                self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=False)
             except Exception, e:
                 expired = True
                 break
 
         message = self.create_next_message(oid='nop')
         message.header.token = self.session_refresh_token
-        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=False)
 
         for i in range(message_count):
             # Need to send nop messages to continue connection ttl,
@@ -497,13 +493,13 @@ class TestReadyState(BiomioTest):
             message = self.create_next_message(oid='nop')
             time.sleep(message_timeout)
             try:
-                self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
+                self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=False)
             except Exception, e:
                 expired = True
                 break
 
         ok_(not expired, msg='Session expired instead of refresh')
-
+        ok_(not old_session_token == self.current_session_token, msg='New session token not generated (old one present).')
 
 def main():
     pass

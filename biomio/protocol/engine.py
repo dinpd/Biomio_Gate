@@ -239,7 +239,7 @@ class BiomioProtocol:
             if not self._state_machine_instance.current == STATE_DISCONNECTED:
                 self._process_message(input_msg)
         else:
-            self._state_machine_instance.bye(protocol_instance=self, status_message='Invalid message sent')
+            self._state_machine_instance.bye(protocol_instance=self, status='Invalid message sent (message string:%s)' % msg_string)
 
     def _process_message(self, input_msg):
         """ Processes next message, performs state machine transitions.
