@@ -14,5 +14,4 @@ class Crypto:
         key = RSA.generate(1024, random_generator)
         priv_key = key.exportKey()
         pub_key = key.publickey().exportKey()
-        print priv_key, pub_key
         return priv_key, pub_key

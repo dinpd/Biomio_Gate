@@ -3,6 +3,7 @@ from biomio.protocol.message import BiomioMessageBuilder
 from biomio.third_party.fysom import Fysom, FysomError
 from biomio.protocol.sessionmanager import SessionManager, Session
 from biomio.protocol.settings import settings
+from biomio.protocol.crypt import Crypto
 
 from jsonschema import ValidationError
 from functools import wraps
@@ -94,11 +95,19 @@ class MessageHandler:
 def handshake(e):
     # Send serverHello responce after entering handshake state
     session = e.protocol_instance.get_current_session()
+
+    key = None
+    if hasattr(e.request.msg.secret, "token")\
+            or e.request.msg.secret:
+        # TODO: store public key in redis
+        key, pub_key = Crypto.generate_keypair()
+
     message = e.protocol_instance.create_next_message(
         request_seq=e.request.header.seq,
         oid='serverHello',
         refreshToken=session.refresh_token,
-        ttl=settings.session_ttl
+        ttl=settings.session_ttl,
+        key=key
     )
     e.protocol_instance.send_message(responce=message)
 
