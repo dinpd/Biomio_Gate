@@ -36,7 +36,7 @@ class BiomioTest:
         result = websocket.recv()
         response = BiomioMessageBuilder.create_message_from_json(result)
         self.last_server_message = response
-        if not response.header.token == self.current_session_token:
+        if not str(response.header.token) == self.current_session_token:
             self.set_session_token(str(response.header.token))
         if response.msg.oid == 'serverHello':
             self.session_refresh_token = str(response.msg.refreshToken)
@@ -477,14 +477,15 @@ class TestReadyState(BiomioTest):
             message = self.create_next_message(oid='nop')
             time.sleep(message_timeout)
             try:
-                self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=False)
+                self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
             except Exception, e:
                 expired = True
                 break
 
         message = self.create_next_message(oid='nop')
         message.header.token = self.session_refresh_token
-        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=False)
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
+
 
         for i in range(message_count):
             # Need to send nop messages to continue connection ttl,
@@ -493,7 +494,7 @@ class TestReadyState(BiomioTest):
             message = self.create_next_message(oid='nop')
             time.sleep(message_timeout)
             try:
-                self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=False)
+                self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
             except Exception, e:
                 expired = True
                 break
