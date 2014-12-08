@@ -101,14 +101,21 @@ def handshake(e):
             or e.request.msg.secret:
         # TODO: store public key in redis
         key, pub_key = Crypto.generate_keypair()
+        message = e.protocol_instance.create_next_message(
+            request_seq=e.request.header.seq,
+            oid='serverHello',
+            refreshToken=session.refresh_token,
+            ttl=settings.session_ttl,
+            key=key
+        )
+    else:
+        message = e.protocol_instance.create_next_message(
+            request_seq=e.request.header.seq,
+            oid='serverHello',
+            refreshToken=session.refresh_token,
+            ttl=settings.session_ttl
+        )
 
-    message = e.protocol_instance.create_next_message(
-        request_seq=e.request.header.seq,
-        oid='serverHello',
-        refreshToken=session.refresh_token,
-        ttl=settings.session_ttl,
-        key=key
-    )
     e.protocol_instance.send_message(responce=message)
 
 

@@ -111,35 +111,42 @@ class BiomioTest:
         self.current_session_token = None
 
     @nottest
-    def setup_test_with_hello(self):
+    def setup_test_with_hello(self, secret=None):
         self.setup_test()
 
         # Send hello message
-        message = self.create_next_message(oid='clientHello', secret='secret')
+        params = {
+            'oid': 'clientHello'
+        }
+
+        if secret:
+            params['secret'] = secret
+
+        message = self.create_next_message(**params)
         response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
         eq_(response.msg.oid, 'serverHello', msg='Response does not contains helloServer message')
         eq_(response.header.seq, int(message.header.seq) + 1,
             'Responce sequence number is invalid (expected: %d, got: %d)' % (int(message.header.seq) + 1, response.header.seq))
 
     @nottest
-    def setup_test_with_handshake(self):
+    def setup_test_with_handshake(self, secret=None):
         """Setup method for tests to perform handshake"""
-        self.setup_test_with_hello()
+        self.setup_test_with_hello(secret=secret)
 
         # Send ack message
         message = self.create_next_message(oid='ack')
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_responce=False)
 
     @nottest
-    def setup_with_session_restore(self):
+    def setup_with_session_restore(self, secret=None):
         """Performs handshake and closes connection without 'bye',
         so we could restore connection further"""
         # Perform handshake
-        self.setup_test_with_handshake()
+        self.setup_test_with_handshake(secret=secret)
 
         # Close websocket on client side,
         # without sending bye message,
-        # so we could restore session futher
+        # so we could restore session further
         websocket = self.get_curr_connection()
         websocket.close()
 
@@ -177,7 +184,7 @@ class TestTimeouts(BiomioTest):
 
     def test_session_ttl_not_zero(self):
         self.setup_test()
-        message = self.create_next_message(oid='clientHello', secret='secret')
+        message = self.create_next_message(oid='clientHello')
         response = self.send_message(message=message)
         ok_(not response.msg.ttl == 0, msg='Session TTL == 0')
 
@@ -216,7 +223,7 @@ class TestConnectedState(BiomioTest):
         self.teardown_test()
 
     def test_hello_server(self):
-        message = self.create_next_message(oid='clientHello', secret='secret')
+        message = self.create_next_message(oid='clientHello')
         response = self.send_message(message=message)
         eq_(response.msg.oid, 'serverHello', msg='Response does not contains serverHello message')
 
@@ -237,7 +244,7 @@ class TestConnectedState(BiomioTest):
         ok_(hasattr(response, 'status'), msg='Response does not contains status string')
 
     def test_invalid_sequence(self):
-        message = self.create_next_message(oid='clientHello', secret='secret')
+        message = self.create_next_message(oid='clientHello')
         message.header.seq = 1
         response = self.send_message(websocket=self.get_curr_connection(), message=message)
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
@@ -245,7 +252,7 @@ class TestConnectedState(BiomioTest):
         pass
 
     def test_invalid_protocol_ver(self):
-        message = self.create_next_message(oid='clientHello', secret='secret')
+        message = self.create_next_message(oid='clientHello')
         message.header.protoVer = '2.0'
         response = self.send_message(websocket=self.get_curr_connection(), message=message)
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
@@ -258,7 +265,7 @@ class TestConnectedState(BiomioTest):
         ok_(hasattr(response, 'status'), msg='Response does not contains status string')
 
     def test_token_generation(self):
-        message = self.create_next_message(oid='clientHello', secret='secret')
+        message = self.create_next_message(oid='clientHello')
         first_response = self.send_message(message=message, close_connection=True, websocket=self.new_connection())
         ok_(first_response.header.token, msg='Server returns empty token string')
 
@@ -267,7 +274,7 @@ class TestConnectedState(BiomioTest):
         ok_(not str(first_response.header.token) == str(second_response.header.token), msg='Token string sould be unique for every connection')
 
     def test_refresh_token_generation(self):
-        message = self.create_next_message(oid='clientHello', secret='secret')
+        message = self.create_next_message(oid='clientHello')
         first_response = self.send_message(message=message, close_connection=True, websocket=self.new_connection())
         ok_(first_response.msg.refreshToken, msg='Server returns empty refresh token string')
 

@@ -128,7 +128,7 @@ BIOMIO_protocol_json_schema = {
         },
         "clientHello": {
             "type": "object",
-            "required": ["oid", "secret"],
+            "required": ["oid"],
             "properties": {
                 "oid": { "enum": ["clientHello"] },
                 "secret": {"type": "string"}
