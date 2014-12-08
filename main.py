@@ -23,6 +23,9 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
     connections = {}
     timeouts = {}
 
+    def check_origin(self, origin):
+        return True
+
     def open(self):
         self.biomio_protocol = BiomioProtocol(
             close_callback=self.close,
