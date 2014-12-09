@@ -4,12 +4,15 @@ from biomio.third_party.fysom import Fysom, FysomError
 from biomio.protocol.sessionmanager import SessionManager, Session
 from biomio.protocol.settings import settings
 from biomio.protocol.crypt import Crypto
+from biomio.protocol.redisstore import RedisStore
 
 from jsonschema import ValidationError
 from functools import wraps
 
 import logging
 logger = logging.getLogger(__name__)
+
+PROTOCOL_VERSION = '1.0'
 
 # States
 STATE_CONNECTED = 'connected'
@@ -101,6 +104,11 @@ def handshake(e):
             or e.request.msg.secret:
         # TODO: store public key in redis
         key, pub_key = Crypto.generate_keypair()
+        RedisStore.instance().store_app_data(
+            account_id=e.request.header.id,
+            application_id=e.request.header.appId,
+            public_key=pub_key
+            )
         message = e.protocol_instance.create_next_message(
             request_seq=e.request.header.seq,
             oid='serverHello',
@@ -203,7 +211,7 @@ class BiomioProtocol:
         self._check_connected_callback = kwargs['check_connected_callback']
 
         self._session = None
-        self._builder = BiomioMessageBuilder(oid='serverHeader', seq=1, protoVer='0.1')
+        self._builder = BiomioMessageBuilder(oid='serverHeader', seq=1, protoVer=PROTOCOL_VERSION)
 
         # Initialize state machine
         self._state_machine_instance = Fysom(biomio_states)
@@ -332,7 +340,7 @@ class BiomioProtocol:
 
     def is_protocol_version_valid(self, version):
         """Checks protocol version. Return true if it is current version; false otherwise"""
-        return version == '1.0'
+        return version == PROTOCOL_VERSION
 
     def on_session_closed(self):
         """ Should be called, when session expired.

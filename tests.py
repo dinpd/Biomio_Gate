@@ -26,7 +26,7 @@ class BiomioTest:
     def new_connection(self, socket_timeout=5):
         # socket = WebSocket()
         socket = WebSocket(sslopt=ssl_options)
-        # socket.connect("ws://gb.vakoms.com:{port}/websocket".format(port=settings.port))
+        # socket.connect("wss://gb.vakoms.com:{port}/websocket".format(port=settings.port))
         socket.connect("wss://{host}:{port}/websocket".format(host=settings.host, port=settings.port))
         socket.settimeout(socket_timeout)
         return socket
@@ -220,6 +220,12 @@ class TestConnectedState(BiomioTest):
 
     def teardown(self):
         self.teardown_test()
+
+    def test_registration(self):
+        message = self.create_next_message(oid='clientHello', secret='secret')
+        response = self.send_message(message=message)
+        eq_(response.msg.oid, 'serverHello', msg='Response does not contains serverHello message')
+        ok_(hasattr(response.msg, 'key') and response.msg.key, msg="Responce does not contains generated private key.")
 
     def test_hello_server(self):
         message = self.create_next_message(oid='clientHello')
