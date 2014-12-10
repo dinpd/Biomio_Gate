@@ -19,6 +19,9 @@ class Crypto:
 
     @staticmethod
     def check_digest(key, digest, data):
-        hash = SHA256.new(data).digest()
-        public_key = RSA.importKey(externKey=key)
-        return public_key.verify(hash, digest)
+        try:
+            h = SHA256.new(data).digest()
+            public_key = RSA.importKey(externKey=key)
+            return public_key.verify(h, digest)
+        except:
+            return False

@@ -36,9 +36,9 @@ class BiomioTest:
         result = websocket.recv()
         response = BiomioMessageBuilder.create_message_from_json(result)
         self.last_server_message = response
-        if not str(response.header.token) == self.current_session_token:
+        if response and not str(response.header.token) == self.current_session_token:
             self.set_session_token(str(response.header.token))
-        if response.msg.oid == 'serverHello':
+        if response and response.msg.oid == 'serverHello':
             self.session_refresh_token = str(response.msg.refreshToken)
         return response
 
@@ -132,8 +132,12 @@ class BiomioTest:
         """Setup method for tests to perform handshake"""
         self.setup_test_with_hello(secret=secret)
 
-        # Send ack message
-        message = self.create_next_message(oid='ack')
+        if secret:
+            # Send ack message during registration
+            message = self.create_next_message(oid='ack')
+        else:
+            message = self.create_next_message(oid='auth', key='key')
+
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=False)
 
     @nottest
@@ -214,7 +218,7 @@ class TestTimeouts(BiomioTest):
 
         ok_(expired, msg='Session does not expired')
 
-class TestConnectedState(BiomioTest):
+class TestRegistration(BiomioTest):
     def setup(self):
         self.setup_test()
 
@@ -226,6 +230,32 @@ class TestConnectedState(BiomioTest):
         response = self.send_message(message=message)
         eq_(response.msg.oid, 'serverHello', msg='Response does not contains serverHello message')
         ok_(hasattr(response.msg, 'key') and response.msg.key, msg="Responce does not contains generated private key.")
+
+    def test_ack_message(self):
+        # Send ack message
+        message = self.create_next_message(oid='clientHello', secret='secret')
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
+        message = self.create_next_message(oid='ack')
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=False)
+
+    @attr('slow')
+    @raises(WebSocketTimeoutException, SSLError)
+    def test_ack_message_response(self):
+        message = self.create_next_message(oid='clientHello', secret='secret')
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
+        message = self.create_next_message(oid='ack')
+        # Send message and wait for response,
+        # server should not respond and close connection,
+        # so WebsocketTimeoutException will be raised
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=True)
+
+
+class TestConnectedState(BiomioTest):
+    def setup(self):
+        self.setup_test()
+
+    def teardown(self):
+        self.teardown_test()
 
     def test_hello_server(self):
         message = self.create_next_message(oid='clientHello')
@@ -327,20 +357,6 @@ class TestHandshakeState(BiomioTest):
 
     def teardown(self):
         self.teardown_test()
-
-    def test_ack_message(self):
-        # Send ack message
-        message = self.create_next_message(oid='ack')
-        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=False)
-
-    @attr('slow')
-    @raises(WebSocketTimeoutException, SSLError)
-    def test_ack_message_response(self):
-        message = self.create_next_message(oid='ack')
-        # Send message and wait for response,
-        # server should not respond and close connection,
-        # so WebsocketTimeoutException will be raised
-        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=True)
 
     def test_invalid_message(self):
         websocket = self.get_curr_connection()

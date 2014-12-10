@@ -17,6 +17,8 @@ PROTOCOL_VERSION = '1.0'
 # States
 STATE_CONNECTED = 'connected'
 STATE_HANDSHAKE = 'handshake'
+STATE_REGISTRATION = 'registration'
+STATE_APP_REGISTERED = 'appregistered'
 STATE_READY = 'ready'
 STATE_DISCONNECTED = 'disconnected'
 
@@ -57,20 +59,28 @@ class MessageHandler:
     @staticmethod
     @verify_header
     def on_client_hello_message(e):
+        # "hello" should be received in connected state
+        # and message does not contain refresh token
         if e.src == STATE_CONNECTED:
-            # "hello" received in connected state
-            # and message does not contain refresh token
             if not hasattr(e.request.header, "token")\
                     or not e.request.header.token:
+
+                # Create new session
+                #TODO: move to some state handling callback
                 e.protocol_instance.start_new_session()
-                return STATE_HANDSHAKE
+
+                if hasattr(e.request.msg, "secret")\
+                        and e.request.msg.secret:
+                    return STATE_REGISTRATION
+                else:
+                    return STATE_HANDSHAKE
 
         return STATE_DISCONNECTED
 
     @staticmethod
     @verify_header
     def on_ack_message(e):
-        return
+        return STATE_READY
 
     @staticmethod
     @verify_header
@@ -98,42 +108,49 @@ class MessageHandler:
             key='public_key'
             )
 
-        if Crypto.check_digest(key=key, data=e.request.header.token, digest=e.request.msg.key):
-            return STATE_CONNECTED
+        if Crypto.check_digest(key=key, data=str(e.request.header.token), digest=str(e.request.msg.key)):
+            return STATE_READY
 
-        return STATE_DISCONNECTED
+        return STATE_READY#STATE_DISCONNECTED
 
+    @staticmethod
+    def on_registered(e):
+        return STATE_APP_REGISTERED
 
 def handshake(e):
     # Send serverHello responce after entering handshake state
     session = e.protocol_instance.get_current_session()
 
-    if hasattr(e.request.msg.secret, "token")\
-            or e.request.msg.secret:
-        # TODO: store public key in redis
-        key, pub_key = Crypto.generate_keypair()
-        RedisStore.instance().store_app_data(
-            account_id=e.request.header.id,
-            application_id=e.request.header.appId,
-            public_key=pub_key
-            )
-        message = e.protocol_instance.create_next_message(
-            request_seq=e.request.header.seq,
-            oid='serverHello',
-            refreshToken=session.refresh_token,
-            ttl=settings.session_ttl,
-            key=key
-        )
-    else:
-        message = e.protocol_instance.create_next_message(
-            request_seq=e.request.header.seq,
-            oid='serverHello',
-            refreshToken=session.refresh_token,
-            ttl=settings.session_ttl
-        )
+    message = e.protocol_instance.create_next_message(
+        request_seq=e.request.header.seq,
+        oid='serverHello',
+        refreshToken=session.refresh_token,
+        ttl=settings.session_ttl
+    )
 
     e.protocol_instance.send_message(responce=message)
 
+def registration(e):
+    key, pub_key = Crypto.generate_keypair()
+    RedisStore.instance().store_app_data(
+        account_id=e.request.header.id,
+        application_id=e.request.header.appId,
+        public_key=pub_key
+        )
+    e.fsm.registered(protocol_instance=e.protocol_instance, request=e.request, key=key)
+
+def app_registered(e):
+    # Send serverHello responce after entering handshake state
+    session = e.protocol_instance.get_current_session()
+
+    message = e.protocol_instance.create_next_message(
+        request_seq=e.request.header.seq,
+        oid='serverHello',
+        refreshToken=session.refresh_token,
+        ttl=settings.session_ttl,
+        key=e.key
+    )
+    e.protocol_instance.send_message(responce=message)
 
 def disconnect(e):
     # If status parameter passed to state change method
@@ -161,14 +178,20 @@ biomio_states = {
         {
             'name': 'clientHello',
             'src': STATE_CONNECTED,
-            'dst': [STATE_HANDSHAKE, STATE_DISCONNECTED],
+            'dst': [STATE_HANDSHAKE, STATE_REGISTRATION, STATE_DISCONNECTED],
             'decision': MessageHandler.on_client_hello_message
         },
         {
             'name': 'ack',
-            'src': STATE_HANDSHAKE,
+            'src': STATE_APP_REGISTERED,
             'dst': [STATE_READY, STATE_DISCONNECTED],
             'decision': MessageHandler.on_ack_message
+        },
+        {
+            'name': 'registered',
+            'src': STATE_REGISTRATION,
+            'dst': [STATE_APP_REGISTERED, STATE_DISCONNECTED],
+            'decision': MessageHandler.on_registered
         },
         {
             'name': 'nop',
@@ -192,6 +215,8 @@ biomio_states = {
     'callbacks': {
         'onhandshake': handshake,
         'ondisconnected': disconnect,
+        'onregistration': registration,
+        'onappregistered': app_registered,
         'onchangestate': print_state_change
     }
 }
