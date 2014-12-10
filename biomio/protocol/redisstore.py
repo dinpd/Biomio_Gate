@@ -7,7 +7,6 @@ class RedisStore:
     _instance = None
 
     def __init__(self):
-        print self._redis_application_name(account_id='id', application_id='app')
         self._redis = StrictRedis(host=settings.redis_host, port=settings.redis_port)
 
     @classmethod
@@ -60,6 +59,15 @@ class RedisStore:
     def store_app_data(self, account_id, application_id, **kwargs):
         key = self._redis_application_name(account_id=account_id, application_id=application_id)
         self._store_data_dict(key=key, **kwargs)
+
+    def get_app_data(self, account_id, application_id, key):
+        redis_key = self._redis_application_name(account_id=account_id, application_id=application_id)
+        data = self._redis.get(name=redis_key)
+        if not data:
+            data = {}
+        else:
+            data = ast.literal_eval(data)
+        return data.get(key, None)
 
     def remove_session_data(self, token):
         self._redis.delete(self._redis_session_name(refresh_token=token))

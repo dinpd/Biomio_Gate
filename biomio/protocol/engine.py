@@ -70,7 +70,7 @@ class MessageHandler:
     @staticmethod
     @verify_header
     def on_ack_message(e):
-        return STATE_READY
+        return
 
     @staticmethod
     @verify_header
@@ -92,14 +92,22 @@ class MessageHandler:
     @staticmethod
     @verify_header
     def on_auth_message(e):
-        return STATE_READY
+        key = RedisStore.instance().get_app_data(
+            account_id=e.request.header.id,
+            application_id=e.request.header.appId,
+            key='public_key'
+            )
+
+        if Crypto.check_digest(key=key, data=e.request.header.token, digest=e.request.msg.key):
+            return STATE_CONNECTED
+
+        return STATE_DISCONNECTED
 
 
 def handshake(e):
     # Send serverHello responce after entering handshake state
     session = e.protocol_instance.get_current_session()
 
-    key = None
     if hasattr(e.request.msg.secret, "token")\
             or e.request.msg.secret:
         # TODO: store public key in redis
