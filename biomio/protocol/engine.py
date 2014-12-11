@@ -117,6 +117,7 @@ class MessageHandler:
     def on_registered(e):
         return STATE_APP_REGISTERED
 
+
 def handshake(e):
     # Send serverHello responce after entering handshake state
     session = e.protocol_instance.get_current_session()
@@ -130,6 +131,7 @@ def handshake(e):
 
     e.protocol_instance.send_message(responce=message)
 
+
 def registration(e):
     key, pub_key = Crypto.generate_keypair()
     RedisStore.instance().store_app_data(
@@ -138,6 +140,7 @@ def registration(e):
         public_key=pub_key
         )
     e.fsm.registered(protocol_instance=e.protocol_instance, request=e.request, key=key)
+
 
 def app_registered(e):
     # Send serverHello responce after entering handshake state
@@ -151,6 +154,7 @@ def app_registered(e):
         key=e.key
     )
     e.protocol_instance.send_message(responce=message)
+
 
 def disconnect(e):
     # If status parameter passed to state change method
