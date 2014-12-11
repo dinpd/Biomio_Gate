@@ -211,12 +211,15 @@ class TestTimeouts(BiomioTest):
             message = self.create_next_message(oid='nop')
             time.sleep(message_timeout)
             try:
-                self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=False)
+                response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=True)
+                if str(response.msg.oid) == 'bye':
+                    expired = True
+                    break
             except Exception, e:
                 expired = True
                 break
 
-        ok_(expired, msg='Session does not expired')
+        ok_(expired, msg='Session does not expired %s' % self.current_session_token)
 
 class TestRegistration(BiomioTest):
     def setup(self):
