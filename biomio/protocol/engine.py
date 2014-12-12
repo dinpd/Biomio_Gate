@@ -108,10 +108,14 @@ class MessageHandler:
             key='public_key'
             )
 
-        if Crypto.check_digest(key=key, data=str(e.request.header.token), digest=str(e.request.msg.key)):
+
+        header_str = BiomioMessageBuilder.header_from_message(e.request)
+
+        if Crypto.check_digest(key=key, data=header_str, digest=str(e.request.msg.key)):
             return STATE_READY
 
-        return STATE_READY#STATE_DISCONNECTED
+        e.status = 'Handshake failed. Invalid signature.'
+        return STATE_DISCONNECTED
 
     @staticmethod
     def on_registered(e):
@@ -134,6 +138,7 @@ def handshake(e):
 
 def registration(e):
     key, pub_key = Crypto.generate_keypair()
+
     RedisStore.instance().store_app_data(
         account_id=e.request.header.id,
         application_id=e.request.header.appId,

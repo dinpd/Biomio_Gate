@@ -44,6 +44,18 @@ class BiomioMessageBuilder:
 
         return biomio_message
 
+    def header_str(self):
+        return json.dumps(self._header, ensure_ascii=False).decode('utf-8')
+
+    @staticmethod
+    def header_from_message(message):
+        json_str = message.serialize()
+        obj = json.loads(json_str)
+        header = obj.get('header', None)
+        if header:
+            return json.dumps(header, ensure_ascii=False).decode('utf-8')
+        return None
+
     def create_message(self, status=None, **kwargs):
         msg = {}
 

@@ -2,12 +2,19 @@
 
 from ssl import SSLError
 from websocket import create_connection, WebSocketTimeoutException, WebSocket
+
 from biomio.protocol.message import BiomioMessageBuilder
 from biomio.protocol.settings import settings
+from biomio.protocol.crypt import Crypto
+
 from nose.tools import ok_, eq_, nottest, raises
 from nose.plugins.attrib import attr
+
 import time
 import logging
+from hashlib import sha1
+from os import urandom
+
 
 ssl_options = {
         "ca_certs": "server.pem"
@@ -15,6 +22,9 @@ ssl_options = {
 
 
 class BiomioTest:
+    _registered_key = None
+    _registered_user_id = None
+
     def __init__(self):
         self._ws = None
         self._builder = None
@@ -110,7 +120,7 @@ class BiomioTest:
         self.current_session_token = None
 
     @nottest
-    def setup_test_with_hello(self, secret=None):
+    def setup_test_with_hello(self, secret=None, is_registration_required=True):
         self.setup_test()
 
         # Send hello message
@@ -118,7 +128,10 @@ class BiomioTest:
             'oid': 'clientHello'
         }
 
-        if secret:
+        if is_registration_required and not secret:
+            self.check_app_registered()
+            self._builder.set_header(id=BiomioTest._registered_user_id)
+        elif secret:
             params['secret'] = secret
 
         message = self.create_next_message(**params)
@@ -128,15 +141,17 @@ class BiomioTest:
             'Response sequence number is invalid (expected: %d, got: %d)' % (int(message.header.seq) + 1, response.header.seq))
 
     @nottest
-    def setup_test_with_handshake(self, secret=None):
+    def setup_test_with_handshake(self, secret=None, is_registration_required=True):
         """Setup method for tests to perform handshake"""
-        self.setup_test_with_hello(secret=secret)
+        self.setup_test_with_hello(secret=secret, is_registration_required=is_registration_required)
 
         if secret:
             # Send ack message during registration
             message = self.create_next_message(oid='ack')
         else:
-            message = self.create_next_message(oid='auth', key='key')
+            header_str = self._builder.header_str()
+            digest = Crypto.create_digest(data=header_str, key=BiomioTest._registered_key)
+            message = self.create_next_message(oid='auth', key=digest)
 
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=False)
 
@@ -152,6 +167,20 @@ class BiomioTest:
         # so we could restore session further
         websocket = self.get_curr_connection()
         websocket.close()
+
+    @nottest
+    def check_app_registered(self):
+        if not self._registered_key:
+            self._builder.set_header(id=sha1(urandom(64)).hexdigest())
+            message = self.create_next_message(oid='clientHello', secret='secret')
+            response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=True)
+            message = self.create_next_message(oid='ack')
+            self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=False)
+            BiomioTest._registered_key = str(response.msg.key)
+            BiomioTest._registered_user_id = str(message.header.id)
+
+            self.teardown_test()
+            self.setup_test()
 
 class TestTimeouts(BiomioTest):
     def setup(self):

@@ -74,7 +74,6 @@ class SessionManager:
         """
         session = Session()
         session.close_callback = close_callback
-        print self._sessions
 
         should_run_timer = not bool(self._sessions)
         self._enqueue_session(session)
