@@ -1,8 +1,9 @@
 
 from Crypto.PublicKey import RSA
 from Crypto import Random
-from Crypto.Hash import SHA256
-from binascii import b2a_hex, a2b_hex
+from Crypto.Hash import SHA
+from Crypto.Signature import PKCS1_v1_5
+from binascii import hexlify, unhexlify
 
 class Crypto:
 
@@ -20,17 +21,18 @@ class Crypto:
 
     @staticmethod
     def create_digest(key, data):
-        h = SHA256.new(data).digest()
+        h = SHA.new(data)
         private_key = RSA.importKey(externKey=key)
-        digest, = private_key.sign(h, '')
-        return str(digest)
+        signer = PKCS1_v1_5.new(private_key)
+        return hexlify(signer.sign(h))
 
     @staticmethod
     def check_digest(key, digest, data):
         try:
-            h = SHA256.new(data).digest()
+            h = SHA.new(data)
             public_key = RSA.importKey(externKey=key)
-            result = public_key.verify(h, (long(digest), None))
+            verifier = PKCS1_v1_5.new(public_key)
+            result = verifier.verify(h,unhexlify(digest))
             return result
         except:
             return False
