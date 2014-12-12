@@ -32,7 +32,7 @@ class Crypto:
             h = SHA.new(data)
             public_key = RSA.importKey(externKey=key)
             verifier = PKCS1_v1_5.new(public_key)
-            result = verifier.verify(h,unhexlify(digest))
+            result = verifier.verify(h, unhexlify(digest))
             return result
         except:
             return False

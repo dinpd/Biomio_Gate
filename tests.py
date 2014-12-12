@@ -149,8 +149,7 @@ class BiomioTest:
             # Send ack message during registration
             message = self.create_next_message(oid='ack')
         else:
-            header_str = self._builder.header_str()
-            digest = Crypto.create_digest(data=header_str, key=BiomioTest._registered_key)
+            digest = self.get_digest_for_next_message()
             message = self.create_next_message(oid='auth', key=digest)
 
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=False)
@@ -167,6 +166,12 @@ class BiomioTest:
         # so we could restore session further
         websocket = self.get_curr_connection()
         websocket.close()
+
+    @nottest
+    def get_digest_for_next_message(self):
+        header_str = self._builder.header_str()
+        return Crypto.create_digest(data=header_str, key=BiomioTest._registered_key)
+
 
     @nottest
     def check_app_registered(self):
@@ -428,19 +433,20 @@ class TestHandshakeState(BiomioTest):
         ok_(hasattr(response, 'status') and response.status, msg='Response does not contains status message')
 
     def test_auth_message(self):
-        message = self.create_next_message(oid='auth', key='authkey')
+        message = self.create_next_message(oid='auth', key=self.get_digest_for_next_message())
         websocket = self.get_curr_connection()
         self.send_message(websocket=websocket, message=message, wait_for_response=False, close_connection=False)
 
     @attr('slow')
     @raises(WebSocketTimeoutException, SSLError)
     def test_auth_message_response(self):
-        message = self.create_next_message(oid='auth', key='authkey')
+        message = self.create_next_message(oid='auth', key=self.get_digest_for_next_message())
         websocket = self.get_curr_connection()
         # Send message and wait for response,
         # server should not respond and close connection,
         # so WebsocketTimeoutException will be raised
-        self.send_message(websocket=websocket, message=message, close_connection=False)
+        response = self.send_message(websocket=websocket, message=message, close_connection=False, wait_for_response=True)
+        print response
 
 
 class TestReadyState(BiomioTest):
