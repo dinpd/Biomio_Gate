@@ -50,8 +50,7 @@ class BiomioMessageBuilder:
     @staticmethod
     def header_from_message(message):
         json_str = '{'
-        json_str += '"oid":"{oid}","seq":{seq},"protoVer":"{protoVer}","id":"{id}","appId":"{appId}","osId":"{osId}",\
-        "devId":"{devId}","token":"{token}"'\
+        json_str += '"oid":"{oid}","seq":{seq},"protoVer":"{protoVer}","id":"{id}","appId":"{appId}","osId":"{osId}","devId":"{devId}","token":"{token}"'\
             .format(oid=str(message.header.oid),
                     seq=int(message.header.seq),
                     protoVer=str(message.header.protoVer),
@@ -60,6 +59,20 @@ class BiomioMessageBuilder:
                     osId=str(message.header.osId),
                     devId=str(message.header.devId),
                     token=str(message.header.token))
+        json_str += '}'
+        return json_str
+
+    def header_string(self):
+        json_str = '{'
+        json_str += '"oid":"{oid}","seq":{seq},"protoVer":"{protoVer}","id":"{id}","appId":"{appId}","osId":"{osId}","devId":"{devId}","token":"{token}"'\
+            .format(oid=str(self._header['oid']),
+                    seq=int(self._header['seq']),
+                    protoVer=str(self._header['protoVer']),
+                    id=str(self._header['id']),
+                    appId=str(self._header['appId']),
+                    osId=str(self._header['osId']),
+                    devId=str(self._header['devId']),
+                    token=str(self._header['token']))
         json_str += '}'
         return json_str
 
