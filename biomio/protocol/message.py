@@ -49,12 +49,19 @@ class BiomioMessageBuilder:
 
     @staticmethod
     def header_from_message(message):
-        json_str = message.serialize()
-        obj = json.loads(json_str)
-        header = obj.get('header', None)
-        if header:
-            return json.dumps(header, ensure_ascii=False).decode('utf-8')
-        return None
+        json_str = '{'
+        json_str += '"oid":"{oid}","seq":{seq},"protoVer":"{protoVer}","id":"{id}","appId":"{appId}","osId":"{osId}",\
+        "devId":"{devId}","token":"{token}"'\
+            .format(oid=str(message.header.oid),
+                    seq=int(message.header.seq),
+                    protoVer=str(message.header.protoVer),
+                    id=str(message.header.id),
+                    appId=str(message.header.appId),
+                    osId=str(message.header.osId),
+                    devId=str(message.header.devId),
+                    token=str(message.header.token))
+        json_str += '}'
+        return json_str
 
     def create_message(self, status=None, **kwargs):
         msg = {}
