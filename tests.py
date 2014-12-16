@@ -102,7 +102,7 @@ class BiomioTest:
     @nottest
     def setup_test(self):
         """Default setup for test methods."""
-        self._builder = BiomioMessageBuilder(oid='clientHeader', seq=0, protoVer='1.0', id='id', osId='os id', appId='app Id')
+        self._builder = BiomioMessageBuilder(oid='clientHeader', seq=0, protoVer='1.0', id='id', osId='os id', devId='devid',appId='app Id')
         self.last_server_message = None
         self.session_refresh_token = None
         self.current_session_token = None
@@ -169,9 +169,8 @@ class BiomioTest:
 
     @nottest
     def get_digest_for_next_message(self):
-        header_str = self._builder.header_str()
+        header_str = self._builder.header_string()
         return Crypto.create_digest(data=header_str, key=BiomioTest._registered_key)
-
 
     @nottest
     def check_app_registered(self):

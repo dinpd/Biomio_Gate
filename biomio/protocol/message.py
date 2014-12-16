@@ -44,9 +44,6 @@ class BiomioMessageBuilder:
 
         return biomio_message
 
-    def header_str(self):
-        return json.dumps(self._header, ensure_ascii=False).decode('utf-8')
-
     @staticmethod
     def header_from_message(message):
         json_str = '{'
