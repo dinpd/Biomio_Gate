@@ -570,7 +570,7 @@ class TestRpcCalls(BiomioTest):
         self.teardown_test()
 
     def test_rpc_call(self):
-        message = self.create_next_message(oid='rpcReq', namespace='namespace', call='test_func', data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
+        message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin', call='test_func', data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=False)
 
 def main():
