@@ -1,17 +1,17 @@
+from functools import wraps
+from itertools import izip
+import logging
+
+from jsonschema import ValidationError
 
 from biomio.protocol.message import BiomioMessageBuilder
 from biomio.third_party.fysom import Fysom, FysomError
-from biomio.protocol.sessionmanager import SessionManager, Session
+from biomio.protocol.sessionmanager import SessionManager
 from biomio.protocol.settings import settings
 from biomio.protocol.crypt import Crypto
 from biomio.protocol.redisstore import RedisStore
-from biomio.protocol.rpchandler import RpcHandler
+from biomio.protocol.rpc.rpchandler import RpcHandler
 
-from jsonschema import ValidationError
-from functools import wraps
-from itertools import izip
-
-import logging
 logger = logging.getLogger(__name__)
 
 PROTOCOL_VERSION = '1.0'
