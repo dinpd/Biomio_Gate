@@ -5,9 +5,11 @@ from biomio.protocol.sessionmanager import SessionManager, Session
 from biomio.protocol.settings import settings
 from biomio.protocol.crypt import Crypto
 from biomio.protocol.redisstore import RedisStore
+from biomio.protocol.rpchandler import RpcHandler
 
 from jsonschema import ValidationError
 from functools import wraps
+from itertools import izip
 
 import logging
 logger = logging.getLogger(__name__)
@@ -255,6 +257,8 @@ class BiomioProtocol:
         self._session = None
         self._builder = BiomioMessageBuilder(oid='serverHeader', seq=1, protoVer=PROTOCOL_VERSION)
 
+        self._rpc_handler = RpcHandler()
+
         # Initialize state machine
         self._state_machine_instance = Fysom(biomio_states)
 
@@ -286,6 +290,11 @@ class BiomioProtocol:
             if not self._session and hasattr(input_msg.header, 'token') and input_msg.header.token:
                 self._restore_state(str(input_msg.header.token))
 
+            # Try to process RPC request subset, if message is RCP request - exit after processing
+            if self.process_rpc_request(input_msg):
+                return
+
+            # Process protocol message
             if not self._state_machine_instance.current == STATE_DISCONNECTED:
                 self._process_message(input_msg)
         else:
@@ -421,3 +430,24 @@ class BiomioProtocol:
                 self._state_machine_instance.bye(protocol_instance=self, status='Internal error: Could not restore protpcol state after last disconnection')
         else:
             self._state_machine_instance.bye(protocol_instance=self, status='Invalid token')
+
+    def process_rpc_request(self, input_msg):
+        message_id = str(input_msg.msg.oid)
+
+        if message_id not in ('rpcReq', 'rpcEnumNsReq', 'rpcEnumCallsReq'):
+            return
+
+        if message_id == 'rpcReq':
+            data = {}
+            for k,v in izip(list(input_msg.msg.data.keys), list(input_msg.msg.data.values)):
+                data[str(k)] = str(v)
+
+            self._rpc_handler.process_rpc_call(
+                call=str(input_msg.msg.call),
+                namespace=str(input_msg.msg.namespace),
+                data=data
+            )
+        elif message_id == 'rpcEnumNsReq':
+            self._rpc_handler.get_available_namespaces()
+        elif message_id == 'rpcEnumCallsReq':
+            self._rpc_handler.get_available_calls(namespace=input_msg.msg.namespace)

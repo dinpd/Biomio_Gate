@@ -561,6 +561,18 @@ class TestReadyState(BiomioTest):
         ok_(not expired, msg='Session expired instead of refresh')
         ok_(not old_session_token == self.current_session_token, msg='New session token not generated (old one present).')
 
+
+class TestRpcCalls(BiomioTest):
+    def setup(self):
+        self.setup_test_with_handshake(is_registration_required=True)
+
+    def teardown(self):
+        self.teardown_test()
+
+    def test_rpc_call(self):
+        message = self.create_next_message(oid='rpcReq', namespace='namespace', call='test_func', data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=False)
+
 def main():
     pass
 
@@ -569,7 +581,6 @@ logger = logging.getLogger("python_jsonschema_objects.classbuilder")
 logger.disabled = True
 logger = logging.getLogger("python_jsonschema_objects")
 logger.disabled = True
-
 
 
 if __name__ == '__main__':
