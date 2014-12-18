@@ -387,6 +387,21 @@ class TestConnectedState(BiomioTest):
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
         ok_(hasattr(response, 'status') and response.status, msg='Response does not contains status string')
 
+    def test_inappropriate_regular_handshake(self):
+        self.setup_with_session_restore()
+
+        self.teardown_test()
+        self.setup_test()
+
+        invalid_id = sha1(urandom(64)).hexdigest()
+        self._builder.set_header(id=invalid_id)
+        message = self.create_next_message(oid='clientHello')
+        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+                                     wait_for_response=True)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
+        ok_(hasattr(response, 'status') and response.status, msg='Response does not contains status string')
+
+
 class TestHandshakeState(BiomioTest):
     def setup(self):
         self.setup_test_with_hello()

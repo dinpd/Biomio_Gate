@@ -68,11 +68,17 @@ class MessageHandler:
                 # Create new session
                 #TODO: move to some state handling callback
                 e.protocol_instance.start_new_session()
-
+                app_data = RedisStore.instance().get_app_data(
+                    account_id=e.request.header.id,
+                    application_id=e.request.header.appId,
+                    key='public_key'
+                )
+                if app_data is None:
+                    e.status = "Regular handshake is inappropriate. It is required to run registration handshake first."
                 if hasattr(e.request.msg, "secret")\
                         and e.request.msg.secret:
                     return STATE_REGISTRATION
-                else:
+                elif app_data is not None:
                     return STATE_HANDSHAKE
 
         return STATE_DISCONNECTED
@@ -106,7 +112,7 @@ class MessageHandler:
             account_id=e.request.header.id,
             application_id=e.request.header.appId,
             key='public_key'
-            )
+        )
 
 
         header_str = BiomioMessageBuilder.header_from_message(e.request)
@@ -143,7 +149,7 @@ def registration(e):
         account_id=e.request.header.id,
         application_id=e.request.header.appId,
         public_key=pub_key
-        )
+    )
     e.fsm.registered(protocol_instance=e.protocol_instance, request=e.request, key=key)
 
 
