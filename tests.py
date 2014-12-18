@@ -17,7 +17,7 @@ from os import urandom
 
 
 ssl_options = {
-        "ca_certs": "server.pem"
+    "ca_certs": "server.pem"
 }
 
 
@@ -102,7 +102,8 @@ class BiomioTest:
     @nottest
     def setup_test(self):
         """Default setup for test methods."""
-        self._builder = BiomioMessageBuilder(oid='clientHeader', seq=0, protoVer='1.0', id='id', osId='os id', devId='devid',appId='app Id')
+        self._builder = BiomioMessageBuilder(oid='clientHeader', seq=0, protoVer='1.0', id='id', osId='os id',
+                                             devId='devid', appId='app Id')
         self.last_server_message = None
         self.session_refresh_token = None
         self.current_session_token = None
@@ -138,7 +139,8 @@ class BiomioTest:
         response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
         eq_(response.msg.oid, 'serverHello', msg='Response does not contains helloServer message')
         eq_(response.header.seq, int(message.header.seq) + 1,
-            'Response sequence number is invalid (expected: %d, got: %d)' % (int(message.header.seq) + 1, response.header.seq))
+            'Response sequence number is invalid (expected: %d, got: %d)' % (
+                int(message.header.seq) + 1, response.header.seq))
 
     @nottest
     def setup_test_with_handshake(self, secret=None, is_registration_required=True):
@@ -152,7 +154,8 @@ class BiomioTest:
             digest = self.get_digest_for_next_message()
             message = self.create_next_message(oid='auth', key=digest)
 
-        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=False)
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+                          wait_for_response=False)
 
     @nottest
     def setup_with_session_restore(self, secret=None):
@@ -177,14 +180,17 @@ class BiomioTest:
         if not self._registered_key:
             self._builder.set_header(id=sha1(urandom(64)).hexdigest())
             message = self.create_next_message(oid='clientHello', secret='secret')
-            response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=True)
+            response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+                                         wait_for_response=True)
             message = self.create_next_message(oid='ack')
-            self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=False)
+            self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+                              wait_for_response=False)
             BiomioTest._registered_key = str(response.msg.key)
             BiomioTest._registered_user_id = str(message.header.id)
 
             self.teardown_test()
             self.setup_test()
+
 
 class TestTimeouts(BiomioTest):
     def setup(self):
@@ -244,7 +250,8 @@ class TestTimeouts(BiomioTest):
             message = self.create_next_message(oid='nop')
             time.sleep(message_timeout)
             try:
-                response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=True)
+                response = self.send_message(websocket=self.get_curr_connection(), message=message,
+                                             close_connection=False, wait_for_response=True)
                 if str(response.msg.oid) == 'bye':
                     expired = True
                     break
@@ -253,6 +260,7 @@ class TestTimeouts(BiomioTest):
                 break
 
         ok_(expired, msg='Session does not expired %s' % self.current_session_token)
+
 
 class TestRegistration(BiomioTest):
     def setup(self):
@@ -272,7 +280,8 @@ class TestRegistration(BiomioTest):
         message = self.create_next_message(oid='clientHello', secret='secret')
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
         message = self.create_next_message(oid='ack')
-        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=False)
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+                          wait_for_response=False)
 
     @attr('slow')
     @raises(WebSocketTimeoutException, SSLError)
@@ -283,7 +292,8 @@ class TestRegistration(BiomioTest):
         # Send message and wait for response,
         # server should not respond and close connection,
         # so WebsocketTimeoutException will be raised
-        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=True)
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+                          wait_for_response=True)
 
 
 class TestConnectedState(BiomioTest):
@@ -342,7 +352,8 @@ class TestConnectedState(BiomioTest):
 
         second_response = self.send_message(message=message, close_connection=True, websocket=self.new_connection())
         ok_(second_response.header.token, msg='Server returns empty token string')
-        ok_(not str(first_response.header.token) == str(second_response.header.token), msg='Token string sould be unique for every connection')
+        ok_(not str(first_response.header.token) == str(second_response.header.token),
+            msg='Token string sould be unique for every connection')
 
     def test_refresh_token_generation(self):
         message = self.create_next_message(oid='clientHello')
@@ -351,7 +362,8 @@ class TestConnectedState(BiomioTest):
 
         second_response = self.send_message(message=message, close_connection=True, websocket=self.new_connection())
         ok_(second_response.msg.refreshToken, msg='Server returns empty refresh token string')
-        ok_(not str(first_response.msg.refreshToken) == str(second_response.msg.refreshToken), msg='Refresh token string sould be unique for every connection')
+        ok_(not str(first_response.msg.refreshToken) == str(second_response.msg.refreshToken),
+            msg='Refresh token string sould be unique for every connection')
 
     @attr('slow')
     def test_session_restore(self):
@@ -363,9 +375,9 @@ class TestConnectedState(BiomioTest):
 
         self.set_session_token(token)
         message = self.create_next_message(oid='nop')
-        response = None
         try:
-            response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=True)
+            self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+                              wait_for_response=True)
         except (WebSocketTimeoutException, SSLError):
             pass
 
@@ -383,7 +395,8 @@ class TestConnectedState(BiomioTest):
         invalid_token = 'invalid_token_123'
         self.set_session_token(invalid_token)
         message = self.create_next_message(oid='nop')
-        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=True)
+        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+                                     wait_for_response=True)
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
         ok_(hasattr(response, 'status') and response.status, msg='Response does not contains status string')
 
@@ -459,7 +472,8 @@ class TestHandshakeState(BiomioTest):
         # Send message and wait for response,
         # server should not respond and close connection,
         # so WebsocketTimeoutException will be raised
-        response = self.send_message(websocket=websocket, message=message, close_connection=False, wait_for_response=True)
+        response = self.send_message(websocket=websocket, message=message, close_connection=False,
+                                     wait_for_response=True)
         print response
 
 
@@ -473,14 +487,16 @@ class TestReadyState(BiomioTest):
     def test_nop_message(self):
         # Send nop message
         message = self.create_next_message(oid='nop')
-        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=False)
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+                          wait_for_response=False)
 
     def test_nop_message_response(self):
         message = self.create_next_message(oid='nop')
         # Send message and wait for response,
         # server should not respond and close connection,
         # so WebsocketTimeoutException will be raised
-        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=True)
+        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+                                     wait_for_response=True)
         eq_(response.msg.oid, 'nop', msg='Response does not contains nop message')
 
     def test_bye_message(self):
@@ -524,11 +540,14 @@ class TestReadyState(BiomioTest):
         # Handshake done (setup method)
         # Send few nop's in a row
         message = self.create_next_message(oid='nop')
-        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=True)
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+                          wait_for_response=True)
         message = self.create_next_message(oid='nop')
-        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=True)
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+                          wait_for_response=True)
         message = self.create_next_message(oid='nop')
-        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=True)
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+                          wait_for_response=True)
 
         # Send 'bye' and check sequence number
         message = self.create_next_message(oid='bye')
@@ -560,7 +579,6 @@ class TestReadyState(BiomioTest):
         message.header.token = self.session_refresh_token
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
 
-
         for i in range(message_count):
             # Need to send nop messages to continue connection ttl,
             # but messages will be sent with the same session token, so
@@ -574,7 +592,9 @@ class TestReadyState(BiomioTest):
                 break
 
         ok_(not expired, msg='Session expired instead of refresh')
-        ok_(not old_session_token == self.current_session_token, msg='New session token not generated (old one present).')
+        ok_(not old_session_token == self.current_session_token,
+            msg='New session token not generated (old one present).')
+
 
 def main():
     pass
@@ -584,8 +604,6 @@ logger = logging.getLogger("python_jsonschema_objects.classbuilder")
 logger.disabled = True
 logger = logging.getLogger("python_jsonschema_objects")
 logger.disabled = True
-
-
 
 if __name__ == '__main__':
     main()
