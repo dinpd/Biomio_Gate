@@ -442,11 +442,33 @@ class BiomioProtocol:
             for k,v in izip(list(input_msg.msg.data.keys), list(input_msg.msg.data.values)):
                 data[str(k)] = str(v)
 
-            self._rpc_handler.process_rpc_call(
+            result = self._rpc_handler.process_rpc_call(
                 call=str(input_msg.msg.call),
                 namespace=str(input_msg.msg.namespace),
                 data=data
             )
+
+            res_keys = []
+            res_values = []
+
+            res_params = {
+                'oid': 'rpcResp',
+                'namespace': str(input_msg.msg.namespace),
+                'call': str(input_msg.msg.call),
+            }
+
+            if result:
+                for k, v in result.iteritems():
+                    res_keys.append(k)
+                    res_values.append(str(v))
+
+                res_params['data'] = {'keys': res_keys, 'values': res_values}
+
+            message = self.create_next_message(
+                request_seq=input_msg.header.seq,
+                **res_params
+            )
+            self.send_message(responce=message)
         elif message_id == 'rpcEnumNsReq':
             namespaces = self._rpc_handler.get_available_namespaces()
             message = self.create_next_message(request_seq=input_msg.header.seq, oid='rpcEnumNsReq', namespaces=namespaces)
