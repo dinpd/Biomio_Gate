@@ -23,18 +23,25 @@ class RpcPluginManager:
         plugin_dir = get_plugin_dir_path()
         plugin_places = (plugin_dir,)
         self._plugin_locator.setPluginPlaces(plugin_places)
-        print plugin_places
 
         self._plugin_manager = PluginManager(categories_filter={"Default": IPlugin}, plugin_locator=self._plugin_locator)
         self._plugin_manager.collectPlugins()
 
         self._plugins_by_namespace = {}
 
+        # Sort RPC objects taken from plugin by namespace
         for plugin_info in self._plugin_manager.getAllPlugins():
+            # RPC object containing methods that are actual RPC calls
             obj = plugin_info.plugin_object
+
+            # RPC namespace - name of the plugin module
             plugin_path = plugin_info.path
             namespace = plugin_info.path[(len(plugin_dir)+1):plugin_path.rfind('/')]
+
             self._plugins_by_namespace[namespace] = obj
 
     def get_rpc_object(self, namespace):
         return self._plugins_by_namespace.get(namespace, None)
+
+    def get_namespaces_list(self):
+        return self._plugins_by_namespace.keys()

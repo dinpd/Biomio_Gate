@@ -14,14 +14,17 @@ class RpcHandler:
         logger.debug('Processing RPC call %s/%s, with parameters: %s' % (namespace, call, data))
         rpc_obj = RpcPluginManager.instance().get_rpc_object(namespace=namespace)
 
+        result = None
         if hasattr(rpc_obj, call):
             rpc_call = getattr(rpc_obj, call)
             if rpc_call:
-                rpc_call(**data)
+                result = rpc_call(**data)
+
+        return result
 
 
     def get_available_calls(self, namespace):
-        pass
+        return []
 
     def get_available_namespaces(self):
-        pass
+        return RpcPluginManager.instance().get_namespaces_list()

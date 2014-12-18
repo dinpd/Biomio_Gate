@@ -448,6 +448,8 @@ class BiomioProtocol:
                 data=data
             )
         elif message_id == 'rpcEnumNsReq':
-            self._rpc_handler.get_available_namespaces()
+            namespaces = self._rpc_handler.get_available_namespaces()
+            message = self.create_next_message(request_seq=input_msg.header.seq, oid='rpcEnumNsReq', namespaces=namespaces)
+            self.send_message(responce=message)
         elif message_id == 'rpcEnumCallsReq':
             self._rpc_handler.get_available_calls(namespace=input_msg.msg.namespace)
