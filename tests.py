@@ -176,13 +176,16 @@ class BiomioTest:
         return Crypto.create_digest(data=header_str, key=BiomioTest._registered_key)
 
     @nottest
-    def check_app_registered(self):
-        if not self._registered_key:
-            self._builder.set_header(id=sha1(urandom(64)).hexdigest())
+    def check_app_registered(self, id_to_create=None):
+        if not self._registered_key or id_to_create is not None:
+            self._builder.set_header(id=sha1(urandom(64)).hexdigest() if id_to_create is None else id_to_create)
             message = self.create_next_message(oid='clientHello', secret='secret')
             response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
                                          wait_for_response=True)
             message = self.create_next_message(oid='ack')
+            self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+                              wait_for_response=False)
+            message = self.create_next_message(oid='bye')
             self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
                               wait_for_response=False)
             BiomioTest._registered_key = str(response.msg.key)
@@ -409,6 +412,23 @@ class TestConnectedState(BiomioTest):
         invalid_id = sha1(urandom(64)).hexdigest()
         self._builder.set_header(id=invalid_id)
         message = self.create_next_message(oid='clientHello')
+        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+                                     wait_for_response=True)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
+        ok_(hasattr(response, 'status') and response.status, msg='Response does not contains status string')
+
+    def test_inappropriate_registration_handshake(self):
+        self.setup_with_session_restore()
+
+        self.teardown_test()
+        self.setup_test()
+
+        id_to_create = sha1(urandom(64)).hexdigest()
+        self.check_app_registered(id_to_create)
+
+        self._builder.set_header(id=id_to_create)
+
+        message = self.create_next_message(oid='clientHello', secret='secret')
         response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
                                      wait_for_response=True)
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
