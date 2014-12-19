@@ -69,15 +69,17 @@ class MessageHandler:
                 # Create new session
                 # TODO: move to some state handling callback
                 e.protocol_instance.start_new_session()
+                app_data = RedisStore.instance().get_app_data(
+                    account_id=e.request.header.id,
+                    application_id=e.request.header.appId,
+                    key='public_key'
+                )
                 if hasattr(e.request.msg, "secret") \
                         and e.request.msg.secret:
-                    return STATE_REGISTRATION
+                    if app_data is None:
+                        return STATE_REGISTRATION
+                    e.status = "Registration handshake is inappropriate. Given app is already registered."
                 else:
-                    app_data = RedisStore.instance().get_app_data(
-                        account_id=e.request.header.id,
-                        application_id=e.request.header.appId,
-                        key='public_key'
-                    )
                     if app_data is not None:
                         return STATE_HANDSHAKE
                     e.status = "Regular handshake is inappropriate. It is required to run registration handshake first."
