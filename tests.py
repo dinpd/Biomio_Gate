@@ -194,6 +194,11 @@ class BiomioTest:
             self.teardown_test()
             self.setup_test()
 
+    @nottest
+    def setup_test_for_for_new_id(self):
+        self.setup_test()
+        self._builder.set_header(id=sha1(urandom(64)).hexdigest())
+
 
 class TestTimeouts(BiomioTest):
     def setup(self):
@@ -273,6 +278,7 @@ class TestRegistration(BiomioTest):
         self.teardown_test()
 
     def test_registration(self):
+        self.setup_test_for_for_new_id()
         message = self.create_next_message(oid='clientHello', secret='secret')
         response = self.send_message(message=message)
         eq_(response.msg.oid, 'serverHello', msg='Response does not contains serverHello message')
@@ -289,6 +295,7 @@ class TestRegistration(BiomioTest):
     @attr('slow')
     @raises(WebSocketTimeoutException, SSLError)
     def test_ack_message_response(self):
+        self.setup_test_for_for_new_id()
         message = self.create_next_message(oid='clientHello', secret='secret')
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False)
         message = self.create_next_message(oid='ack')
