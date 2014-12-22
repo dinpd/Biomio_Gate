@@ -2,8 +2,6 @@ from functools import wraps
 from itertools import izip
 import logging
 
-from jsonschema import ValidationError
-
 from biomio.protocol.message import BiomioMessageBuilder
 from biomio.third_party.fysom import Fysom, FysomError
 from biomio.protocol.sessionmanager import SessionManager
@@ -11,6 +9,11 @@ from biomio.protocol.settings import settings
 from biomio.protocol.crypt import Crypto
 from biomio.protocol.redisstore import RedisStore
 from biomio.protocol.rpc.rpchandler import RpcHandler
+
+from jsonschema import ValidationError
+from functools import wraps
+
+import logging
 
 logger = logging.getLogger(__name__)
 
@@ -49,34 +52,42 @@ def verify_header(verify_func):
     :param verify_func: Callbacks used to make decision about next protocol state.
      Should take single parameter e - state event object.
     """
+
     def _decorator(e, *args, **kwargs):
         if not _is_header_valid(e, *args, **kwargs):
             return STATE_DISCONNECTED
         return verify_func(e, *args, **kwargs)
+
     return wraps(verify_func)(_decorator)
 
 
 class MessageHandler:
-
     @staticmethod
     @verify_header
     def on_client_hello_message(e):
         # "hello" should be received in connected state
         # and message does not contain refresh token
         if e.src == STATE_CONNECTED:
-            if not hasattr(e.request.header, "token")\
+            if not hasattr(e.request.header, "token") \
                     or not e.request.header.token:
 
                 # Create new session
-                #TODO: move to some state handling callback
+                # TODO: move to some state handling callback
                 e.protocol_instance.start_new_session()
-
-                if hasattr(e.request.msg, "secret")\
+                app_data = RedisStore.instance().get_app_data(
+                    account_id=e.request.header.id,
+                    application_id=e.request.header.appId,
+                    key='public_key'
+                )
+                if hasattr(e.request.msg, "secret") \
                         and e.request.msg.secret:
-                    return STATE_REGISTRATION
+                    if app_data is None:
+                        return STATE_REGISTRATION
+                    e.status = "Registration handshake is inappropriate. Given app is already registered."
                 else:
-                    return STATE_HANDSHAKE
-
+                    if app_data is not None:
+                        return STATE_HANDSHAKE
+                    e.status = "Regular handshake is inappropriate. It is required to run registration handshake first."
         return STATE_DISCONNECTED
 
     @staticmethod
@@ -108,8 +119,7 @@ class MessageHandler:
             account_id=e.request.header.id,
             application_id=e.request.header.appId,
             key='public_key'
-            )
-
+        )
 
         header_str = BiomioMessageBuilder.header_from_message(e.request)
 
@@ -145,7 +155,7 @@ def registration(e):
         account_id=e.request.header.id,
         application_id=e.request.header.appId,
         public_key=pub_key
-        )
+    )
     e.fsm.registered(protocol_instance=e.protocol_instance, request=e.request, key=key)
 
 
@@ -182,6 +192,7 @@ def disconnect(e):
 def print_state_change(e):
     """Helper function for printing state transitions to log."""
     logger.debug('STATE_TRANSITION: event: %s, %s -> %s' % (e.event, e.src, e.dst))
+
 
 biomio_states = {
     'initial': STATE_CONNECTED,
@@ -283,7 +294,8 @@ class BiomioProtocol:
             logger.debug('RECEIVED: "%s" ' % msg_string)
 
             # Refresh session if necessary
-            if self._session and hasattr(input_msg.header, 'token') and self._session.refresh_token == input_msg.header.token:
+            if self._session and hasattr(input_msg.header,
+                                         'token') and self._session.refresh_token == input_msg.header.token:
                 self._refresh_session()
 
             # Restore session and state (if no session, and message contains token)
@@ -298,7 +310,8 @@ class BiomioProtocol:
             if not self._state_machine_instance.current == STATE_DISCONNECTED:
                 self._process_message(input_msg)
         else:
-            self._state_machine_instance.bye(protocol_instance=self, status='Invalid message sent (message string:%s)' % msg_string)
+            self._state_machine_instance.bye(protocol_instance=self,
+                                             status='Invalid message sent (message string:%s)' % msg_string)
 
     def _process_message(self, input_msg):
         """ Processes next message, performs state machine transitions.
@@ -318,7 +331,8 @@ class BiomioProtocol:
                 if not (self._state_machine_instance.current == STATE_DISCONNECTED):
                     self._start_connection_timer_callback()
             else:
-                self._state_machine_instance.bye(request=input_msg, protocol_instance=self, status='Could not process message: %s' % input_msg.msg.oid)
+                self._state_machine_instance.bye(request=input_msg, protocol_instance=self,
+                                                 status='Could not process message: %s' % input_msg.msg.oid)
         except FysomError, e:
             logger.exception('State event for method not defined')
             self._state_machine_instance.bye(request=input_msg, protocol_instance=self, status=str(e))
@@ -408,7 +422,8 @@ class BiomioProtocol:
         """Should be called in cases when connection is closed by client."""
         if self._session:
             self._session.close_callback = None
-            SessionManager.instance().set_protocol_state(token=self._session.refresh_token, current_state=self._state_machine_instance.current)
+            SessionManager.instance().set_protocol_state(token=self._session.refresh_token,
+                                                         current_state=self._state_machine_instance.current)
         logger.debug('Connection closed by client')
 
     def _restore_state(self, refresh_token):
@@ -427,7 +442,8 @@ class BiomioProtocol:
                 logger.debug('State : %s' % state)
                 self._state_machine_instance.current = state
             else:
-                self._state_machine_instance.bye(protocol_instance=self, status='Internal error: Could not restore protpcol state after last disconnection')
+                self._state_machine_instance.bye(protocol_instance=self,
+                                                 status='Internal error: Could not restore protpcol state after last disconnection')
         else:
             self._state_machine_instance.bye(protocol_instance=self, status='Invalid token')
 
