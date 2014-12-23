@@ -640,6 +640,10 @@ class TestRpcCalls(BiomioTest):
         response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=True)
         ok_(str(response.msg.oid) != 'bye', msg='Connection closed. Status: %s' % response.status)
 
+    def test_rpc_with_auth(self):
+        message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin', call='test_func', data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
+        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=True)
+        ok_(str(response.msg.oid) != 'bye', msg='Connection closed. Status: %s' % response.status)
 
 def main():
     pass
