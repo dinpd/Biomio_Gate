@@ -7,12 +7,11 @@ import time
 
 class ExtensionTestPlugin(IPlugin):
 
-    def test_func(self, val1, val2):
-        print "Test Func Call"
-        return {"result": "some value"}
+    def test_func(self, val1, val2, callback):
+        callback({"result": "some value"})
 
     @biometric_auth
-    def test_funch_with_auth(self, val1, val2, callback=None):
+    def test_funch_with_auth(self, val1, val2, callback):
         print "Done!"
         callback({"result": "some value"})
         # return {"result": "some value"}

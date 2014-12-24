@@ -6,7 +6,7 @@ import tornado.ioloop
 
 from biomio.protocol.session import Session
 from biomio.protocol.settings import settings
-from biomio.protocol.storage.redisstore import RedisStore
+from biomio.protocol.storage.sessionstore import SessionStore
 from biomio.utils.timeoutqueue import TimeoutQueue
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ class SessionManager:
         self._sessions_by_token = WeakValueDictionary()
         self._timeout_handle = None
         self.interval = 1  # timeout to check for expired sessions
-        self._redis_session_store = RedisStore.instance()
+        self._session_store = SessionStore.instance()
 
     @classmethod
     def instance(cls):
@@ -91,11 +91,11 @@ class SessionManager:
         """
         session = self._sessions_by_token.get(token, None)
 
-        if not session and self._redis_session_store.has_session(refresh_token=token):
+        if not session and self._session_store.has_session(refresh_token=token):
             session = Session()
             session.refresh_token = token
             self._enqueue_session(session=session)
-            self._redis_session_store.refresh_session()
+            self._session_store.refresh_session()
 
         return session
 
@@ -104,7 +104,7 @@ class SessionManager:
         :param token: Session refresj token string.
         :return: Protocol state name string if session is alive and state stored; None otherwise.
         """
-        return self._redis_session_store.get_session_data(refresh_token=token, key='state')
+        return self._session_store.get_session_data(refresh_token=token, key='state')
 
     def set_protocol_state(self, token, current_state):
         """ Store protocol state information for session. Used to save protocol state during client disconnection period.
@@ -114,7 +114,7 @@ class SessionManager:
         """
         session = self._sessions_by_token.get(token, None)
         refresh_token = session.refresh_token
-        self._redis_session_store.store_session_data(refresh_token=refresh_token, state=current_state, ttl=settings.session_ttl)
+        self._session_store.store_session_data(refresh_token=refresh_token, state=current_state, ttl=settings.session_ttl)
 
     def refresh_session(self, session):
         """ Refreshes given session. Make session life longer by session TTL value. Also session get a new session token.

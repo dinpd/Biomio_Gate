@@ -11,6 +11,7 @@ from biomio.protocol.settings import settings
 from biomio.protocol.crypt import Crypto
 from biomio.protocol.storage.redisstore import RedisStore
 from biomio.protocol.rpc.rpchandler import RpcHandler
+from biomio.protocol.storage.applicationdatastore import ApplicationDataStore
 
 import tornado.gen
 
@@ -73,7 +74,7 @@ class MessageHandler:
                 # Create new session
                 # TODO: move to some state handling callback
                 e.protocol_instance.start_new_session()
-                app_data = RedisStore.instance().get_app_data(
+                app_data = ApplicationDataStore.instance().get_app_data(
                     account_id=e.request.header.id,
                     application_id=e.request.header.appId,
                     key='public_key'
@@ -114,7 +115,7 @@ class MessageHandler:
     @staticmethod
     @verify_header
     def on_auth_message(e):
-        key = RedisStore.instance().get_app_data(
+        key = ApplicationDataStore.instance().get_app_data(
             account_id=e.request.header.id,
             application_id=e.request.header.appId,
             key='public_key'
@@ -150,7 +151,7 @@ def handshake(e):
 def registration(e):
     key, pub_key = Crypto.generate_keypair()
 
-    RedisStore.instance().store_app_data(
+    ApplicationDataStore.instance().store_app_data(
         account_id=e.request.header.id,
         application_id=e.request.header.appId,
         public_key=pub_key

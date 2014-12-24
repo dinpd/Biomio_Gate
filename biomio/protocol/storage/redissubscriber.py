@@ -3,18 +3,20 @@ from tornadoredis import Client
 from biomio.protocol.settings import settings
 import tornado.gen
 
-class RedisProbeSubscriber:
+class RedisSubscriber:
     _instance = None
 
     @classmethod
     def instance(cls):
         if not cls._instance:
-            cls._instance = RedisProbeSubscriber()
+            cls._instance = RedisSubscriber()
         return cls._instance
 
     def __init__(self):
         self.redis = Client(host=settings.redis_host, port=settings.redis_port)
         self.callback_by_key = {}
+        self.args_by_key = {}
+        self.kwargs_by_key = {}
         self.listen()
 
     @tornado.gen.engine
@@ -24,8 +26,8 @@ class RedisProbeSubscriber:
         self.redis.listen(self.on_redis_message)
 
     @tornado.gen.engine
-    def subscribe(self, user_id, callback):
-        key = RedisProbeSubscriber._redis_probe_key(user_id=user_id)
+    def subscribe(self, user_id, callback=None):
+        key = RedisSubscriber._redis_probe_key(user_id=user_id)
         self.callback_by_key[key] = callback
 
     @staticmethod
