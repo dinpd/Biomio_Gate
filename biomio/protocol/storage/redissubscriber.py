@@ -1,8 +1,3 @@
-from functools import wraps
-
-import tornado.gen
-
-
 import re
 from tornadoredis import Client
 from biomio.protocol.settings import settings
@@ -46,16 +41,3 @@ class RedisProbeSubscriber:
                 callback = self.callback_by_key.get(probe_key, None)
                 if callback:
                     callback()
-
-@tornado.gen.engine
-def _is_biometric_data_valid():
-    user_id = "userid"
-    yield tornado.gen.Task(RedisProbeSubscriber.instance().subscribe, user_id)
-
-def biometric_auth(verify_func):
-    def _decorator(*args, **kwargs):
-        print 'Biometric auth'
-        if not _is_biometric_data_valid(*args, **kwargs):
-            return
-        return verify_func(*args, **kwargs)
-    return wraps(verify_func)(_decorator)

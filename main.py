@@ -73,12 +73,19 @@ def run_tornado():
     tornado.ioloop.IOLoop.instance().start()
 
 
+from biomio.protocol.rpc.rpcutils import _is_biometric_data_valid
+
 if __name__ == '__main__':
+
+    _is_biometric_data_valid()
+    print "!!!!!!!!!!!!!!!!!!!!!!!!!!"
 
     logging.basicConfig(
         format='%(levelname)-8s [%(asctime)s] %(message)s',
         level=logging.DEBUG
     )
+
+
 
     # Run tornado application
     run_tornado()

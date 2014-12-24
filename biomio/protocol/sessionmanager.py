@@ -1,14 +1,14 @@
-
 from time import time
-import tornado.ioloop
 from weakref import WeakValueDictionary
+import logging
+
+import tornado.ioloop
 
 from biomio.protocol.session import Session
 from biomio.protocol.settings import settings
-from biomio.protocol.redisstore import RedisStore
+from biomio.protocol.storage.redisstore import RedisStore
 from biomio.utils.timeoutqueue import TimeoutQueue
 
-import logging
 logger = logging.getLogger(__name__)
 
 
