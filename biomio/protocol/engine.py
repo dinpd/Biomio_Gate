@@ -12,6 +12,8 @@ from biomio.protocol.crypt import Crypto
 from biomio.protocol.storage.redisstore import RedisStore
 from biomio.protocol.rpc.rpchandler import RpcHandler
 
+import tornado.gen
+
 logger = logging.getLogger(__name__)
 
 PROTOCOL_VERSION = '1.0'
@@ -272,6 +274,7 @@ class BiomioProtocol:
 
         logger.debug(' --------- ')  # helpful to separate output when auto tests is running
 
+    @tornado.gen.engine
     def process_next(self, msg_string):
         """ Processes next message received from client.
         :param msg_string: String containing next message.
@@ -300,7 +303,9 @@ class BiomioProtocol:
                 self._restore_state(str(input_msg.header.token))
 
             # Try to process RPC request subset, if message is RCP request - exit after processing
-            if self.process_rpc_request(input_msg):
+
+            if input_msg.msg.oid in ('rpcReq', 'rpcEnumNsReq', 'rpcEnumCallsReq'):
+                self.process_rpc_request(input_msg)
                 return
 
             # Process protocol message
@@ -444,22 +449,21 @@ class BiomioProtocol:
         else:
             self._state_machine_instance.bye(protocol_instance=self, status='Invalid token')
 
+    @tornado.gen.engine
     def process_rpc_request(self, input_msg):
         message_id = str(input_msg.msg.oid)
-
-        if message_id not in ('rpcReq', 'rpcEnumNsReq', 'rpcEnumCallsReq'):
-            return
 
         if message_id == 'rpcReq':
             data = {}
             for k,v in izip(list(input_msg.msg.data.keys), list(input_msg.msg.data.values)):
                 data[str(k)] = str(v)
 
-            result = self._rpc_handler.process_rpc_call(
-                call=str(input_msg.msg.call),
-                namespace=str(input_msg.msg.namespace),
-                data=data
-            )
+            # result = self._rpc_handler.process_rpc_call(
+            #     call=str(input_msg.msg.call),
+            #     namespace=str(input_msg.msg.namespace),
+            #     data=data
+            # )
+            result = yield tornado.gen.Task(self._rpc_handler.process_rpc_call, str(input_msg.msg.call), str(input_msg.msg.namespace), data)
 
             res_keys = []
             res_values = []

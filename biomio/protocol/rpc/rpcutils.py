@@ -20,6 +20,8 @@ class RedisProbeSubscriber:
     def __init__(self):
         self.redis = Client(host=settings.redis_host, port=settings.redis_port)
         self.callback_by_key = {}
+        self.args_by_key = {}
+        self.kwargs_by_key = {}
         self.listen()
 
     @tornado.gen.engine
@@ -29,7 +31,7 @@ class RedisProbeSubscriber:
         self.redis.listen(self.on_redis_message)
 
     @tornado.gen.engine
-    def subscribe(self, user_id, callback):
+    def subscribe(self, user_id, callback=None):
         key = RedisProbeSubscriber._redis_probe_key(user_id=user_id)
         self.callback_by_key[key] = callback
 
@@ -48,14 +50,20 @@ class RedisProbeSubscriber:
                     callback()
 
 @tornado.gen.engine
-def _is_biometric_data_valid():
+def _is_biometric_data_valid(callable, args, kwargs):
     user_id = "userid"
+    # RedisProbeSubscriber.instance().subscribe(user_id)
+    print 'waiting for redis...'
     yield tornado.gen.Task(RedisProbeSubscriber.instance().subscribe, user_id)
+    print 'results form redis...'
+    callable(*args, **kwargs)
 
 def biometric_auth(verify_func):
+
     def _decorator(*args, **kwargs):
-        print 'Biometric auth'
-        if not _is_biometric_data_valid(*args, **kwargs):
-            return
-        return verify_func(*args, **kwargs)
+        # verify_func(*args, **kwargs)
+        _is_biometric_data_valid(verify_func, args, kwargs)
+        # if not _is_biometric_data_valid(*args, **kwargs):
+        #     return
+        # return verify_func(*args, **kwargs)
     return wraps(verify_func)(_decorator)
