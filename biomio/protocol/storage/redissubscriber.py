@@ -36,7 +36,6 @@ class RedisSubscriber:
         return probe_key
 
     def on_redis_message(self, msg):
-        print msg
         if msg.kind == 'pmessage':
             if msg.body == 'set' or msg.body == 'expired':
                 probe_key = re.search('.*:(probe:.*)', msg.channel).group(1)

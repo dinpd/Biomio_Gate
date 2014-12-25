@@ -11,7 +11,7 @@ class ProbeResultsStore(RedisStore):
     @classmethod
     def instance(cls):
         if not cls._instance:
-            cls._instance = SessionStore()
+            cls._instance = ProbeResultsStore()
 
         return cls._instance
 
