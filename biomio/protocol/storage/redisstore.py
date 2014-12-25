@@ -3,6 +3,7 @@ import ast
 
 from biomio.protocol.settings import settings
 
+
 class RedisStore:
     _instance = None
 

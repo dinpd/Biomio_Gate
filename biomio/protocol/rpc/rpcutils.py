@@ -5,8 +5,10 @@ from biomio.protocol.storage.redissubscriber import RedisSubscriber
 from biomio.protocol.storage.proberesultsstore import ProbeResultsStore
 from biomio.protocol.settings import settings
 
+
 def _callback_arg(callable_kwargs):
     return callable_kwargs.get('callback', None)
+
 
 @tornado.gen.engine
 def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
@@ -32,7 +34,9 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
         callback({"status": status})
         pass
 
+
 def biometric_auth(verify_func):
     def _decorator(*args, **kwargs):
         _is_biometric_data_valid(callable_func=verify_func, callable_args=args, callable_kwargs=kwargs)
+
     return wraps(verify_func)(_decorator)

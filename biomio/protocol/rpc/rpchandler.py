@@ -3,10 +3,11 @@ __author__ = 'alexchmykhalo'
 from biomio.protocol.rpc.rpcpluginmanager import RpcPluginManager
 
 import logging
+
 logger = logging.getLogger(__name__)
 
-class RpcHandler:
 
+class RpcHandler:
     def __init__(self):
         pass
 
@@ -21,7 +22,6 @@ class RpcHandler:
                 result = rpc_call(callback=callback, **data)
 
         return result
-
 
     def get_available_calls(self, namespace):
         return []
