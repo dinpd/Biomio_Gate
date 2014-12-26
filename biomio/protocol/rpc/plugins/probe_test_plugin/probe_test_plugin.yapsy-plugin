@@ -1,0 +1,6 @@
+[Core]
+Name = ProbeTestPlugin
+Module = probe_test_plugin
+
+[Documentation]
+Description = Probe Test Plugin
