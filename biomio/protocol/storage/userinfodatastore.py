@@ -1,8 +1,6 @@
 from biomio.protocol.storage.redisstore import RedisStore
 import ast
 
-__author__ = 'andriy.lobashchuk'
-
 
 class UserInfoDataStore(RedisStore):
     _instance = None
