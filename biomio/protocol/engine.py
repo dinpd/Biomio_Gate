@@ -464,7 +464,7 @@ class BiomioProtocol:
             #     namespace=str(input_msg.msg.namespace),
             #     data=data
             # )
-            result = yield tornado.gen.Task(self._rpc_handler.process_rpc_call, str(input_msg.msg.call), str(input_msg.msg.namespace), data)
+            result = yield tornado.gen.Task(self._rpc_handler.process_rpc_call, str(input_msg.header.id), str(input_msg.msg.call), str(input_msg.msg.namespace), data)
 
             res_keys = []
             res_values = []
