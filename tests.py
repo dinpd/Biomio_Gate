@@ -33,7 +33,7 @@ class BiomioTest:
         self.session_refresh_token = None
 
     @nottest
-    def new_connection(self, socket_timeout=50):
+    def new_connection(self, socket_timeout=5):
         # socket = WebSocket()
         socket = WebSocket(sslopt=ssl_options)
         # socket.connect("wss://gb.vakoms.com:{port}/websocket".format(port=settings.port))
