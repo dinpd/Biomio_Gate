@@ -7,6 +7,7 @@ class UserInfoDataStore(RedisStore):
 
     PASS_PHRASE_KEY = 'pass_phrase'
     PUBLIC_PGP_KEY = 'public_pgp_key'
+    PRIVATE_PGP_KEY = 'private_pgp_key'
 
     def __init__(self):
         RedisStore.__init__(self)
