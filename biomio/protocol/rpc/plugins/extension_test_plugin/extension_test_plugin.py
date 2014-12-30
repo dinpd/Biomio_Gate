@@ -19,7 +19,8 @@ class ExtensionTestPlugin(IPlugin):
     def test_funch_with_auth(self, val1, val2):
         return {"result": "some value"}
 
-    @rpc_call_with_auth
+    #@rpc_call_with_auth
+    @rpc_call
     def get_pass_phrase(self, user_id, email):
         user_pass_phrase = UserInfoDataStore.instance().get_user_data_by_id(user_id=user_id,
                                                                             key=UserInfoDataStore.PASS_PHRASE_KEY)
