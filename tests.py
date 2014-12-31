@@ -1,6 +1,8 @@
 #!/usr/bin/env python
+import random
 
 from ssl import SSLError
+import string
 from websocket import create_connection, WebSocketTimeoutException, WebSocket
 
 from biomio.protocol.message import BiomioMessageBuilder
@@ -33,7 +35,7 @@ class BiomioTest:
         self.session_refresh_token = None
 
     @nottest
-    def new_connection(self, socket_timeout=5):
+    def new_connection(self, socket_timeout=15):
         # socket = WebSocket()
         socket = WebSocket(sslopt=ssl_options)
         # socket.connect("wss://gb.vakoms.com:{port}/websocket".format(port=settings.port))
@@ -658,6 +660,40 @@ class TestRpcCalls(BiomioTest):
                                      wait_for_response=True)
         ok_(str(response.msg.oid) != 'bye', msg='Connection closed. Status %s' % response.status)
         ok_('private_pgp_key' in response.msg.data.keys, msg='Response does not contain private pgp key.')
+
+    def test_rpc_get_pass_phrase(self):
+        message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin\\extension_test_plugi',
+                                           call='get_pass_phrase',
+                                           data={'keys': ['email'], 'values': ['test@mail.com']})
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+                          wait_for_response=True)
+        message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin\\extension_test_plugi',
+                                           call='get_pass_phrase',
+                                           data={'keys': ['email'], 'values': ['test@mail.com']})
+        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+                                     wait_for_response=True)
+        ok_(str(response.msg.oid) != 'bye', msg='Connection closed. Status %s' % response.status)
+        ok_('private_pgp_key' not in response.msg.data.keys, msg='Response contains private pgp key.')
+        ok_('pass_phrase' in response.msg.data.keys, msg='Response does not contain pass phrase.')
+
+    def test_rpc_get_user_pgp_key_generation(self):
+        fake_email = '%s@mail.com' % ''.join(random.choice(string.lowercase) for _ in range(10))
+        message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin\\extension_test_plugi',
+                                           call='get_user_public_pgp_key',
+                                           data={'keys': ['email'], 'values': [fake_email]})
+        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+                                     wait_for_response=True)
+        ok_(str(response.msg.oid) != 'bye', msg='Connection closed. Status %s' % response.status)
+        ok_('public_pgp_key' in response.msg.data.keys, msg='Response does not contain public pgp key.')
+
+    def test_rpc_get_user_public_pgp_key(self):
+        message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin\\extension_test_plugi',
+                                           call='get_user_public_pgp_key',
+                                           data={'keys': ['email'], 'values': ['test@mail.com']})
+        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+                                     wait_for_response=True)
+        ok_(str(response.msg.oid) != 'bye', msg='Connection closed. Status %s' % response.status)
+        ok_('public_pgp_key' in response.msg.data.keys, msg='Response does not contain public pgp key.')
 
 
 def main():

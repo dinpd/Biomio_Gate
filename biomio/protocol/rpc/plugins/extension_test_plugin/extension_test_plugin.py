@@ -58,11 +58,6 @@ class ExtensionTestPlugin(IPlugin):
             return {'public_pgp_key': user_public_pgp_key}
         return {'error': 'Failed to get public key for given user email.'}
 
-    @rpc_call
-    def store_public_pgp_key(self, user_id, public_pgp_key):
-        UserInfoDataStore.instance().store_user_data(user_id=user_id, email=None, public_pgp_key=public_pgp_key)
-        return {'result': 'Done'}
-
     @staticmethod
     def generate_pgp_key_pair(email, pass_phrase):
         home = tempfile.mkdtemp()
@@ -77,9 +72,6 @@ class ExtensionTestPlugin(IPlugin):
             key = gpg.gen_key(input_data)
             ascii_armored_public_key = gpg.export_keys(key.fingerprint)
             ascii_armored_private_key = gpg.export_keys(key.fingerprint, True)
-            print ascii_armored_public_key
-            print '---------\n'
-            print ascii_armored_private_key
         except Exception, e:
             print e
         finally:
