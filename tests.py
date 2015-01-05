@@ -653,7 +653,7 @@ class TestRpcCalls(BiomioTest):
         ok_(str(response.msg.oid) != 'bye', msg='Connection closed. Status: %s' % response.status)
 
     def test_rpc_pass_phrase_keys_generation(self):
-        message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin\\extension_test_plugi',
+        message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin',
                                            call='get_pass_phrase',
                                            data={'keys': ['email'], 'values': ['test@mail.com']})
         response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
@@ -662,12 +662,12 @@ class TestRpcCalls(BiomioTest):
         ok_('private_pgp_key' in response.msg.data.keys, msg='Response does not contain private pgp key.')
 
     def test_rpc_get_pass_phrase(self):
-        message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin\\extension_test_plugi',
+        message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin',
                                            call='get_pass_phrase',
                                            data={'keys': ['email'], 'values': ['test@mail.com']})
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
                           wait_for_response=True)
-        message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin\\extension_test_plugi',
+        message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin',
                                            call='get_pass_phrase',
                                            data={'keys': ['email'], 'values': ['test@mail.com']})
         response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
