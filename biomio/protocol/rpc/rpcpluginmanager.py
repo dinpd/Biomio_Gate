@@ -36,7 +36,7 @@ class RpcPluginManager:
 
             # RPC namespace - name of the plugin module
             #plugin_path = plugin_info.path
-            namespace = os.path.basename(os.path.dirname(os.path.abspath(plugin_info.path)))#plugin_info.path[(len(plugin_dir)+1):plugin_path.rfind('/')]
+            namespace = os.path.basename(plugin_info.path)#plugin_info.path[(len(plugin_dir)+1):plugin_path.rfind('/')]
             self._plugins_by_namespace[namespace] = obj
 
     def get_rpc_object(self, namespace):
