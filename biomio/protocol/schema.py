@@ -274,6 +274,7 @@ BIOMIO_protocol_json_schema = {
             "required": ["oid", "namespace", "call"],
             "properties": {
                 "oid": { "enum": ["rpcReq"] },
+                "onBehalfOf": {"type": "string"},
                 "namespace": {"type": "string"},
                 "call": {"type": "string"},
                 "data": {"$ref": "#/definitions/rpcData"}
