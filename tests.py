@@ -678,7 +678,7 @@ class TestRpcCalls(BiomioTest):
 
     def test_rpc_get_user_pgp_key_generation(self):
         fake_email = '%s@mail.com' % ''.join(random.choice(string.lowercase) for _ in range(10))
-        message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin\\extension_test_plugi',
+        message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin',
                                            call='get_user_public_pgp_key',
                                            data={'keys': ['email'], 'values': [fake_email]})
         response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
@@ -687,7 +687,7 @@ class TestRpcCalls(BiomioTest):
         ok_('public_pgp_key' in response.msg.data.keys, msg='Response does not contain public pgp key.')
 
     def test_rpc_get_user_public_pgp_key(self):
-        message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin\\extension_test_plugi',
+        message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin',
                                            call='get_user_public_pgp_key',
                                            data={'keys': ['email'], 'values': ['test@mail.com']})
         response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
