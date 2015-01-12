@@ -1,6 +1,7 @@
-
 TESTING
 -------
 To run all tests, execute: nosetests -s -v tests.py --attr '!slow'
+
 To skip slow tests (e.g. connection timeout): nosetests -s -v tests.py --attr '!slow'
-To run certain test, for instance test_message_sequence_with_bye test method from TestReadyState, run: nosetests -s -v tests.py:TestReadyState.test_message_sequence_with_bye
+
+To run certain test (for instance test_message_sequence_with_bye test method from TestReadyState) run: nosetests -s -v tests.py:TestReadyState.test_message_sequence_with_bye
