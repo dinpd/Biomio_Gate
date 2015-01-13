@@ -3,6 +3,12 @@ from yapsy.PluginFileLocator import PluginFileLocator
 from yapsy.IPlugin import IPlugin
 import os
 
+import logging
+
+# Disable logging from yapsy
+logger = logging.getLogger('yapsy')
+logger.disabled = True
+
 def get_plugin_dir_path():
     curr_dir = os.path.dirname(os.path.abspath(__file__))
     plugin_dir_path = os.path.join(curr_dir, 'plugins')
@@ -35,8 +41,7 @@ class RpcPluginManager:
             obj = plugin_info.plugin_object
 
             # RPC namespace - name of the plugin module
-            #plugin_path = plugin_info.path
-            namespace = os.path.basename(plugin_info.path)#plugin_info.path[(len(plugin_dir)+1):plugin_path.rfind('/')]
+            namespace = os.path.basename(plugin_info.path)
             self._plugins_by_namespace[namespace] = obj
 
     def get_rpc_object(self, namespace):

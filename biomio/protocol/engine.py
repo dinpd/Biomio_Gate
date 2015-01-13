@@ -456,8 +456,9 @@ class BiomioProtocol:
 
         if message_id == 'rpcReq':
             data = {}
-            for k,v in izip(list(input_msg.msg.data.keys), list(input_msg.msg.data.values)):
-                data[str(k)] = str(v)
+            if input_msg.msg.data:
+                for k,v in izip(list(input_msg.msg.data.keys), list(input_msg.msg.data.values)):
+                    data[str(k)] = str(v)
 
             # result = self._rpc_handler.process_rpc_call(
             #     call=str(input_msg.msg.call),

@@ -7,6 +7,10 @@ from biomio.protocol.storage.proberesultsstore import ProbeResultsStore
 from biomio.protocol.settings import settings
 
 
+def set_probe_result(user_id, auth_successfull):
+    ProbeResultsStore.instance().store_probe_data(user_id=user_id, ttl=settings.bioauth_timeout, auth=auth_successfull)
+
+
 def _callback_arg(callable_kwargs):
     return callable_kwargs.get('callback', None)
 
