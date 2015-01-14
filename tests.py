@@ -17,6 +17,7 @@ import logging
 from hashlib import sha1
 from os import urandom
 import threading
+from itertools import izip
 
 ssl_options = {
     "ca_certs": "server.pem"
@@ -629,6 +630,12 @@ class TestReadyState(BiomioTest):
         ok_(not old_session_token == self.current_session_token,
             msg='New session token not generated (old one present).')
 
+@nottest
+def get_rpc_msg_field(message, key):
+    for k,v in izip(list(message.msg.data.keys), list(message.msg.data.values)):
+        if str(k) == key:
+            return str(v)
+
 
 class TestRpcCalls(BiomioTest):
     def setup(self):
@@ -656,6 +663,15 @@ class TestRpcCalls(BiomioTest):
         test_obj = BiomioTest()
         test_obj.setup_test_with_handshake()
         message = test_obj.create_next_message(oid='rpcReq', namespace='probe_test_plugin', call='test_probe_valid')
+        response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False,
+                                         wait_for_response=True)
+
+    @staticmethod
+    def probe_test_job_with_invalid_auth():
+        time.sleep(10)
+        test_obj = BiomioTest()
+        test_obj.setup_test_with_handshake()
+        message = test_obj.create_next_message(oid='rpcReq', namespace='probe_test_plugin', call='test_probe_invalid')
         response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False,
                                          wait_for_response=True)
 
@@ -694,6 +710,7 @@ class TestRpcCalls(BiomioTest):
                 pass
 
         ok_(rpc_responce_message, msg='No RPC response on auth')
+        ok_(get_rpc_msg_field(message=rpc_responce_message, key="error") is None, msg='Errors during RPC call')
 
 
     def test_rpc_pass_phrase_keys_generation(self):

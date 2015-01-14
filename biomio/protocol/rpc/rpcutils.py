@@ -75,7 +75,7 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
         result = callable_func(*callable_args, **kwargs)
         callback(result)
     else:
-        callback({"status": status})
+        callback({"error": status})
         pass
 
 
