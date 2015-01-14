@@ -16,7 +16,7 @@ import time
 import logging
 from hashlib import sha1
 from os import urandom
-
+import threading
 
 ssl_options = {
     "ca_certs": "server.pem"
@@ -27,6 +27,10 @@ class BiomioTest:
     _registered_key = None
     _registered_user_id = None
 
+    @classmethod
+    def set_registered_user_id(cls):
+        cls._registered_user_id = None
+
     def __init__(self):
         self._ws = None
         self._builder = None
@@ -35,7 +39,7 @@ class BiomioTest:
         self.session_refresh_token = None
 
     @nottest
-    def new_connection(self, socket_timeout=15):
+    def new_connection(self, socket_timeout=5):
         # socket = WebSocket()
         socket = WebSocket(sslopt=ssl_options)
         # socket.connect("wss://gb.vakoms.com:{port}/websocket".format(port=settings.port))
@@ -304,8 +308,9 @@ class TestRegistration(BiomioTest):
         # Send message and wait for response,
         # server should not respond and close connection,
         # so WebsocketTimeoutException will be raised
-        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
                           wait_for_response=True)
+
 
 
 class TestConnectedState(BiomioTest):
@@ -645,12 +650,51 @@ class TestRpcCalls(BiomioTest):
                                      wait_for_response=True)
         ok_(str(response.msg.oid) != 'bye', msg='Connection closed. Status: %s' % response.status)
 
+    @staticmethod
+    def probe_test_job():
+        time.sleep(10)
+        test_obj = BiomioTest()
+        test_obj.setup_test_with_handshake()
+        message = test_obj.create_next_message(oid='rpcReq', namespace='probe_test_plugin', call='test_probe_valid')
+        response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False,
+                                         wait_for_response=True)
+
+    @attr('slow')
     def test_rpc_with_auth(self):
+        message_timeout = settings.connection_timeout / 2  # Send a message every 3 seconds
+
         message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin', call='test_funch_with_auth',
-                                           data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
-        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
-                                     wait_for_response=True)
-        ok_(str(response.msg.oid) != 'bye', msg='Connection closed. Status: %s' % response.status)
+            data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+            wait_for_response=False)
+
+        # Separate thread with connection for
+        t = threading.Thread(target=TestRpcCalls.probe_test_job)
+        t.start()
+
+        max_message_count = 10
+        rpc_responce_message = None
+        for i in range(max_message_count):
+            try:
+                message = self.read_message(websocket=self.get_curr_connection())
+
+                if message and message.msg and str(message.msg.oid) == 'rpcResp':
+                    rpc_responce_message = message
+                    break
+            except Exception, e:
+                pass
+
+            message = self.create_next_message(oid='nop')
+            message.header.token = self.session_refresh_token
+            try:
+                response = self.send_message(websocket=self.get_curr_connection(), message=message,
+                                             close_connection=False, wait_for_response=True)
+                ok_(str(response.msg.oid) == 'nop', msg='No responce on nop message')
+            except Exception, e:
+                pass
+
+        ok_(rpc_responce_message, msg='No RPC response on auth')
+
 
     def test_rpc_pass_phrase_keys_generation(self):
         message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin',

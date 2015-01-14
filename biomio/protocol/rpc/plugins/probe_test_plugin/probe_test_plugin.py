@@ -1,8 +1,7 @@
 
 from yapsy.IPlugin import IPlugin
 
-from biomio.protocol.rpc.rpcutils import rpc_call_with_auth, rpc_call
-from biomio.protocol.storage.userinfodatastore import UserInfoDataStore
+from biomio.protocol.rpc.rpcutils import rpc_call, set_probe_result
 
 
 class ProbeTestPlugin(IPlugin):
@@ -10,6 +9,12 @@ class ProbeTestPlugin(IPlugin):
     def test_func(self, val1, val2):
         return {"result": "some value"}
 
-    @rpc_call_with_auth
-    def test_funch_with_auth(self, val1, val2):
+    @rpc_call
+    def test_probe_valid(self, user_id):
+        set_probe_result(user_id=user_id, auth_successfull=True)
+        return {"result": "some value"}
+
+    @rpc_call
+    def test_probe_invalid(self, user_id):
+        set_probe_result(user_id=user_id, auth_successfull=False)
         return {"result": "some value"}
