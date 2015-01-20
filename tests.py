@@ -712,6 +712,28 @@ class TestRpcCalls(BiomioTest):
         ok_(rpc_responce_message, msg='No RPC response on auth')
         ok_(get_rpc_msg_field(message=rpc_responce_message, key="error") is None, msg='Errors during RPC call')
 
+    @staticmethod
+    def extension_test_job():
+        time.sleep(10)
+        test_obj = BiomioTest()
+        test_obj.setup_test_with_handshake()
+        message = test_obj.create_next_message(oid='rpcReq', namespace='extension_test_plugin', call='test_funch_with_auth', data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
+        response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False,
+                                         wait_for_response=True)
+        print 'thread', get_rpc_msg_field(message=response, key='result')
+        print 'thread', get_rpc_msg_field(message=response, key='error')
+
+    @attr('slow')
+    def test_rpc_with_auth_probe_first(self):
+        message = self.create_next_message(oid='rpcReq', namespace='probe_test_plugin', call='test_probe_valid')
+        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+                                         wait_for_response=True)
+        t = threading.Thread(target=TestRpcCalls.extension_test_job)
+        t.start()
+        t.join()
+        print get_rpc_msg_field(message=response, key='result')
+        print get_rpc_msg_field(message=response, key='error')
+
 
     def test_rpc_pass_phrase_keys_generation(self):
         message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin',

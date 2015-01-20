@@ -476,12 +476,12 @@ class BiomioProtocol:
                 'call': str(input_msg.msg.call),
             }
 
-            if result:
+            if result is not None:
                 for k, v in result.iteritems():
                     res_keys.append(k)
                     res_values.append(str(v))
 
-                res_params['data'] = {'keys': res_keys, 'values': res_values}
+            res_params['data'] = {'keys': res_keys, 'values': res_values}
 
             message = self.create_next_message(
                 request_seq=input_msg.header.seq,

@@ -13,10 +13,10 @@ from biomio.protocol.storage.userinfodatastore import UserInfoDataStore
 class ExtensionTestPlugin(IPlugin):
     @rpc_call
     def test_func(self, val1, val2):
-        return {"result": "some value"}
+        pass
 
     @rpc_call_with_auth
-    def test_funch_with_auth(self, val1, val2):
+    def test_func_with_auth(self, val1, val2):
         return {"result": "some value"}
 
     @rpc_call
