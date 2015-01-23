@@ -186,7 +186,7 @@ BIOMIO_protocol_json_schema = {
         },
         "probe": {
             "type": "object",
-            "required": ["oid", "probeId", "index", "samples"],
+            "required": ["oid", "probeId", "index"],
             "properties": {
                 "oid": { "enum": ["probe"] },
                 "probeId": {"type": "number"},
@@ -202,7 +202,8 @@ BIOMIO_protocol_json_schema = {
                             "items": {"$ref": "#/definitions/sound"}
                         }
                     ]
-                }
+                },
+                "touchId": {"type": "string"}
             }
         },
         "verify": {
