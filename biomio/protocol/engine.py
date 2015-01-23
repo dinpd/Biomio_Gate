@@ -200,8 +200,9 @@ def app_registered(e):
 
 
 def ready(e):
+    pass
     # TODO: following code - for test purpose
-    e.fsm.probetry(protocol_instance=e.protocol_instance, request=e.request)
+    # e.fsm.probetry(protocol_instance=e.protocol_instance, request=e.request)
     # user_id = e.request.header.id,
     # RedisSubscriber.instance().subscribe(user_id=user_id, callback=e.fsm.probetry)
 
@@ -272,8 +273,8 @@ biomio_states = {
         },
         {
             'name': 'nop',
-            'src': STATE_READY,
-            'dst': [STATE_READY, STATE_DISCONNECTED],
+            'src': [STATE_READY, STATE_PROBE_TRYING, STATE_GETTING_PROBES],
+            'dst': [STATE_READY, STATE_PROBE_TRYING, STATE_GETTING_PROBES, STATE_DISCONNECTED],
             'decision': MessageHandler.on_nop_message
         },
         {
