@@ -26,6 +26,8 @@ STATE_REGISTRATION = 'registration'
 STATE_APP_REGISTERED = 'appregistered'
 STATE_READY = 'ready'
 STATE_DISCONNECTED = 'disconnected'
+STATE_PROBE_TRYING = 'probetry'
+STATE_GETTING_PROBES = 'probeget'
 
 
 def _is_header_valid(e):
@@ -133,6 +135,15 @@ class MessageHandler:
     def on_registered(e):
         return STATE_APP_REGISTERED
 
+    @staticmethod
+    def on_probe_trying(e):
+        return STATE_PROBE_TRYING
+
+    @staticmethod
+    @verify_header
+    def on_getting_probe(e):
+        return STATE_READY
+
 
 def handshake(e):
     # Send serverHello responce after entering handshake state
@@ -171,6 +182,14 @@ def app_registered(e):
         key=e.key
     )
     e.protocol_instance.send_message(responce=message)
+
+
+def probe_trying(e):
+    pass
+
+
+def getting_probe(e):
+    pass
 
 
 def disconnect(e):
@@ -232,6 +251,18 @@ biomio_states = {
             'src': STATE_HANDSHAKE,
             'dst': [STATE_READY, STATE_DISCONNECTED],
             'decision': MessageHandler.on_auth_message
+        },
+        {
+            'name': 'try',
+            'src': STATE_READY,
+            'dst': [STATE_PROBE_TRYING, STATE_DISCONNECTED],
+            'decision': MessageHandler.on_probe_trying
+        },
+        {
+            'name': 'probe',
+            'src': STATE_PROBE_TRYING,
+            'dst': [STATE_GETTING_PROBES, STATE_READY, STATE_DISCONNECTED],
+            'decision': MessageHandler.on_getting_probe
         }
     ],
     'callbacks': {
@@ -239,6 +270,8 @@ biomio_states = {
         'ondisconnected': disconnect,
         'onregistration': registration,
         'onappregistered': app_registered,
+        'onprobetry': probe_trying,
+        'onprobeget': getting_probe,
         'onchangestate': print_state_change
     }
 }
