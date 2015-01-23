@@ -184,8 +184,16 @@ def app_registered(e):
     e.protocol_instance.send_message(responce=message)
 
 
-def probe_trying(e):
+def ready(e):
+    print "READY"
+    user_id = e.request.header.id,
+    print user_id
+    RedisSubscriber.instance().subscribe(user_id=user_id, callback=e.fsm.probetry)
     pass
+
+
+def probe_trying(e):
+    print 'PROBE TRYING'
 
 
 def getting_probe(e):
@@ -253,7 +261,7 @@ biomio_states = {
             'decision': MessageHandler.on_auth_message
         },
         {
-            'name': 'try',
+            'name': 'probetry',
             'src': STATE_READY,
             'dst': [STATE_PROBE_TRYING, STATE_DISCONNECTED],
             'decision': MessageHandler.on_probe_trying
@@ -270,6 +278,7 @@ biomio_states = {
         'ondisconnected': disconnect,
         'onregistration': registration,
         'onappregistered': app_registered,
+        'onready': ready,
         'onprobetry': probe_trying,
         'onprobeget': getting_probe,
         'onchangestate': print_state_change
@@ -307,9 +316,6 @@ class BiomioProtocol:
 
         # Initialize state machine
         self._state_machine_instance = Fysom(biomio_states)
-
-        # TODO: remove me
-        s = RedisSubscriber()
 
         logger.debug(' --------- ')  # helpful to separate output when auto tests is running
 
