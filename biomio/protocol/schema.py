@@ -67,6 +67,14 @@ BIOMIO_protocol_json_schema = {
                 "rProperties": {"type": "string"}
             }
         },
+        "resourceItem": {
+            "type": "object",
+            "required": ["rType", "samples"],
+            "properties": {
+                "rType": {"enum": ["video", "fp-scanner", "mic"]},
+                "samples": {"type": "number"}
+            }
+        },
         "serverHeader": {
             "type": "object",
             "name": "serverHeader",
@@ -92,9 +100,11 @@ BIOMIO_protocol_json_schema = {
             "type": "object",
             "required": ["oid", "resource"],
             "properties": {
-            "oid": { "enum": ["try"] },
-                "resource": {"$ref": "#/definitions/resource"},
-                "samples": {"type": "number"}
+                "oid": { "enum": ["try"] },
+                "resource": {
+                    "type": "array",
+                    "items": {"$ref": "#/definitions/resourceItem"}
+                }
             }
         },
         "data": {
@@ -176,10 +186,11 @@ BIOMIO_protocol_json_schema = {
         },
         "probe": {
             "type": "object",
-            "required": ["oid", "probeId", "samples"],
+            "required": ["oid", "probeId", "index", "samples"],
             "properties": {
-            "oid": { "enum": ["probe"] },
+                "oid": { "enum": ["probe"] },
                 "probeId": {"type": "number"},
+                "index": {"type": "number"},
                 "samples": {
                     "oneOf": [
                         {
