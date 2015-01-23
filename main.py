@@ -20,8 +20,6 @@ ssl_options = {
 
 
 class WebSocketHandler(tornado.websocket.WebSocketHandler):
-    connections = {}
-    timeouts = {}
 
     def check_origin(self, origin):
         return True
