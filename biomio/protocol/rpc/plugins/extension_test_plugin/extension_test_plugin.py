@@ -21,6 +21,7 @@ class ExtensionTestPlugin(IPlugin):
 
     @rpc_call
     def get_pass_phrase(self, user_id, email):
+        email = self.parse_email_data(email)
         user_pass_phrase = UserInfoDataStore.instance().get_user_data_by_id(user_id=user_id,
                                                                             key=UserInfoDataStore.PASS_PHRASE_KEY)
         if user_pass_phrase is None:
@@ -35,27 +36,30 @@ class ExtensionTestPlugin(IPlugin):
         return {"pass_phrase": user_pass_phrase}
 
     @rpc_call
-    def get_user_public_pgp_key(self, email):
-        user_id = UserInfoDataStore.instance().get_user_id_by_email(email=email)
-        user_info_redis = UserInfoDataStore.instance()
-        if user_id is None:
-            # I think this should be done in method which proceeds user registration
-            # but for now it is faked here.
-            user_id = '%s_fakeID' % email
-            random_pass_phrase = self.generate_random_pass_phrase()
-            user_info_redis.store_user_data(user_id=user_id, email=email, pass_phrase=random_pass_phrase)
-            public_pgp_key, private_pgp_key = self.generate_pgp_key_pair(email, random_pass_phrase)
-            if public_pgp_key is not None and private_pgp_key is not None:
-                UserInfoDataStore.instance().store_user_data(user_id=user_id, email=None,
-                                                             public_pgp_key=public_pgp_key)
-                UserInfoDataStore.instance().store_user_data(user_id=user_id, email=None,
-                                                             private_pgp_key=private_pgp_key)
-                return {'public_pgp_key': public_pgp_key}
-        else:
-            user_public_pgp_key = user_info_redis.get_user_data_by_id(user_id=user_id,
-                                                                      key=UserInfoDataStore.PUBLIC_PGP_KEY)
-            return {'public_pgp_key': user_public_pgp_key}
-        return {'error': 'Failed to get public key for given user email.'}
+    def get_users_public_pgp_keys(self, emails):
+        emails = self.parse_email_data(emails).split(',')
+        public_pgp_keys = []
+        for email in emails:
+            user_id = UserInfoDataStore.instance().get_user_id_by_email(email=email)
+            user_info_redis = UserInfoDataStore.instance()
+            if user_id is None:
+                # I think this should be done in method which proceeds user registration
+                # but for now it is faked here.
+                user_id = '%s_fakeID' % email
+                random_pass_phrase = self.generate_random_pass_phrase()
+                user_info_redis.store_user_data(user_id=user_id, email=email, pass_phrase=random_pass_phrase)
+                public_pgp_key, private_pgp_key = self.generate_pgp_key_pair(email, random_pass_phrase)
+                if public_pgp_key is not None and private_pgp_key is not None:
+                    UserInfoDataStore.instance().store_user_data(user_id=user_id, email=None,
+                                                                 public_pgp_key=public_pgp_key)
+                    UserInfoDataStore.instance().store_user_data(user_id=user_id, email=None,
+                                                                 private_pgp_key=private_pgp_key)
+                    public_pgp_keys.append(public_pgp_key)
+            else:
+                user_public_pgp_key = user_info_redis.get_user_data_by_id(user_id=user_id,
+                                                                          key=UserInfoDataStore.PUBLIC_PGP_KEY)
+                public_pgp_keys.append(user_public_pgp_key)
+        return {'public_pgp_keys': ','.join(public_pgp_keys)}
 
     @staticmethod
     def generate_pgp_key_pair(email, pass_phrase):
@@ -84,3 +88,9 @@ class ExtensionTestPlugin(IPlugin):
     def generate_random_pass_phrase():
         return ''.join(
             random.choice(string.ascii_lowercase + string.ascii_uppercase + string.digits) for _ in range(16))
+
+    @staticmethod
+    def parse_email_data(emails):
+        for rep in ['<', '>']:
+            emails = emails.replace(rep, '')
+        return emails
