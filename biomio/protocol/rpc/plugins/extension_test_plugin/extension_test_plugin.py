@@ -73,7 +73,7 @@ class ExtensionTestPlugin(IPlugin):
         try:
             gpg = gnupg.GPG(gnupghome=home, keyring=keyring, options=['--no-default-keyring', '--no-version',
                                                                       '--no-use-agent'])
-            input_data = gpg.gen_key_input(key_type="RSA", key_length=1024, name_comment="Biomio",
+            input_data = gpg.gen_key_input(key_type="RSA", key_length=1024, name_comment="", name_real="BioMio",
                                            name_email=email, passphrase=pass_phrase)
             key = gpg.gen_key(input_data)
             ascii_armored_public_key = gpg.export_keys(key.fingerprint)
