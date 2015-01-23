@@ -276,6 +276,8 @@ biomio_states = {
     }
 }
 
+# TODO: remove me
+from biomio.protocol.storage.redissubscriber import RedisSubscriber
 
 class BiomioProtocol:
     """ The BiomioProtocol class is an abstraction for protocol implementation.
@@ -305,6 +307,9 @@ class BiomioProtocol:
 
         # Initialize state machine
         self._state_machine_instance = Fysom(biomio_states)
+
+        # TODO: remove me
+        s = RedisSubscriber()
 
         logger.debug(' --------- ')  # helpful to separate output when auto tests is running
 

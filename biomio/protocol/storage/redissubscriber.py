@@ -2,6 +2,7 @@ import re
 from tornadoredis import Client
 from biomio.protocol.settings import settings
 import tornado.gen
+from weakref import WeakValueDictionary
 
 class RedisSubscriber:
     _instance = None
@@ -14,9 +15,7 @@ class RedisSubscriber:
 
     def __init__(self):
         self.redis = Client(host=settings.redis_host, port=settings.redis_port)
-        self.callback_by_key = {}
-        self.args_by_key = {}
-        self.kwargs_by_key = {}
+        self.callback_by_key = WeakValueDictionary()
         self.listen()
 
     @tornado.gen.engine
