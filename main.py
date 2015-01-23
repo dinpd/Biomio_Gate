@@ -70,6 +70,7 @@ def run_tornado():
     server.listen(settings.port)
     tornado.ioloop.IOLoop.instance().start()
 
+# from biomio.protocol.message import BiomioMessageBuilder
 
 if __name__ == '__main__':
 
@@ -77,6 +78,29 @@ if __name__ == '__main__':
         format='%(levelname)-8s [%(asctime)s] %(message)s',
         level=logging.DEBUG
     )
+    #
+    # msg = {
+    #   "msg" : {
+    #     "touchId" : "true",
+    #     "probeId" : 0,
+    #     "oid" : "probe",
+    #     "index" : 0
+    #   },
+    #   "header" : {
+    #     "id" : "0UMhRvDTEOEw93x8SROygESdI",
+    #     "osId" : "iOS_8.1",
+    #     "devId" : "021DD1E2-5D5A-423B-9B64-37FDCD536FE8",
+    #     "appId" : "probe_lIErKOvKhhYcSt9esg7eXatmY",
+    #     "oid" : "clientHeader",
+    #     "protoVer" : "1.0",
+    #     "seq" : 24
+    #   }
+    # }
+
+    # builder = BiomioMessageBuilder(oid="serverHeader", seq=1, protoVer="1.0", token="1235217523745327465324")
+    # # msg = builder.create_message(oid="nop")
+    # msg = builder.create_message(oid='probe', probeId=0, index=0, touchId='sdfdsfdsfdsdsf')
+    # print msg.serialize()
 
     # Run tornado application
     run_tornado()

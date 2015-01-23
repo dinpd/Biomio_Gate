@@ -757,6 +757,39 @@ class TestRpcCalls(BiomioTest):
         ok_('public_pgp_key' in response.msg.data.keys, msg='Response does not contain public pgp key.')
 
 
+class TestProbes(BiomioTest):
+    def setup(self):
+        self.setup_test()
+        # self.setup_test_with_handshake(is_registration_required=True)
+
+    def teardown(self):
+        self.teardown_test()
+
+    def test_send_resources(self):
+        self.setup_test_for_for_new_id()
+        self._builder.set_header(appId='probe_%s' % (sha1(urandom(64)).hexdigest()))
+
+        message = self.create_next_message(oid='clientHello', secret='secret')
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=False)
+
+        message = self.create_next_message(oid='resources', data=[{"rType": "video", "rProperties": "1500x1000"},
+            {"rType": "fp-scanner", "rProperties": "true"}, {"rType": "mic", "rProperties": "true"}])
+        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=True)
+
+        message = self.create_next_message(oid='ack')
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+                          wait_for_response=False)
+
+        # response = self.read_message(websocket=self.get_curr_connection())
+
+        # message = self.create_next_message(oid='nop')
+        # response = self.send_message(websocket=self.get_curr_connection(), message=message,
+        #                              close_connection=False, wait_for_response=True)
+        print response.serialize()
+        # eq_(response.msg.oid, 'serverHello', msg='Response does not contains serverHello message')
+        # ok_(hasattr(response.msg, 'key') and response.msg.key, msg="Responce does not contains generated private key.")
+
+
 def main():
     pass
 
