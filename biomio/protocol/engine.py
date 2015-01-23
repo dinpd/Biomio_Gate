@@ -9,7 +9,7 @@ from biomio.third_party.fysom import Fysom, FysomError
 from biomio.protocol.sessionmanager import SessionManager
 from biomio.protocol.settings import settings
 from biomio.protocol.crypt import Crypto
-from biomio.protocol.storage.redisstore import RedisStore
+from biomio.protocol.storage.redissubscriber import RedisSubscriber
 from biomio.protocol.rpc.rpchandler import RpcHandler
 from biomio.protocol.storage.applicationdatastore import ApplicationDataStore
 
@@ -23,6 +23,7 @@ PROTOCOL_VERSION = '1.0'
 STATE_CONNECTED = 'connected'
 STATE_HANDSHAKE = 'handshake'
 STATE_REGISTRATION = 'registration'
+STATE_GETTING_RESOURCES = 'resourceget'
 STATE_APP_REGISTERED = 'appregistered'
 STATE_READY = 'ready'
 STATE_DISCONNECTED = 'disconnected'
@@ -84,7 +85,11 @@ class MessageHandler:
                 if hasattr(e.request.msg, "secret") \
                         and e.request.msg.secret:
                     if app_data is None:
-                        return STATE_REGISTRATION
+                        appId = str(e.request.header.appId)
+                        if appId.startswith('probe'):
+                            return STATE_GETTING_RESOURCES
+                        else:
+                            return STATE_REGISTRATION
                     e.status = "Registration handshake is inappropriate. Given app is already registered."
                 else:
                     if app_data is not None:
@@ -141,8 +146,18 @@ class MessageHandler:
 
     @staticmethod
     @verify_header
+    def on_getting_resources(e):
+        return STATE_REGISTRATION
+
+    @staticmethod
+    @verify_header
     def on_getting_probe(e):
         return STATE_READY
+
+    @staticmethod
+    @verify_header
+    def on_resources(e):
+        return STATE_REGISTRATION
 
 
 def handshake(e):
@@ -185,20 +200,19 @@ def app_registered(e):
 
 
 def ready(e):
-    print "READY"
     user_id = e.request.header.id,
-    print user_id
     RedisSubscriber.instance().subscribe(user_id=user_id, callback=e.fsm.probetry)
-    pass
 
 
 def probe_trying(e):
-    print 'PROBE TRYING'
-
+    pass
 
 def getting_probe(e):
     pass
 
+
+def getting_resouces(e):
+    pass
 
 def disconnect(e):
     # If status parameter passed to state change method
@@ -227,7 +241,7 @@ biomio_states = {
         {
             'name': 'clientHello',
             'src': STATE_CONNECTED,
-            'dst': [STATE_HANDSHAKE, STATE_REGISTRATION, STATE_DISCONNECTED],
+            'dst': [STATE_HANDSHAKE, STATE_REGISTRATION, STATE_GETTING_RESOURCES, STATE_DISCONNECTED],
             'decision': MessageHandler.on_client_hello_message
         },
         {
@@ -241,6 +255,12 @@ biomio_states = {
             'src': STATE_REGISTRATION,
             'dst': [STATE_APP_REGISTERED, STATE_DISCONNECTED],
             'decision': MessageHandler.on_registered
+        },
+        {
+            'name': 'resources',
+            'src': STATE_GETTING_RESOURCES,
+            'dst': [STATE_REGISTRATION, STATE_DISCONNECTED],
+            'decision': MessageHandler.on_resources
         },
         {
             'name': 'nop',
@@ -281,12 +301,10 @@ biomio_states = {
         'onready': ready,
         'onprobetry': probe_trying,
         'onprobeget': getting_probe,
+        'resourceget': getting_resouces,
         'onchangestate': print_state_change
     }
 }
-
-# TODO: remove me
-from biomio.protocol.storage.redissubscriber import RedisSubscriber
 
 class BiomioProtocol:
     """ The BiomioProtocol class is an abstraction for protocol implementation.
@@ -504,11 +522,6 @@ class BiomioProtocol:
                 for k,v in izip(list(input_msg.msg.data.keys), list(input_msg.msg.data.values)):
                     data[str(k)] = str(v)
 
-            # result = self._rpc_handler.process_rpc_call(
-            #     call=str(input_msg.msg.call),
-            #     namespace=str(input_msg.msg.namespace),
-            #     data=data
-            # )
             result = yield tornado.gen.Task(self._rpc_handler.process_rpc_call, str(input_msg.header.id), str(input_msg.msg.call), str(input_msg.msg.namespace), data)
 
             res_keys = []
