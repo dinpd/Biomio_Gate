@@ -780,7 +780,7 @@ class TestProbes(BiomioTest):
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
                           wait_for_response=False)
 
-        # response = self.read_message(websocket=self.get_curr_connection())
+        response = self.read_message(websocket=self.get_curr_connection())
 
         # message = self.create_next_message(oid='nop')
         # response = self.send_message(websocket=self.get_curr_connection(), message=message,

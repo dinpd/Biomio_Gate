@@ -27,8 +27,8 @@ STATE_GETTING_RESOURCES = 'resourceget'
 STATE_APP_REGISTERED = 'appregistered'
 STATE_READY = 'ready'
 STATE_DISCONNECTED = 'disconnected'
-STATE_PROBE_TRYING = 'probetry'
-STATE_GETTING_PROBES = 'probeget'
+STATE_PROBE_TRYING = 'probetrying'
+STATE_GETTING_PROBES = 'probegetting'
 
 
 def _is_header_valid(e):
@@ -202,7 +202,7 @@ def app_registered(e):
 def ready(e):
     pass
     # TODO: following code - for test purpose
-    # e.fsm.probetry(protocol_instance=e.protocol_instance, request=e.request)
+    e.fsm.probetry(protocol_instance=e.protocol_instance, request=e.request)
     # user_id = e.request.header.id,
     # RedisSubscriber.instance().subscribe(user_id=user_id, callback=e.fsm.probetry)
 
@@ -308,8 +308,8 @@ biomio_states = {
         'onregistration': registration,
         'onappregistered': app_registered,
         'onready': ready,
-        'onprobetry': probe_trying,
-        'onprobeget': getting_probe,
+        'onprobetrying': probe_trying,
+        'onprobegetting': getting_probe,
         'resourceget': getting_resouces,
         'onchangestate': print_state_change
     }
