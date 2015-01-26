@@ -200,11 +200,11 @@ def app_registered(e):
 
 
 def ready(e):
-    pass
+    #pass
+    user_id = e.request.header.id,
+    RedisSubscriber.instance().subscribe(user_id=user_id, callback=e.fsm.probetry)
     # TODO: following code - for test purpose
-    e.fsm.probetry(protocol_instance=e.protocol_instance, request=e.request)
-    # user_id = e.request.header.id,
-    # RedisSubscriber.instance().subscribe(user_id=user_id, callback=e.fsm.probetry)
+    # e.fsm.probetry(protocol_instance=e.protocol_instance, request=e.request)
 
 
 def probe_trying(e):
