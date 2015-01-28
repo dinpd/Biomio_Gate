@@ -200,14 +200,12 @@ def app_registered(e):
 
 
 def ready(e):
-    #pass
     user_id = e.request.header.id,
-    RedisSubscriber.instance().subscribe(user_id=user_id, callback=e.fsm.probetry)
-    # TODO: following code - for test purpose
-    # e.fsm.probetry(protocol_instance=e.protocol_instance, request=e.request)
+    RedisSubscriber.instance().subscribe(user_id=user_id, callback=e.protocol_instance.try_probe)
 
 
 def probe_trying(e):
+    print "PROBE TRYING"
     message = e.protocol_instance.create_next_message(
         request_seq=e.request.header.seq,
         oid='try',
@@ -216,12 +214,14 @@ def probe_trying(e):
     e.protocol_instance.send_message(responce=message)
     pass
 
+
 def getting_probe(e):
     pass
 
 
 def getting_resouces(e):
     pass
+
 
 def disconnect(e):
     # If status parameter passed to state change method
@@ -235,6 +235,9 @@ def disconnect(e):
     request_seq = None
     if hasattr(e, 'request'):
         request_seq = e.request.header.seq
+
+    user_id = e.request.header.id,
+    RedisSubscriber.instance().unsubscribe(user_id=user_id, callback=e.protocol_instance.try_probe)
 
     e.protocol_instance.close_connection(request_seq=request_seq, status_message=status)
 
@@ -315,6 +318,7 @@ biomio_states = {
     }
 }
 
+
 class BiomioProtocol:
     """ The BiomioProtocol class is an abstraction for protocol implementation.
         For every client connection unique instance of BiomioProtocol is created.
@@ -343,6 +347,8 @@ class BiomioProtocol:
 
         # Initialize state machine
         self._state_machine_instance = Fysom(biomio_states)
+
+        self._last_received_message = None
 
         logger.debug(' --------- ')  # helpful to separate output when auto tests is running
 
@@ -399,6 +405,7 @@ class BiomioProtocol:
                 if self._state_machine_instance.current == STATE_DISCONNECTED:
                     return
 
+                self._last_received_message = input_msg
                 make_transition(request=input_msg, protocol_instance=self)
 
                 # Start connection timer, if state machine does no reach its final state
@@ -560,3 +567,6 @@ class BiomioProtocol:
             self.send_message(responce=message)
         elif message_id == 'rpcEnumCallsReq':
             self._rpc_handler.get_available_calls(namespace=input_msg.msg.namespace)
+
+    def try_probe(self):
+        self._state_machine_instance.probetry(request=self._last_received_message, protocol_instance=self)

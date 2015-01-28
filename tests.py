@@ -185,6 +185,7 @@ class BiomioTest:
     @nottest
     def check_app_registered(self, id_to_create=None):
         if not self._registered_key or id_to_create is not None:
+            # id_to_create = '1amxHFtymG7tIHfj96zbzgbTY'
             self._builder.set_header(id=sha1(urandom(64)).hexdigest() if id_to_create is None else id_to_create)
             message = self.create_next_message(oid='clientHello', secret='secret')
             response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
@@ -659,34 +660,85 @@ class TestRpcCalls(BiomioTest):
 
     @staticmethod
     def probe_test_job():
-        time.sleep(10)
+        time.sleep(1)
         test_obj = BiomioTest()
         test_obj.setup_test_with_handshake()
-        message = test_obj.create_next_message(oid='rpcReq', namespace='probe_test_plugin', call='test_probe_valid')
-        response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False,
-                                         wait_for_response=True)
+        print "\nPROBE: handshake finished"
+        # message = test_obj.read_message(websocket=test_obj.get_curr_connection())
+        # print "PROBE: ", message.serialize()
+        # message = test_obj.create_next_message(oid='rpcReq', namespace='probe_test_plugin', call='test_probe_valid')
+        # response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False,
+        #                                  wait_for_response=True)
 
     @staticmethod
-    def probe_test_job_with_invalid_auth():
-        time.sleep(10)
+    def probe_job():
         test_obj = BiomioTest()
-        test_obj.setup_test_with_handshake()
-        message = test_obj.create_next_message(oid='rpcReq', namespace='probe_test_plugin', call='test_probe_invalid')
-        response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False,
-                                         wait_for_response=True)
+        test_obj.setup_test_for_for_new_id()
+        test_obj._builder.set_header(appId='probe_%s' % (sha1(urandom(64)).hexdigest()))
+
+        message = test_obj.create_next_message(oid='clientHello', secret='secret')
+        test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False, wait_for_response=False)
+
+        message = test_obj.create_next_message(oid='resources', data=[{"rType": "video", "rProperties": "1500x1000"},
+            {"rType": "fp-scanner", "rProperties": "true"}, {"rType": "mic", "rProperties": "true"}])
+        response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False, wait_for_response=True)
+
+        message = test_obj.create_next_message(oid='ack')
+        test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False,
+                          wait_for_response=False)
+
+        print "HANDSHAKE"
+
+        message_timeout = settings.connection_timeout / 2  # Send a message every 3 seconds
+        max_message_count = 10
+        rpc_responce_message = None
+        for i in range(max_message_count):
+            try:
+                message = test_obj.read_message(websocket=test_obj.get_curr_connection())
+
+                if message and message.msg and str(message.msg.oid) == 'rpcResp':
+                    rpc_responce_message = message
+                    break
+            except Exception, e:
+                pass
+
+            message = test_obj.create_next_message(oid='nop')
+            message.header.token = test_obj.session_refresh_token
+            try:
+                response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message,
+                                             close_connection=False, wait_for_response=True)
+                ok_(str(response.msg.oid) == 'nop', msg='No responce on nop message')
+            except Exception, e:
+                pass
+        print "PROBE END"
+
+
+    # @staticmethod
+    # def probe_test_job_with_invalid_auth():
+    #     # time.sleep(1)
+    #     test_obj = BiomioTest()
+    #     test_obj.setup_test_with_handshake()
+    #     message = test_obj.read_message(websocket=test_obj.get_curr_connection())
+    #     print "PROBE: ", message
+        # message = test_obj.create_next_message(oid='rpcReq', namespace='probe_test_plugin', call='test_probe_invalid')
+        # response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False,
+        #                                  wait_for_response=True)
 
     @attr('slow')
     def test_rpc_with_auth(self):
         message_timeout = settings.connection_timeout / 2  # Send a message every 3 seconds
 
+        # Separate thread with connection for
+        t = threading.Thread(target=TestRpcCalls.probe_job)
+        t.start()
+
+        time.sleep(3)
+
+        print "\nEXTENSION: rpcCall"
         message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin', call='test_funch_with_auth',
             data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
-        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
-            wait_for_response=False)
-
-        # Separate thread with connection for
-        t = threading.Thread(target=TestRpcCalls.probe_test_job)
-        t.start()
+        message = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+            wait_for_response=True)
 
         max_message_count = 10
         rpc_responce_message = None
@@ -709,8 +761,8 @@ class TestRpcCalls(BiomioTest):
             except Exception, e:
                 pass
 
-        ok_(rpc_responce_message, msg='No RPC response on auth')
-        ok_(get_rpc_msg_field(message=rpc_responce_message, key="error") is None, msg='Errors during RPC call')
+        # ok_(rpc_responce_message, msg='No RPC response on auth')
+        # ok_(get_rpc_msg_field(message=rpc_responce_message, key="error") is None, msg='Errors during RPC call')
 
 
     def test_rpc_pass_phrase_keys_generation(self):
@@ -759,8 +811,7 @@ class TestRpcCalls(BiomioTest):
 
 class TestProbes(BiomioTest):
     def setup(self):
-        self.setup_test()
-        # self.setup_test_with_handshake(is_registration_required=True)
+        self.setup_test_with_handshake(is_registration_required=True)
 
     def teardown(self):
         self.teardown_test()
@@ -780,7 +831,7 @@ class TestProbes(BiomioTest):
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
                           wait_for_response=False)
 
-        response = self.read_message(websocket=self.get_curr_connection())
+        # response = self.read_message(websocket=self.get_curr_connection())
 
         # message = self.create_next_message(oid='nop')
         # response = self.send_message(websocket=self.get_curr_connection(), message=message,
