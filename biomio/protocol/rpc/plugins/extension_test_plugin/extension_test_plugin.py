@@ -22,42 +22,63 @@ class ExtensionTestPlugin(IPlugin):
     @rpc_call
     def get_pass_phrase(self, user_id, email):
         email = self.parse_email_data(email)
-        user_pass_phrase = UserInfoDataStore.instance().get_user_data_by_id(user_id=user_id,
-                                                                            key=UserInfoDataStore.PASS_PHRASE_KEY)
-        if user_pass_phrase is None:
-            user_pass_phrase = self.generate_random_pass_phrase()
-            UserInfoDataStore.instance().store_user_data(user_id=user_id, email=email, pass_phrase=user_pass_phrase)
-            public_pgp_key, private_pgp_key = self.generate_pgp_key_pair(email, user_pass_phrase)
-            if public_pgp_key is not None and private_pgp_key is not None:
-                UserInfoDataStore.instance().store_user_data(user_id=user_id, email=None,
-                                                             public_pgp_key=public_pgp_key)
-                return {'private_pgp_key': private_pgp_key, 'pass_phrase': user_pass_phrase}
-            return {'error': 'Failed to get public key for given user email.'}
-        return {"pass_phrase": user_pass_phrase}
+        user_info_redis = UserInfoDataStore.instance()
+        user_data = user_info_redis.get_user_data_by_id(user_id=user_id, key=UserInfoDataStore.USER_DATA_KEY)
+        if user_data is None:
+            return self.get_pass_phrase_by_email(user_id, email, user_data)
+        user_email_data = user_data.get(email, None)
+        if user_email_data is not None:
+            return {"pass_phrase": user_email_data.get(UserInfoDataStore.PASS_PHRASE_KEY)}
+        user_email_data = user_info_redis.get_user_data_by_id(user_id="%s_fakeID" % email,
+                                                              key=UserInfoDataStore.USER_DATA_KEY)
+        if user_email_data is None:
+            return self.get_pass_phrase_by_email(user_id, email, user_data)
+        user_data.update({email: user_email_data.get(email)})
+        user_info_redis.store_user_data(user_id=user_id, email=email, user_data=user_data)
+        user_info_redis.delete_user_data("%s_fakeID" % email)
+        return {'private_pgp_key': user_email_data.get(email).get(UserInfoDataStore.PRIVATE_PGP_KEY),
+                'pass_phrase': user_email_data.get(email).get(UserInfoDataStore.PASS_PHRASE_KEY)}
+
+
+    @staticmethod
+    def get_pass_phrase_by_email(user_id, email, user_data=None):
+        user_info_redis = UserInfoDataStore.instance()
+        user_pass_phrase = ExtensionTestPlugin.generate_random_pass_phrase()
+        public_pgp_key, private_pgp_key = ExtensionTestPlugin.generate_pgp_key_pair(email, user_pass_phrase)
+        if public_pgp_key is not None and private_pgp_key is not None:
+            if user_data is not None:
+                user_data.update({email: {UserInfoDataStore.PUBLIC_PGP_KEY: public_pgp_key,
+                                          UserInfoDataStore.PASS_PHRASE_KEY: user_pass_phrase}})
+            else:
+                user_data = {email: {UserInfoDataStore.PUBLIC_PGP_KEY: public_pgp_key,
+                                     UserInfoDataStore.PASS_PHRASE_KEY: user_pass_phrase}}
+            user_info_redis.store_user_data(user_id=user_id, email=email, user_data=user_data)
+            return {'private_pgp_key': private_pgp_key, 'pass_phrase': user_pass_phrase}
+        return {'error': 'Failed to get public key for given user email.'}
 
     @rpc_call
     def get_users_public_pgp_keys(self, emails):
         emails = self.parse_email_data(emails).split(',')
+        user_info_redis = UserInfoDataStore.instance()
         public_pgp_keys = []
         for email in emails:
-            user_id = UserInfoDataStore.instance().get_user_id_by_email(email=email)
-            user_info_redis = UserInfoDataStore.instance()
+            user_id = user_info_redis.get_user_id_by_email(email=email)
             if user_id is None:
                 # I think this should be done in method which proceeds user registration
                 # but for now it is faked here.
                 user_id = '%s_fakeID' % email
-                random_pass_phrase = self.generate_random_pass_phrase()
-                user_info_redis.store_user_data(user_id=user_id, email=email, pass_phrase=random_pass_phrase)
-                public_pgp_key, private_pgp_key = self.generate_pgp_key_pair(email, random_pass_phrase)
+                user_pass_phrase = ExtensionTestPlugin.generate_random_pass_phrase()
+                public_pgp_key, private_pgp_key = ExtensionTestPlugin.generate_pgp_key_pair(email, user_pass_phrase)
                 if public_pgp_key is not None and private_pgp_key is not None:
-                    UserInfoDataStore.instance().store_user_data(user_id=user_id, email=None,
-                                                                 public_pgp_key=public_pgp_key)
-                    UserInfoDataStore.instance().store_user_data(user_id=user_id, email=None,
-                                                                 private_pgp_key=private_pgp_key)
+                    user_data = {email: {UserInfoDataStore.PUBLIC_PGP_KEY: public_pgp_key,
+                                         UserInfoDataStore.PRIVATE_PGP_KEY: private_pgp_key,
+                                         UserInfoDataStore.PASS_PHRASE_KEY: user_pass_phrase}}
+                    user_info_redis.store_user_data(user_id=user_id, email=None, user_data=user_data)
                     public_pgp_keys.append(public_pgp_key)
             else:
                 user_public_pgp_key = user_info_redis.get_user_data_by_id(user_id=user_id,
-                                                                          key=UserInfoDataStore.PUBLIC_PGP_KEY)
+                                                                          key=UserInfoDataStore.USER_DATA_KEY)\
+                    .get(email).get(UserInfoDataStore.PUBLIC_PGP_KEY)
                 public_pgp_keys.append(user_public_pgp_key)
         return {'public_pgp_keys': ','.join(public_pgp_keys)}
 
