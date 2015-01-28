@@ -676,13 +676,17 @@ class TestRpcCalls(BiomioTest):
         test_obj.setup_test_for_for_new_id()
         test_obj._builder.set_header(appId='probe_%s' % (sha1(urandom(64)).hexdigest()))
 
+        # CLIENT HELLO ->
         message = test_obj.create_next_message(oid='clientHello', secret='secret')
         test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False, wait_for_response=False)
 
+        # RESOURCES ->
         message = test_obj.create_next_message(oid='resources', data=[{"rType": "video", "rProperties": "1500x1000"},
             {"rType": "fp-scanner", "rProperties": "true"}, {"rType": "mic", "rProperties": "true"}])
+        # SERVER HELLO <-
         response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False, wait_for_response=True)
 
+        # ACK ->
         message = test_obj.create_next_message(oid='ack')
         test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False,
                           wait_for_response=False)
@@ -696,8 +700,13 @@ class TestRpcCalls(BiomioTest):
             try:
                 message = test_obj.read_message(websocket=test_obj.get_curr_connection())
 
-                if message and message.msg and str(message.msg.oid) == 'rpcResp':
-                    rpc_responce_message = message
+                # TRY <-
+                if message and message.msg and str(message.msg.oid) == 'try':
+                    print "GOT TRY!"
+                    # PROBE ->
+                    probe_msg = test_obj.create_next_message(oid='probe', probeId=0, index=0, touchId='True')
+                    response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=probe_msg,
+                                                 close_connection=False, wait_for_response=False)
                     break
             except Exception, e:
                 pass
@@ -705,12 +714,20 @@ class TestRpcCalls(BiomioTest):
             message = test_obj.create_next_message(oid='nop')
             message.header.token = test_obj.session_refresh_token
             try:
+                # NOP ->
+                # NOP <-
                 response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message,
                                              close_connection=False, wait_for_response=True)
                 ok_(str(response.msg.oid) == 'nop', msg='No responce on nop message')
             except Exception, e:
                 pass
+
+
         print "PROBE END"
+        message = test_obj.create_next_message(oid='bye')
+        # BYE ->
+        # BYE <-
+        response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False)
 
 
     # @staticmethod
@@ -748,6 +765,7 @@ class TestRpcCalls(BiomioTest):
 
                 if message and message.msg and str(message.msg.oid) == 'rpcResp':
                     rpc_responce_message = message
+                    print "GOT RESPONSE!"
                     break
             except Exception, e:
                 pass
