@@ -153,7 +153,6 @@ class MessageHandler:
     @staticmethod
     @verify_header
     def on_getting_probe(e):
-        print "GETTING PROBE"
         user_id = str(e.request.header.id)
         ttl = settings.bioauth_timeout
         result = (str(e.request.msg.touchId).lower() == 'true')
@@ -208,13 +207,12 @@ def app_registered(e):
 def ready(e):
     app_id = str(e.request.header.appId)
 
-    if app_id.startswith('probe_'):
+    if app_id.startswith('probe'):
         user_id = e.request.header.id,
         RedisSubscriber.instance().subscribe(user_id=user_id, callback=e.protocol_instance.try_probe)
 
 
 def probe_trying(e):
-    print "PROBE TRYING"
     message = e.protocol_instance.create_next_message(
         request_seq=e.request.header.seq,
         oid='try',
@@ -578,5 +576,4 @@ class BiomioProtocol:
             self._rpc_handler.get_available_calls(namespace=input_msg.msg.namespace)
 
     def try_probe(self):
-        print "PROBETRY"
         self._state_machine_instance.probetry(request=self._last_received_message, protocol_instance=self)

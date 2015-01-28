@@ -3,7 +3,7 @@ from tornadoredis import Client
 from biomio.protocol.settings import settings
 from biomio.protocol.storage.proberesultsstore import ProbeResultsStore
 import tornado.gen
-from weakref import WeakValueDictionary
+
 
 class RedisSubscriber:
     _instance = None
@@ -17,6 +17,7 @@ class RedisSubscriber:
     def __init__(self):
         self.redis = Client(host=settings.redis_host, port=settings.redis_port)
         self.callback_by_key = {}
+        self.data_key_by_callback = {}
         self.listen()
 
     @tornado.gen.engine
@@ -26,13 +27,16 @@ class RedisSubscriber:
         self.redis.listen(self.on_redis_message)
 
     @tornado.gen.engine
+    def subscribe_to_data(self, user_id, data_key, callback=None):
+        self.data_key_by_callback[callback] = data_key
+        self.subscribe(user_id, callback)
+
     def subscribe(self, user_id, callback):
         key = RedisSubscriber._redis_probe_key(user_id=user_id)
         subscribers = self.callback_by_key.get(key, [])
         if not subscribers or callback not in subscribers:
             subscribers.append(callback)
             self.callback_by_key[key] = subscribers
-        print key, callback
 
     def unsubscribe(self, user_id, callback):
         key = RedisSubscriber._redis_probe_key(user_id=user_id)
@@ -40,6 +44,8 @@ class RedisSubscriber:
         if subscribers and callback in subscribers:
             subscribers.remove(callback)
             self.callback_by_key[key] = subscribers
+            if callback in self.data_key_by_callback:
+                del self.data_key_by_callback[callback]
 
     @staticmethod
     def _redis_probe_key(user_id):
@@ -54,7 +60,9 @@ class RedisSubscriber:
         if msg.kind == 'pmessage':
             if msg.body == 'set' or msg.body == 'expired':
                 probe_key = re.search('.*:(probe:.*)', msg.channel).group(1)
-                subscribers = self.callback_by_key.get(probe_key, None)
-                if subscribers:
-                    for callback in subscribers:
+                user_id = re.search('.*:probe:(.*)', msg.channel).group(1)
+                subscribers = self.callback_by_key.get(probe_key, [])
+                for callback in subscribers:
+                    data_key = self.data_key_by_callback.get(callback, None)
+                    if not data_key or ProbeResultsStore.instance().get_probe_data(user_id=user_id, key=data_key):
                         callback()

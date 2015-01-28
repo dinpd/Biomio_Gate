@@ -659,18 +659,6 @@ class TestRpcCalls(BiomioTest):
         ok_(str(response.msg.oid) != 'bye', msg='Connection closed. Status: %s' % response.status)
 
     @staticmethod
-    def probe_test_job():
-        time.sleep(1)
-        test_obj = BiomioTest()
-        test_obj.setup_test_with_handshake()
-        print "\nPROBE: handshake finished"
-        # message = test_obj.read_message(websocket=test_obj.get_curr_connection())
-        # print "PROBE: ", message.serialize()
-        # message = test_obj.create_next_message(oid='rpcReq', namespace='probe_test_plugin', call='test_probe_valid')
-        # response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False,
-        #                                  wait_for_response=True)
-
-    @staticmethod
     def probe_job():
         test_obj = BiomioTest()
         test_obj.setup_test_for_for_new_id()
@@ -691,8 +679,6 @@ class TestRpcCalls(BiomioTest):
         test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False,
                           wait_for_response=False)
 
-        print "HANDSHAKE"
-
         message_timeout = settings.connection_timeout / 2  # Send a message every 3 seconds
         max_message_count = 10
         rpc_responce_message = None
@@ -702,7 +688,6 @@ class TestRpcCalls(BiomioTest):
 
                 # TRY <-
                 if message and message.msg and str(message.msg.oid) == 'try':
-                    print "GOT TRY!"
                     # PROBE ->
                     probe_msg = test_obj.create_next_message(oid='probe', probeId=0, index=0, touchId='True')
                     response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=probe_msg,
@@ -722,24 +707,11 @@ class TestRpcCalls(BiomioTest):
             except Exception, e:
                 pass
 
-
-        print "PROBE END"
         message = test_obj.create_next_message(oid='bye')
         # BYE ->
         # BYE <-
         response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False)
-
-
-    # @staticmethod
-    # def probe_test_job_with_invalid_auth():
-    #     # time.sleep(1)
-    #     test_obj = BiomioTest()
-    #     test_obj.setup_test_with_handshake()
-    #     message = test_obj.read_message(websocket=test_obj.get_curr_connection())
-    #     print "PROBE: ", message
-        # message = test_obj.create_next_message(oid='rpcReq', namespace='probe_test_plugin', call='test_probe_invalid')
-        # response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False,
-        #                                  wait_for_response=True)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
 
     @attr('slow')
     def test_rpc_with_auth(self):
@@ -751,11 +723,10 @@ class TestRpcCalls(BiomioTest):
 
         time.sleep(3)
 
-        print "\nEXTENSION: rpcCall"
         message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin', call='test_funch_with_auth',
             data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
         message = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
-            wait_for_response=True)
+            wait_for_response=False)
 
         max_message_count = 10
         rpc_responce_message = None
@@ -765,7 +736,6 @@ class TestRpcCalls(BiomioTest):
 
                 if message and message.msg and str(message.msg.oid) == 'rpcResp':
                     rpc_responce_message = message
-                    print "GOT RESPONSE!"
                     break
             except Exception, e:
                 pass
@@ -779,8 +749,8 @@ class TestRpcCalls(BiomioTest):
             except Exception, e:
                 pass
 
-        # ok_(rpc_responce_message, msg='No RPC response on auth')
-        # ok_(get_rpc_msg_field(message=rpc_responce_message, key="error") is None, msg='Errors during RPC call')
+        ok_(rpc_responce_message, msg='No RPC response on auth')
+        ok_(get_rpc_msg_field(message=rpc_responce_message, key="error") is None, msg='Errors during RPC call')
 
 
     def test_rpc_pass_phrase_keys_generation(self):
@@ -854,7 +824,6 @@ class TestProbes(BiomioTest):
         # message = self.create_next_message(oid='nop')
         # response = self.send_message(websocket=self.get_curr_connection(), message=message,
         #                              close_connection=False, wait_for_response=True)
-        print response.serialize()
         # eq_(response.msg.oid, 'serverHello', msg='Response does not contains serverHello message')
         # ok_(hasattr(response.msg, 'key') and response.msg.key, msg="Responce does not contains generated private key.")
 
