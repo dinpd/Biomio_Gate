@@ -33,11 +33,14 @@ class ExtensionTestPlugin(IPlugin):
                                                               key=UserInfoDataStore.USER_DATA_KEY)
         if user_email_data is None:
             return self.get_pass_phrase_by_email(user_id, email, user_data)
-        user_data.update({email: user_email_data.get(email)})
+        user_email_data = user_email_data.get(email)
+        private_pgp_key = user_email_data.get(UserInfoDataStore.PRIVATE_PGP_KEY)
+        del user_email_data[UserInfoDataStore.PRIVATE_PGP_KEY]
+        user_data.update({email: user_email_data})
         user_info_redis.store_user_data(user_id=user_id, email=email, user_data=user_data)
         user_info_redis.delete_user_data("%s_fakeID" % email)
-        return {'private_pgp_key': user_email_data.get(email).get(UserInfoDataStore.PRIVATE_PGP_KEY),
-                'pass_phrase': user_email_data.get(email).get(UserInfoDataStore.PASS_PHRASE_KEY)}
+        return {'private_pgp_key': private_pgp_key,
+                'pass_phrase': user_email_data.get(UserInfoDataStore.PASS_PHRASE_KEY)}
 
 
     @staticmethod
@@ -67,13 +70,13 @@ class ExtensionTestPlugin(IPlugin):
                 # I think this should be done in method which proceeds user registration
                 # but for now it is faked here.
                 user_id = '%s_fakeID' % email
-                user_pass_phrase = ExtensionTestPlugin.generate_random_pass_phrase()
-                public_pgp_key, private_pgp_key = ExtensionTestPlugin.generate_pgp_key_pair(email, user_pass_phrase)
+                user_pass_phrase = self.generate_random_pass_phrase()
+                public_pgp_key, private_pgp_key = self.generate_pgp_key_pair(email, user_pass_phrase)
                 if public_pgp_key is not None and private_pgp_key is not None:
                     user_data = {email: {UserInfoDataStore.PUBLIC_PGP_KEY: public_pgp_key,
                                          UserInfoDataStore.PRIVATE_PGP_KEY: private_pgp_key,
                                          UserInfoDataStore.PASS_PHRASE_KEY: user_pass_phrase}}
-                    user_info_redis.store_user_data(user_id=user_id, email=None, user_data=user_data)
+                    user_info_redis.store_user_data(user_id=user_id, email=email, user_data=user_data)
                     public_pgp_keys.append(public_pgp_key)
             else:
                 user_public_pgp_key = user_info_redis.get_user_data_by_id(user_id=user_id,
