@@ -32,18 +32,23 @@ class RedisSubscriber:
         self.subscribe(user_id, callback)
 
     def subscribe(self, user_id, callback):
+        #TODO: added for test purposes - remove later
+        user_id = 'id'
         key = RedisSubscriber._redis_probe_key(user_id=user_id)
         subscribers = self.callback_by_key.get(key, [])
         if not subscribers or callback not in subscribers:
+            print "SUBSCRIBE", user_id
             subscribers.append(callback)
             self.callback_by_key[key] = subscribers
 
     def unsubscribe(self, user_id, callback):
+        user_id = 'id'
         key = RedisSubscriber._redis_probe_key(user_id=user_id)
         subscribers = self.callback_by_key.get(key, [])
         if subscribers and callback in subscribers:
             subscribers.remove(callback)
             self.callback_by_key[key] = subscribers
+            print "UNSUBSCRIBE", user_id
             if callback in self.data_key_by_callback:
                 del self.data_key_by_callback[callback]
 
@@ -64,5 +69,6 @@ class RedisSubscriber:
                 subscribers = self.callback_by_key.get(probe_key, [])
                 for callback in subscribers:
                     data_key = self.data_key_by_callback.get(callback, None)
-                    if not data_key or ProbeResultsStore.instance().get_probe_data(user_id=user_id, key=data_key):
+                    if not data_key or (data_key and ProbeResultsStore.instance().get_probe_data(user_id=user_id, key=data_key)):
+                        self.unsubscribe(user_id=user_id, callback=callback)
                         callback()

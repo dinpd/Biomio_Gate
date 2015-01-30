@@ -47,6 +47,10 @@ def _is_header_valid(e):
         is_valid = False
         e.status = 'Protocol version is invalid'
 
+    if e.protocol_instance._last_received_message.header.appId:
+        appId = str(e.protocol_instance._last_received_message.header.appId)
+        logger.debug(appId)
+
     return is_valid
 
 
@@ -118,6 +122,9 @@ class MessageHandler:
 
     @staticmethod
     def on_bye_message(e):
+        if e.protocol_instance._last_received_message.header.appId:
+            appId = str(e.protocol_instance._last_received_message.header.appId)
+            logger.debug(appId)
         return STATE_DISCONNECTED
 
     @staticmethod
@@ -139,10 +146,16 @@ class MessageHandler:
 
     @staticmethod
     def on_registered(e):
+        if e.protocol_instance._last_received_message.header.appId:
+            appId = str(e.protocol_instance._last_received_message.header.appId)
+            logger.debug(appId)
         return STATE_APP_REGISTERED
 
     @staticmethod
     def on_probe_trying(e):
+        if e.protocol_instance._last_received_message.header.appId:
+            appId = str(e.protocol_instance._last_received_message.header.appId)
+            logger.debug(appId)
         return STATE_PROBE_TRYING
 
     @staticmethod
@@ -208,7 +221,7 @@ def ready(e):
     app_id = str(e.request.header.appId)
 
     if app_id.startswith('probe'):
-        user_id = e.request.header.id,
+        user_id = str(e.request.header.id),
         RedisSubscriber.instance().subscribe(user_id=user_id, callback=e.protocol_instance.try_probe)
 
 
@@ -240,11 +253,14 @@ def disconnect(e):
     # In a case of reaching disconnected state due to invalid message,
     # request could not be passed to state change method
     request_seq = None
-    if hasattr(e, 'request'):
-        request_seq = e.request.header.seq
+    # if hasattr(e, 'request'):
+    #     request_seq = e.request.header.seq
 
-    user_id = e.request.header.id,
-    RedisSubscriber.instance().unsubscribe(user_id=user_id, callback=e.protocol_instance.try_probe)
+    # print "disconnect"
+    if e.protocol_instance._last_received_message:
+        request_seq = e.protocol_instance._last_received_message.header.seq
+        user_id = str(e.protocol_instance._last_received_message.header.id)
+        RedisSubscriber.instance().unsubscribe(user_id=user_id, callback=e.protocol_instance.try_probe)
 
     e.protocol_instance.close_connection(request_seq=request_seq, status_message=status)
 
