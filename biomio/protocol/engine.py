@@ -223,6 +223,9 @@ def ready(e):
     if app_id.startswith('probe'):
         user_id = str(e.request.header.id),
         RedisSubscriber.instance().subscribe(user_id=user_id, callback=e.protocol_instance.try_probe)
+        waiting_auth = ProbeResultsStore.instance().get_probe_data(user_id=user_id, key='waiting_auth')
+        if waiting_auth:
+            e.protocol_instance.try_probe()
 
 
 def probe_trying(e):
@@ -592,4 +595,9 @@ class BiomioProtocol:
             self._rpc_handler.get_available_calls(namespace=input_msg.msg.namespace)
 
     def try_probe(self):
-        self._state_machine_instance.probetry(request=self._last_received_message, protocol_instance=self)
+        user_id = str(self._last_received_message.header.id)
+        waiting_auth = ProbeResultsStore.instance().get_probe_data(user_id=user_id, key='waiting_auth')
+        if waiting_auth:
+            # print "WAITING AUTH!!!"
+            ProbeResultsStore.instance().store_probe_data(user_id=user_id, ttl=settings.bioauth_timeout, waiting_auth=False)
+            self._state_machine_instance.probetry(request=self._last_received_message, protocol_instance=self)

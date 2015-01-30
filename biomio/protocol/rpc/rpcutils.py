@@ -55,7 +55,7 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
     user_id = _user_id_arg(callable_kwargs=callable_kwargs)
 
     # Create redis key - that will trigger probe try message
-    ProbeResultsStore.instance().store_probe_data(user_id=user_id, ttl=settings.bioauth_timeout, somekey=False)
+    ProbeResultsStore.instance().store_probe_data(user_id=user_id, ttl=settings.bioauth_timeout, waiting_auth=True)
     yield tornado.gen.Task(RedisSubscriber.instance().subscribe_to_data, user_id, 'auth')
 
     status = None
@@ -70,6 +70,7 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
         status = 'Biometric auth timeout'
 
     callback = _callback_arg(callable_kwargs)
+    ProbeResultsStore.instance().remove_probe_data(user_id=user_id)
 
     if user_authenticated:
         kwargs = _check_rpc_arguments(callable_func=callable_func, current_kwargs=callable_kwargs)
