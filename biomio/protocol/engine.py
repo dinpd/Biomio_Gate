@@ -110,13 +110,15 @@ class MessageHandler:
     @staticmethod
     @verify_header
     def on_nop_message(e):
-        if e.src == STATE_READY:
+        if e.src == STATE_READY \
+                or e.src == STATE_PROBE_TRYING\
+                or e.src == STATE_GETTING_PROBES:
             message = e.protocol_instance.create_next_message(
                 request_seq=e.request.header.seq,
                 oid='nop'
             )
             e.protocol_instance.send_message(responce=message)
-            return STATE_READY
+            return e.src
 
         return STATE_DISCONNECTED
 
@@ -229,13 +231,13 @@ def ready(e):
 
 
 def probe_trying(e):
-    message = e.protocol_instance.create_next_message(
-        request_seq=e.request.header.seq,
-        oid='try',
-        resource=[{'rType': 'fp-scanner', 'samples': 1}]
-    )
-    e.protocol_instance.send_message(responce=message)
-    pass
+    if not e.src == STATE_PROBE_TRYING:
+        message = e.protocol_instance.create_next_message(
+            request_seq=e.request.header.seq,
+            oid='try',
+            resource=[{'rType': 'fp-scanner', 'samples': 1}]
+        )
+        e.protocol_instance.send_message(responce=message)
 
 
 def getting_probe(e):
