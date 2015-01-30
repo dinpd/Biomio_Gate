@@ -264,8 +264,16 @@ def disconnect(e):
     # print "disconnect"
     if e.protocol_instance._last_received_message:
         request_seq = e.protocol_instance._last_received_message.header.seq
+        app_id = str(e.protocol_instance._last_received_message.header.appId)
         user_id = str(e.protocol_instance._last_received_message.header.id)
-        RedisSubscriber.instance().unsubscribe(user_id=user_id, callback=e.protocol_instance.try_probe)
+        if app_id.startswith('probe'):
+            RedisSubscriber.instance().unsubscribe(user_id=user_id, callback=e.protocol_instance.try_probe)
+        else:  # Extension
+            if ProbeResultsStore.instance().has_probe_results(user_id=user_id):
+                RedisSubscriber.instance().unsubscribe_all(user_id=user_id)
+                ProbeResultsStore.instance().remove_probe_data(user_id=user_id)
+                print ""
+
 
     e.protocol_instance.close_connection(request_seq=request_seq, status_message=status)
 

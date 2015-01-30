@@ -41,6 +41,14 @@ class RedisSubscriber:
             subscribers.append(callback)
             self.callback_by_key[key] = subscribers
 
+    def unsubscribe_all(self, user_id):
+        user_id = 'id'
+        probe_key = self._redis_probe_key(user_id)
+        subscribers = self.callback_by_key.get(probe_key, [])
+        for callback in subscribers:
+            self.unsubscribe(user_id=user_id, callback=callback)
+            callback()
+
     def unsubscribe(self, user_id, callback):
         user_id = 'id'
         key = RedisSubscriber._redis_probe_key(user_id=user_id)
