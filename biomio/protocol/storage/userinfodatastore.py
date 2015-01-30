@@ -8,6 +8,7 @@ class UserInfoDataStore(RedisStore):
     PASS_PHRASE_KEY = 'pass_phrase'
     PUBLIC_PGP_KEY = 'public_pgp_key'
     PRIVATE_PGP_KEY = 'private_pgp_key'
+    USER_DATA_KEY = 'user_data'
 
     def __init__(self):
         RedisStore.__init__(self)
@@ -51,3 +52,6 @@ class UserInfoDataStore(RedisStore):
         else:
             data = ast.literal_eval(data)
         return data.get('user_id', None)
+
+    def delete_user_data(self, user_id):
+        self._redis.delete(user_id)
