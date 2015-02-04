@@ -52,6 +52,7 @@ def rpc_call(rpc_func):
 
 @tornado.gen.engine
 def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
+    #TODO: use onBehalfOf field
     user_id = _user_id_arg(callable_kwargs=callable_kwargs)
 
     # Create redis key - that will trigger probe try message
