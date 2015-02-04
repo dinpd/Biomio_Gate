@@ -54,9 +54,14 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
     #TODO: use onBehalfOf field
     user_id = _user_id_arg(callable_kwargs=callable_kwargs)
 
+
+    if ProbeResultsStore.instance().has_probe_results(user_id=user_id):
+        if ProbeResultsStore.instance().get_probe_data(user_id=user_id, key='auth'):
+            ProbeResultsStore.instance().remove_probe_data(user_id)
+
     # Check if there is already connection that waiting for biometric auth
-    is_already_waiting = ProbeResultsStore.instance().get_probe_data(user_id=user_id, key='waiting_auth')
-    if is_already_waiting is not None:
+    if ProbeResultsStore.instance().has_probe_results(user_id=user_id):
+        is_already_waiting = ProbeResultsStore.instance().get_probe_data(user_id=user_id, key='waiting_auth')
         if not is_already_waiting:
             # Remove existing key, create new
             ProbeResultsStore.instance().remove_probe_data(user_id)
@@ -70,6 +75,7 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
 
     # Create redis key - that will trigger probe try message
     yield tornado.gen.Task(ProbeResultsStore.instance().subscribe_to_data, user_id, 'auth')
+
 
     status = None
     user_authenticated = None

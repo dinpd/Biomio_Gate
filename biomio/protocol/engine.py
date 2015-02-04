@@ -170,9 +170,7 @@ class MessageHandler:
         user_id = str(e.request.header.id)
         ttl = settings.bioauth_timeout
         result = (str(e.request.msg.touchId).lower() == 'true')
-        waiting_auth = ProbeResultsStore.instance().get_probe_data(user_id=user_id, key='waiting_auth')
-        if waiting_auth:
-            ProbeResultsStore.instance().store_probe_data(user_id=user_id, ttl=ttl, waiting_auth=False, auth=result)
+        ProbeResultsStore.instance().store_probe_data(user_id=user_id, ttl=ttl, waiting_auth=False, auth=result)
         return STATE_READY
 
     @staticmethod
@@ -609,5 +607,5 @@ class BiomioProtocol:
     def try_probe(self):
         user_id = str(self._last_received_message.header.id)
         waiting_auth = ProbeResultsStore.instance().get_probe_data(user_id=user_id, key='waiting_auth')
-        if waiting_auth:
+        if waiting_auth and (self._state_machine_instance.current == STATE_READY):
             self._state_machine_instance.probetry(request=self._last_received_message, protocol_instance=self)
