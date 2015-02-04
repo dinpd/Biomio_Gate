@@ -9,7 +9,6 @@ from biomio.third_party.fysom import Fysom, FysomError
 from biomio.protocol.sessionmanager import SessionManager
 from biomio.protocol.settings import settings
 from biomio.protocol.crypt import Crypto
-from biomio.protocol.storage.redissubscriber import RedisSubscriber
 from biomio.protocol.storage.proberesultsstore import ProbeResultsStore
 from biomio.protocol.rpc.rpchandler import RpcHandler
 from biomio.protocol.storage.applicationdatastore import ApplicationDataStore
@@ -224,7 +223,7 @@ def ready(e):
 
     if app_id.startswith('probe'):
         user_id = str(e.request.header.id),
-        RedisSubscriber.instance().subscribe(user_id=user_id, callback=e.protocol_instance.try_probe)
+        ProbeResultsStore.instance().subscribe(user_id=user_id, callback=e.protocol_instance.try_probe)
         waiting_auth = ProbeResultsStore.instance().get_probe_data(user_id=user_id, key='waiting_auth')
         if waiting_auth:
             e.protocol_instance.try_probe()
@@ -267,10 +266,10 @@ def disconnect(e):
         app_id = str(e.protocol_instance._last_received_message.header.appId)
         user_id = str(e.protocol_instance._last_received_message.header.id)
         if app_id.startswith('probe'):
-            RedisSubscriber.instance().unsubscribe(user_id=user_id, callback=e.protocol_instance.try_probe)
+            ProbeResultsStore.instance().unsubscribe(user_id=user_id, callback=e.protocol_instance.try_probe)
         else:  # Extension
             if ProbeResultsStore.instance().has_probe_results(user_id=user_id):
-                RedisSubscriber.instance().unsubscribe_all(user_id=user_id)
+                ProbeResultsStore.instance().unsubscribe_all(user_id=user_id)
                 ProbeResultsStore.instance().remove_probe_data(user_id=user_id)
                 print ""
 

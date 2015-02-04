@@ -2,7 +2,6 @@ from functools import wraps
 import tornado.gen
 import inspect
 
-from biomio.protocol.storage.redissubscriber import RedisSubscriber
 from biomio.protocol.storage.proberesultsstore import ProbeResultsStore
 from biomio.protocol.settings import settings
 
@@ -55,9 +54,10 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
     #TODO: use onBehalfOf field
     user_id = _user_id_arg(callable_kwargs=callable_kwargs)
 
+
     # Create redis key - that will trigger probe try message
     ProbeResultsStore.instance().store_probe_data(user_id=user_id, ttl=settings.bioauth_timeout, waiting_auth=True)
-    yield tornado.gen.Task(RedisSubscriber.instance().subscribe_to_data, user_id, 'auth')
+    yield tornado.gen.Task(ProbeResultsStore.instance().subscribe_to_data, user_id, 'auth')
 
     status = None
     user_authenticated = None
