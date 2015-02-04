@@ -19,7 +19,7 @@ class ExtensionTestPlugin(IPlugin):
     def test_funch_with_auth(self, val1, val2):
         return {"result": "some value"}
 
-    @rpc_call
+    @rpc_call_with_auth
     def get_pass_phrase(self, user_id, email):
         email = self.parse_email_data(email)
         user_info_redis = UserInfoDataStore.instance()
