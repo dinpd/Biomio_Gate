@@ -69,7 +69,6 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
         ProbeResultsStore.instance().store_probe_data(user_id=user_id, ttl=settings.bioauth_timeout, waiting_auth=True)
 
     # Create redis key - that will trigger probe try message
-
     yield tornado.gen.Task(ProbeResultsStore.instance().subscribe_to_data, user_id, 'auth')
 
     status = None

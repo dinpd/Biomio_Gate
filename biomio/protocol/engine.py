@@ -170,7 +170,9 @@ class MessageHandler:
         user_id = str(e.request.header.id)
         ttl = settings.bioauth_timeout
         result = (str(e.request.msg.touchId).lower() == 'true')
-        ProbeResultsStore.instance().store_probe_data(user_id=user_id, ttl=ttl, auth=result)
+        waiting_auth = ProbeResultsStore.instance().get_probe_data(user_id=user_id, key='waiting_auth')
+        if waiting_auth:
+            ProbeResultsStore.instance().store_probe_data(user_id=user_id, ttl=ttl, waiting_auth=False, auth=result)
         return STATE_READY
 
     @staticmethod
@@ -221,8 +223,9 @@ def app_registered(e):
 def ready(e):
     app_id = str(e.request.header.appId)
 
+    # If current connection - probe connection
     if app_id.startswith('probe'):
-        user_id = str(e.request.header.id),
+        user_id = str(e.request.header.id)
         ProbeResultsStore.instance().subscribe(user_id=user_id, callback=e.protocol_instance.try_probe)
         waiting_auth = ProbeResultsStore.instance().get_probe_data(user_id=user_id, key='waiting_auth')
         if waiting_auth:
@@ -607,6 +610,4 @@ class BiomioProtocol:
         user_id = str(self._last_received_message.header.id)
         waiting_auth = ProbeResultsStore.instance().get_probe_data(user_id=user_id, key='waiting_auth')
         if waiting_auth:
-            # print "WAITING AUTH!!!"
-            ProbeResultsStore.instance().store_probe_data(user_id=user_id, ttl=settings.bioauth_timeout, waiting_auth=False)
             self._state_machine_instance.probetry(request=self._last_received_message, protocol_instance=self)
