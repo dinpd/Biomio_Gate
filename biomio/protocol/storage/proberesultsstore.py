@@ -92,12 +92,22 @@ class ProbeResultsStore(RedisStore):
 
     def on_redis_message(self, msg):
         if msg.kind == 'pmessage':
-            if msg.body == 'set' or msg.body == 'expired':
+            print msg.body, msg
+            if msg.body == 'set' or msg.body == 'expired' or msg.body == 'del':
                 probe_key = re.search('.*:(probe:.*)', msg.channel).group(1)
                 user_id = re.search('.*:probe:(.*)', msg.channel).group(1)
                 subscribers = self.callback_by_key.get(probe_key, [])
+
+                if msg.body == 'expired' and self.has_probe_results(user_id):
+                    return
+                
+                callback_list = []
                 for callback in subscribers:
                     data_key = self.data_key_by_callback.get(callback, None)
                     if not data_key or (data_key and ProbeResultsStore.instance().get_probe_data(user_id=user_id, key=data_key)):
                         self.unsubscribe(user_id=user_id, callback=callback)
-                        callback()
+                        try:
+                            callback()
+                        except :
+                            pass
+                print self.callback_by_key
