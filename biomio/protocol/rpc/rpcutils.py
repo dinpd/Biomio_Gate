@@ -89,7 +89,6 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
         status = 'Biometric auth timeout'
 
     callback = _callback_arg(callable_kwargs)
-    ProbeResultsStore.instance().remove_probe_data(user_id=user_id)
 
     if user_authenticated:
         kwargs = _check_rpc_arguments(callable_func=callable_func, current_kwargs=callable_kwargs)
