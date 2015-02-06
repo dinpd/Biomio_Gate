@@ -6,6 +6,8 @@ import re
 from tornadoredis import Client
 import tornado.gen
 
+import logging
+logger = logging.getLogger(__name__)
 
 class ProbeResultsStore(RedisStore):
     _instance = None
@@ -40,6 +42,7 @@ class ProbeResultsStore(RedisStore):
 
     def has_probe_results(self, user_id):
         return self._redis.exists(name=self.redis_probe_key(user_id=user_id))
+
 
     def get_probe_data(self, user_id, key):
         data = self._redis.get(name=self.redis_probe_key(user_id=user_id))
@@ -101,13 +104,12 @@ class ProbeResultsStore(RedisStore):
                 if msg.body == 'expired' and self.has_probe_results(user_id):
                     return
                 
-                callback_list = []
                 for callback in subscribers:
                     data_key = self.data_key_by_callback.get(callback, None)
                     if not data_key or (data_key and ProbeResultsStore.instance().get_probe_data(user_id=user_id, key=data_key)):
                         self.unsubscribe(user_id=user_id, callback=callback)
                         try:
                             callback()
-                        except :
-                            pass
+                        except Exception as e:
+                            logger.warning(msg=str(e))
                 print self.callback_by_key
