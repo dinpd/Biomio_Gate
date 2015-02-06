@@ -43,10 +43,11 @@ def rpc_call(rpc_func):
     def _decorator(*args, **kwargs):
         callable_kwargs = _check_rpc_arguments(callable_func=rpc_func, current_kwargs=kwargs)
         result = rpc_func(*args, **callable_kwargs)
+        status = 'complete'
 
         # Callback
         callback = _callback_arg(callable_kwargs=kwargs)
-        callback(result)
+        callback(result=result, status=status)
     return wraps(rpc_func)(_decorator)
 
 
