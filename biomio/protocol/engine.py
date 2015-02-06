@@ -481,7 +481,7 @@ class BiomioProtocol:
                 'oid': 'rpcResp',
                 'namespace': str(input_msg.msg.namespace),
                 'call': str(input_msg.msg.call),
-                'status': status
+                'rpcStatus': status
             }
 
             if result is not None:

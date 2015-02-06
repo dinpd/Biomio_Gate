@@ -288,7 +288,7 @@ BIOMIO_protocol_json_schema = {
                 "namespace": {"type": "string"},
                 "call": {"type": "string"},
                 "data": {"$ref": "#/definitions/rpcData"},
-                "status": {"enum": ["complete", "inprogress", "fail"]}
+                "rpcStatus": {"enum": ["complete", "inprogress", "fail"]}
             }
         },
         "rect": {
