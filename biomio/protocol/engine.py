@@ -9,7 +9,8 @@ from biomio.third_party.fysom import Fysom, FysomError
 from biomio.protocol.sessionmanager import SessionManager
 from biomio.protocol.settings import settings
 from biomio.protocol.crypt import Crypto
-from biomio.protocol.storage.redisstore import RedisStore
+from biomio.protocol.storage.redissubscriber import RedisSubscriber
+from biomio.protocol.storage.proberesultsstore import ProbeResultsStore
 from biomio.protocol.rpc.rpchandler import RpcHandler
 from biomio.protocol.storage.applicationdatastore import ApplicationDataStore
 
@@ -23,9 +24,12 @@ PROTOCOL_VERSION = '1.0'
 STATE_CONNECTED = 'connected'
 STATE_HANDSHAKE = 'handshake'
 STATE_REGISTRATION = 'registration'
+STATE_GETTING_RESOURCES = 'resourceget'
 STATE_APP_REGISTERED = 'appregistered'
 STATE_READY = 'ready'
 STATE_DISCONNECTED = 'disconnected'
+STATE_PROBE_TRYING = 'probetrying'
+STATE_GETTING_PROBES = 'probegetting'
 
 
 def _is_header_valid(e):
@@ -42,6 +46,10 @@ def _is_header_valid(e):
     if not e.protocol_instance.is_protocol_version_valid(e.request.header.protoVer):
         is_valid = False
         e.status = 'Protocol version is invalid'
+
+    if e.protocol_instance._last_received_message.header.appId:
+        appId = str(e.protocol_instance._last_received_message.header.appId)
+        logger.debug(appId)
 
     return is_valid
 
@@ -82,7 +90,11 @@ class MessageHandler:
                 if hasattr(e.request.msg, "secret") \
                         and e.request.msg.secret:
                     if app_data is None:
-                        return STATE_REGISTRATION
+                        appId = str(e.request.header.appId)
+                        if appId.startswith('probe'):
+                            return STATE_GETTING_RESOURCES
+                        else:
+                            return STATE_REGISTRATION
                     e.status = "Registration handshake is inappropriate. Given app is already registered."
                 else:
                     if app_data is not None:
@@ -98,18 +110,23 @@ class MessageHandler:
     @staticmethod
     @verify_header
     def on_nop_message(e):
-        if e.src == STATE_READY:
+        if e.src == STATE_READY \
+                or e.src == STATE_PROBE_TRYING\
+                or e.src == STATE_GETTING_PROBES:
             message = e.protocol_instance.create_next_message(
                 request_seq=e.request.header.seq,
                 oid='nop'
             )
             e.protocol_instance.send_message(responce=message)
-            return STATE_READY
+            return e.src
 
         return STATE_DISCONNECTED
 
     @staticmethod
     def on_bye_message(e):
+        if e.protocol_instance._last_received_message.header.appId:
+            appId = str(e.protocol_instance._last_received_message.header.appId)
+            logger.debug(appId)
         return STATE_DISCONNECTED
 
     @staticmethod
@@ -131,7 +148,36 @@ class MessageHandler:
 
     @staticmethod
     def on_registered(e):
+        if e.protocol_instance._last_received_message.header.appId:
+            appId = str(e.protocol_instance._last_received_message.header.appId)
+            logger.debug(appId)
         return STATE_APP_REGISTERED
+
+    @staticmethod
+    def on_probe_trying(e):
+        if e.protocol_instance._last_received_message.header.appId:
+            appId = str(e.protocol_instance._last_received_message.header.appId)
+            logger.debug(appId)
+        return STATE_PROBE_TRYING
+
+    @staticmethod
+    @verify_header
+    def on_getting_resources(e):
+        return STATE_REGISTRATION
+
+    @staticmethod
+    @verify_header
+    def on_getting_probe(e):
+        user_id = str(e.request.header.id)
+        ttl = settings.bioauth_timeout
+        result = (str(e.request.msg.touchId).lower() == 'true')
+        ProbeResultsStore.instance().store_probe_data(user_id=user_id, ttl=ttl, auth=result)
+        return STATE_READY
+
+    @staticmethod
+    @verify_header
+    def on_resources(e):
+        return STATE_REGISTRATION
 
 
 def handshake(e):
@@ -173,6 +219,35 @@ def app_registered(e):
     e.protocol_instance.send_message(responce=message)
 
 
+def ready(e):
+    app_id = str(e.request.header.appId)
+
+    if app_id.startswith('probe'):
+        user_id = str(e.request.header.id),
+        RedisSubscriber.instance().subscribe(user_id=user_id, callback=e.protocol_instance.try_probe)
+        waiting_auth = ProbeResultsStore.instance().get_probe_data(user_id=user_id, key='waiting_auth')
+        if waiting_auth:
+            e.protocol_instance.try_probe()
+
+
+def probe_trying(e):
+    if not e.src == STATE_PROBE_TRYING:
+        message = e.protocol_instance.create_next_message(
+            request_seq=e.request.header.seq,
+            oid='try',
+            resource=[{'rType': 'fp-scanner', 'samples': 1}]
+        )
+        e.protocol_instance.send_message(responce=message)
+
+
+def getting_probe(e):
+    pass
+
+
+def getting_resouces(e):
+    pass
+
+
 def disconnect(e):
     # If status parameter passed to state change method
     # we will add it as a status for message
@@ -183,8 +258,22 @@ def disconnect(e):
     # In a case of reaching disconnected state due to invalid message,
     # request could not be passed to state change method
     request_seq = None
-    if hasattr(e, 'request'):
-        request_seq = e.request.header.seq
+    # if hasattr(e, 'request'):
+    #     request_seq = e.request.header.seq
+
+    # print "disconnect"
+    if e.protocol_instance._last_received_message:
+        request_seq = e.protocol_instance._last_received_message.header.seq
+        app_id = str(e.protocol_instance._last_received_message.header.appId)
+        user_id = str(e.protocol_instance._last_received_message.header.id)
+        if app_id.startswith('probe'):
+            RedisSubscriber.instance().unsubscribe(user_id=user_id, callback=e.protocol_instance.try_probe)
+        else:  # Extension
+            if ProbeResultsStore.instance().has_probe_results(user_id=user_id):
+                RedisSubscriber.instance().unsubscribe_all(user_id=user_id)
+                ProbeResultsStore.instance().remove_probe_data(user_id=user_id)
+                print ""
+
 
     e.protocol_instance.close_connection(request_seq=request_seq, status_message=status)
 
@@ -200,7 +289,7 @@ biomio_states = {
         {
             'name': 'clientHello',
             'src': STATE_CONNECTED,
-            'dst': [STATE_HANDSHAKE, STATE_REGISTRATION, STATE_DISCONNECTED],
+            'dst': [STATE_HANDSHAKE, STATE_REGISTRATION, STATE_GETTING_RESOURCES, STATE_DISCONNECTED],
             'decision': MessageHandler.on_client_hello_message
         },
         {
@@ -216,9 +305,15 @@ biomio_states = {
             'decision': MessageHandler.on_registered
         },
         {
+            'name': 'resources',
+            'src': STATE_GETTING_RESOURCES,
+            'dst': [STATE_REGISTRATION, STATE_DISCONNECTED],
+            'decision': MessageHandler.on_resources
+        },
+        {
             'name': 'nop',
-            'src': STATE_READY,
-            'dst': [STATE_READY, STATE_DISCONNECTED],
+            'src': [STATE_READY, STATE_PROBE_TRYING, STATE_GETTING_PROBES],
+            'dst': [STATE_READY, STATE_PROBE_TRYING, STATE_GETTING_PROBES, STATE_DISCONNECTED],
             'decision': MessageHandler.on_nop_message
         },
         {
@@ -232,6 +327,18 @@ biomio_states = {
             'src': STATE_HANDSHAKE,
             'dst': [STATE_READY, STATE_DISCONNECTED],
             'decision': MessageHandler.on_auth_message
+        },
+        {
+            'name': 'probetry',
+            'src': STATE_READY,
+            'dst': [STATE_PROBE_TRYING, STATE_DISCONNECTED],
+            'decision': MessageHandler.on_probe_trying
+        },
+        {
+            'name': 'probe',
+            'src': STATE_PROBE_TRYING,
+            'dst': [STATE_GETTING_PROBES, STATE_READY, STATE_DISCONNECTED],
+            'decision': MessageHandler.on_getting_probe
         }
     ],
     'callbacks': {
@@ -239,6 +346,10 @@ biomio_states = {
         'ondisconnected': disconnect,
         'onregistration': registration,
         'onappregistered': app_registered,
+        'onready': ready,
+        'onprobetrying': probe_trying,
+        'onprobegetting': getting_probe,
+        'resourceget': getting_resouces,
         'onchangestate': print_state_change
     }
 }
@@ -272,6 +383,8 @@ class BiomioProtocol:
 
         # Initialize state machine
         self._state_machine_instance = Fysom(biomio_states)
+
+        self._last_received_message = None
 
         logger.debug(' --------- ')  # helpful to separate output when auto tests is running
 
@@ -328,6 +441,7 @@ class BiomioProtocol:
                 if self._state_machine_instance.current == STATE_DISCONNECTED:
                     return
 
+                self._last_received_message = input_msg
                 make_transition(request=input_msg, protocol_instance=self)
 
                 # Start connection timer, if state machine does no reach its final state
@@ -496,3 +610,11 @@ class BiomioProtocol:
             self.send_message(responce=message)
         elif message_id == 'rpcEnumCallsReq':
             self._rpc_handler.get_available_calls(namespace=input_msg.msg.namespace)
+
+    def try_probe(self):
+        user_id = str(self._last_received_message.header.id)
+        waiting_auth = ProbeResultsStore.instance().get_probe_data(user_id=user_id, key='waiting_auth')
+        if waiting_auth:
+            # print "WAITING AUTH!!!"
+            ProbeResultsStore.instance().store_probe_data(user_id=user_id, ttl=settings.bioauth_timeout, waiting_auth=False)
+            self._state_machine_instance.probetry(request=self._last_received_message, protocol_instance=self)
