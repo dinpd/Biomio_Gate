@@ -114,7 +114,7 @@ BIOMIO_protocol_json_schema = {
         },
         "clientHeader": {
             "type": "object",
-            "required": ["oid", "seq", "id", "protoVer", "osId", "appId"],
+            "required": ["oid", "seq", "protoVer", "osId", "appId"],
             "properties": {
                 "oid": { "enum": ["clientHeader"] },
                 "seq": {"type": "number"},
