@@ -460,12 +460,6 @@ class BiomioProtocol:
                 for k,v in izip(list(input_msg.msg.data.keys), list(input_msg.msg.data.values)):
                     data[str(k)] = str(v)
 
-            # result = self._rpc_handler.process_rpc_call(
-            #     call=str(input_msg.msg.call),
-            #     namespace=str(input_msg.msg.namespace),
-            #     data=data
-            # )
-
             user_id = ''
             if hasattr(input_msg.msg, 'onBehalfOf'):
                 user_id = str(input_msg.msg.onBehalfOf)

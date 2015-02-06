@@ -75,9 +75,9 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
     if user_authenticated:
         kwargs = _check_rpc_arguments(callable_func=callable_func, current_kwargs=callable_kwargs)
         result = callable_func(*callable_args, **kwargs)
-        callback(result)
+        callback('complete', result)
     else:
-        callback({"error": status})
+        callback('fail', {"error": status})
         pass
 
 
