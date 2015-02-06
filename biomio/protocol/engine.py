@@ -224,10 +224,10 @@ def ready(e):
     # If current connection - probe connection
     if app_id.startswith('probe'):
         user_id = str(e.request.header.id)
-        ProbeResultsStore.instance().subscribe(user_id=user_id, callback=e.protocol_instance.try_probe)
+        ProbeResultsStore.instance().subscribe(user_id=user_id, callback=e.protocol_instance.check_if_probe_should_be_tried)
         waiting_auth = ProbeResultsStore.instance().get_probe_data(user_id=user_id, key='waiting_auth')
         if waiting_auth:
-            e.protocol_instance.try_probe()
+            e.protocol_instance.check_if_probe_should_be_tried()
 
 
 def probe_trying(e):
@@ -267,7 +267,7 @@ def disconnect(e):
         app_id = str(e.protocol_instance._last_received_message.header.appId)
         user_id = str(e.protocol_instance._last_received_message.header.id)
         if app_id.startswith('probe'):
-            ProbeResultsStore.instance().unsubscribe(user_id=user_id, callback=e.protocol_instance.try_probe)
+            ProbeResultsStore.instance().unsubscribe(user_id=user_id, callback=e.protocol_instance.check_if_probe_should_be_tried)
         else:  # Extension
             if ProbeResultsStore.instance().has_probe_results(user_id=user_id):
                 ProbeResultsStore.instance().unsubscribe_all(user_id=user_id)
@@ -604,8 +604,11 @@ class BiomioProtocol:
         elif message_id == 'rpcEnumCallsReq':
             self._rpc_handler.get_available_calls(namespace=input_msg.msg.namespace)
 
-    def try_probe(self):
+    def check_if_probe_should_be_tried(self):
         user_id = str(self._last_received_message.header.id)
         waiting_auth = ProbeResultsStore.instance().get_probe_data(user_id=user_id, key='waiting_auth')
         if waiting_auth and (self._state_machine_instance.current == STATE_READY):
             self._state_machine_instance.probetry(request=self._last_received_message, protocol_instance=self)
+        else:
+            ProbeResultsStore.instance().subscribe(user_id=user_id, callback=self.check_if_probe_should_be_tried)
+
