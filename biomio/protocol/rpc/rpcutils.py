@@ -2,7 +2,6 @@ from functools import wraps
 import tornado.gen
 import inspect
 
-from biomio.protocol.storage.redissubscriber import RedisSubscriber
 from biomio.protocol.storage.proberesultsstore import ProbeResultsStore
 from biomio.protocol.settings import settings
 
@@ -55,9 +54,27 @@ def rpc_call(rpc_func):
 def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
     user_id = _user_id_arg(callable_kwargs=callable_kwargs)
 
+    if ProbeResultsStore.instance().has_probe_results(user_id=user_id):
+        if ProbeResultsStore.instance().get_probe_data(user_id=user_id, key='auth'):
+            ProbeResultsStore.instance().remove_probe_data(user_id)
+
+    # Check if there is already connection that waiting for biometric auth
+    if ProbeResultsStore.instance().has_probe_results(user_id=user_id):
+        is_already_waiting = ProbeResultsStore.instance().get_probe_data(user_id=user_id, key='waiting_auth')
+        if not is_already_waiting:
+            # Remove existing key, create new
+            ProbeResultsStore.instance().remove_probe_data(user_id)
+            ProbeResultsStore.instance().store_probe_data(user_id=user_id, ttl=settings.bioauth_timeout, waiting_auth=True)
+        else:
+            # Another connection is waiting on auth - do nothing, just subscribe later
+            pass
+    else:
+        # There is no key for probe results - create and wait for auth
+        ProbeResultsStore.instance().store_probe_data(user_id=user_id, ttl=settings.bioauth_timeout, waiting_auth=True)
+
     # Create redis key - that will trigger probe try message
-    ProbeResultsStore.instance().store_probe_data(user_id=user_id, ttl=settings.bioauth_timeout, waiting_auth=True)
-    yield tornado.gen.Task(RedisSubscriber.instance().subscribe_to_data, user_id, 'auth')
+    yield tornado.gen.Task(ProbeResultsStore.instance().subscribe_to_data, user_id, 'auth')
+
 
     status = None
     if user_authenticated is None:
@@ -73,7 +90,6 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
             status = 'Biometric auth timeout'
 
     callback = _callback_arg(callable_kwargs)
-    ProbeResultsStore.instance().remove_probe_data(user_id=user_id)
 
     if user_authenticated:
         kwargs = _check_rpc_arguments(callable_func=callable_func, current_kwargs=callable_kwargs)

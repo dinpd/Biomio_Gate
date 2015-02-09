@@ -1,12 +1,29 @@
 from biomio.protocol.storage.redisstore import RedisStore
-import ast
+from biomio.protocol.settings import settings
 
+import ast
+import re
+from tornadoredis import Client
+import tornado.gen
+
+import logging
+logger = logging.getLogger(__name__)
 
 class ProbeResultsStore(RedisStore):
     _instance = None
 
     def __init__(self):
         RedisStore.__init__(self)
+        self.redis = Client(host=settings.redis_host, port=settings.redis_port)
+        self.callback_by_key = {}
+        self.data_key_by_callback = {}
+        self.listen()
+
+    @tornado.gen.engine
+    def listen(self):
+        self.redis.connect()
+        yield tornado.gen.Task(self.redis.psubscribe, "__keyspace*:probe:*")
+        self.redis.listen(self.on_redis_message)
 
     @classmethod
     def instance(cls):
@@ -26,6 +43,7 @@ class ProbeResultsStore(RedisStore):
     def has_probe_results(self, user_id):
         return self._redis.exists(name=self.redis_probe_key(user_id=user_id))
 
+
     def get_probe_data(self, user_id, key):
         data = self._redis.get(name=self.redis_probe_key(user_id=user_id))
         if not data:
@@ -41,4 +59,57 @@ class ProbeResultsStore(RedisStore):
     def remove_probe_data(self, user_id):
         self._redis.delete(self.redis_probe_key(user_id=user_id))
 
+    @tornado.gen.engine
+    def subscribe_to_data(self, user_id, data_key, callback=None):
+        self.data_key_by_callback[callback] = data_key
+        self.subscribe(user_id, callback)
 
+    def subscribe(self, user_id, callback):
+        #TODO: added for test purposes - remove later
+        user_id = 'id'
+        key = self.redis_probe_key(user_id=user_id)
+        subscribers = self.callback_by_key.get(key, [])
+        if not subscribers or callback not in subscribers:
+            print "SUBSCRIBE", user_id
+            subscribers.append(callback)
+            self.callback_by_key[key] = subscribers
+
+    def unsubscribe_all(self, user_id):
+        user_id = 'id'
+        probe_key = self.redis_probe_key(user_id)
+        subscribers = self.callback_by_key.get(probe_key, [])
+        for callback in subscribers:
+            self.unsubscribe(user_id=user_id, callback=callback)
+            callback()
+
+    def unsubscribe(self, user_id, callback):
+        user_id = 'id'
+        key = self.redis_probe_key(user_id=user_id)
+        subscribers = self.callback_by_key.get(key, [])
+        if subscribers and callback in subscribers:
+            subscribers.remove(callback)
+            self.callback_by_key[key] = subscribers
+            print "UNSUBSCRIBE", user_id
+            if callback in self.data_key_by_callback:
+                del self.data_key_by_callback[callback]
+
+    def on_redis_message(self, msg):
+        if msg.kind == 'pmessage':
+            print msg.body, msg
+            if msg.body == 'set' or msg.body == 'expired' or msg.body == 'del':
+                probe_key = re.search('.*:(probe:.*)', msg.channel).group(1)
+                user_id = re.search('.*:probe:(.*)', msg.channel).group(1)
+                subscribers = self.callback_by_key.get(probe_key, [])
+
+                if msg.body == 'expired' and self.has_probe_results(user_id):
+                    return
+                
+                for callback in subscribers:
+                    data_key = self.data_key_by_callback.get(callback, None)
+                    if not data_key or (data_key and ProbeResultsStore.instance().get_probe_data(user_id=user_id, key=data_key)):
+                        self.unsubscribe(user_id=user_id, callback=callback)
+                        try:
+                            callback()
+                        except Exception as e:
+                            logger.warning(msg=str(e))
+                print self.callback_by_key
