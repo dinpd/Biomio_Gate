@@ -718,7 +718,7 @@ class TestRpcCalls(BiomioTest):
     def test_rpc_with_auth(self):
         message_timeout = settings.connection_timeout / 2  # Send a message every 3 seconds
 
-        message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin', call='test_funch_with_auth',
+        message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin', call='test_func_with_auth',
             data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
         message = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
             wait_for_response=False)
