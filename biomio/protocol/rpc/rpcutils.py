@@ -18,6 +18,10 @@ def _user_id_arg(callable_kwargs):
     return callable_kwargs.get('user_id', None)
 
 
+def _wait_callback_arg(callable_kwargs):
+    return callable_kwargs.get('wait_callback', None)
+
+
 def _check_rpc_arguments(callable_func, current_kwargs):
     result_kwargs = {}
 
@@ -29,8 +33,9 @@ def _check_rpc_arguments(callable_func, current_kwargs):
 
     required_args = _get_required_args(callable_func)
 
+    excluded_params_list = ['user_id', 'callback', 'wait_callback']
     for k, v in current_kwargs.iteritems():
-        if k in ['user_id', 'callback'] and k not in required_args:
+        if k in excluded_params_list and k not in required_args:
             continue
         else:
             result_kwargs[k] = v
@@ -53,6 +58,13 @@ def rpc_call(rpc_func):
 @tornado.gen.engine
 def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
     user_id = _user_id_arg(callable_kwargs=callable_kwargs)
+    wait_callback = _wait_callback_arg(callable_kwargs=callable_kwargs)
+    callback = _callback_arg(callable_kwargs)
+
+    try:
+        wait_callback()
+    except Exception as e:
+        callback(result={"error": str(e)}, status='fail')
 
     if ProbeResultsStore.instance().has_probe_results(user_id=user_id):
         if ProbeResultsStore.instance().get_probe_data(user_id=user_id, key='auth'):
@@ -85,9 +97,6 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
             status = 'Biometric authentication failed.'
     else:
         status = 'Biometric auth timeout'
-
-
-    callback = _callback_arg(callable_kwargs)
 
     if user_authenticated:
         kwargs = _check_rpc_arguments(callable_func=callable_func, current_kwargs=callable_kwargs)

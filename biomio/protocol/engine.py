@@ -567,6 +567,7 @@ class BiomioProtocol:
     @tornado.gen.engine
     def process_rpc_request(self, input_msg):
         message_id = str(input_msg.msg.oid)
+        self._last_received_message = input_msg
 
         if message_id == 'rpcReq':
             data = {}
@@ -578,7 +579,15 @@ class BiomioProtocol:
             if hasattr(input_msg.msg, 'onBehalfOf'):
                 user_id = str(input_msg.msg.onBehalfOf)
 
-            args = yield tornado.gen.Task(self._rpc_handler.process_rpc_call, str(user_id), str(input_msg.msg.call), str(input_msg.msg.namespace), data)
+            wait_callback = self.send_in_progress_responce
+
+            args = yield tornado.gen.Task(self._rpc_handler.process_rpc_call,
+                str(user_id),
+                str(input_msg.msg.call),
+                str(input_msg.msg.namespace),
+                data,
+                wait_callback
+            )
             status = args.kwargs.get('status', None)
             result = args.kwargs.get('result', None)
 
@@ -610,6 +619,37 @@ class BiomioProtocol:
             self.send_message(responce=message)
         elif message_id == 'rpcEnumCallsReq':
             self._rpc_handler.get_available_calls(namespace=input_msg.msg.namespace)
+
+    def send_in_progress_responce(self):
+        # Should be last RPC request
+        input_msg = self._last_received_message
+
+        wait_message = 'To proceed with encryption it is required to identify yourself \
+        on Biom.io service. Server will wait for your probe for 5 minutes.'
+
+        res_keys = []
+        res_values = []
+
+        res_params = {
+                'oid': 'rpcResp',
+                'namespace': str(input_msg.msg.namespace),
+                'call': str(input_msg.msg.call),
+                'rpcStatus': 'inprogress'
+        }
+
+        result = {'msg': wait_message, 'timeout': settings.bioauth_timeout}
+        for k, v in result.iteritems():
+            res_keys.append(k)
+            res_values.append(str(v))
+
+        res_params['data'] = {'keys': res_keys, 'values': res_values}
+
+        message = self.create_next_message(
+            request_seq=input_msg.header.seq,
+            **res_params
+        )
+        self.send_message(responce=message)
+
 
     def check_if_probe_should_be_tried(self):
         user_id = str(self._last_received_message.header.id)
