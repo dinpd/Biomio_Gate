@@ -5,13 +5,12 @@ import inspect
 from biomio.protocol.storage.proberesultsstore import ProbeResultsStore
 from biomio.protocol.settings import settings
 
+import logging
+logger = logging.getLogger(__name__)
+
 CALLBACK_ARG = 'callback'
 USER_ID_ARG = 'user_id'
 WAIT_CALLBACK_ARG = 'wait_callback'
-
-
-def set_probe_result(user_id, auth_successfull):
-    ProbeResultsStore.instance().store_probe_data(user_id=user_id, ttl=settings.bioauth_timeout, auth=auth_successfull)
 
 
 def _check_rpc_arguments(callable_func, current_kwargs):
