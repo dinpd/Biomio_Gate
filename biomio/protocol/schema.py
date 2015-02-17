@@ -170,6 +170,20 @@ BIOMIO_protocol_json_schema = {
                 }
             }
         },
+        # "image": {
+        #     "type": "object",
+        #     "required": ["oid", "image"],
+        #     "properties": {
+        #         "oid": { "enum": ["image"] },
+        #         "image": {
+        #             "media": {
+        #                 "type": "image/png",
+        #                 "binaryEncoding": "base64"
+        #             },
+        #             "type": "string"
+        #         }
+        #     }
+        # },
         "image": {
             "media": {
                 "type": "image/png",
@@ -186,11 +200,14 @@ BIOMIO_protocol_json_schema = {
         },
         "probe": {
             "type": "object",
-            "required": ["oid", "probeId", "index"],
+            "required": ["oid", "probeId"],
             "properties": {
                 "oid": { "enum": ["probe"] },
                 "probeId": {"type": "number"},
-                "index": {"type": "number"},
+                # "image": {
+                #             "type": "array",
+                #             "items": {"$ref": "#/definitions/image"}
+                #         },
                 "samples": {
                     "oneOf": [
                         {
@@ -201,7 +218,7 @@ BIOMIO_protocol_json_schema = {
                             "type": "array",
                             "items": {"$ref": "#/definitions/sound"}
                         }
-                    ]
+                     ]
                 },
                 "touchId": {"type": "string"}
             }

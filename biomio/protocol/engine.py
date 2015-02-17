@@ -13,6 +13,7 @@ from biomio.protocol.storage.proberesultsstore import ProbeResultsStore
 from biomio.protocol.rpc.rpchandler import RpcHandler
 from biomio.protocol.storage.applicationdatastore import ApplicationDataStore
 
+
 import tornado.gen
 
 logger = logging.getLogger(__name__)
@@ -385,6 +386,8 @@ class BiomioProtocol:
         self._state_machine_instance = Fysom(biomio_states)
 
         self._last_received_message = None
+
+        self._policy = None
 
         logger.debug(' --------- ')  # helpful to separate output when auto tests is running
 
