@@ -1,6 +1,5 @@
 from itertools import izip
 from functools import wraps
-import logging
 
 from jsonschema import ValidationError
 
@@ -15,6 +14,7 @@ from biomio.protocol.storage.applicationdatastore import ApplicationDataStore
 
 import tornado.gen
 
+import logging
 logger = logging.getLogger(__name__)
 
 PROTOCOL_VERSION = '1.0'
