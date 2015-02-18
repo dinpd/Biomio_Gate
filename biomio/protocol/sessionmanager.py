@@ -77,7 +77,7 @@ class SessionManager:
 
         should_run_timer = not bool(self._sessions)
         self._enqueue_session(session)
-        logger.debug('Created session %s', session.refresh_token)
+        logger.info('Created session %s', session.refresh_token)
 
         if should_run_timer:
             self.run_timer()
@@ -140,6 +140,6 @@ class SessionManager:
         """
         expires_sessions = self._sessions.take_expired(ts=time())
         for session in expires_sessions:
-            logger.debug(msg='Session expired - closing: %s' % session.refresh_token)
+            logger.warn(msg='Session expired - closing: %s' % session.refresh_token)
             session.close()
         self.run_timer()

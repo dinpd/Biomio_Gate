@@ -71,7 +71,7 @@ class ConnectionTimeoutHandler:
         """
         expired_connections = self._connections_queue.take_expired(ts=time())
         for connection in expired_connections:
-            logger.debug(msg='Connection timeout - closing: %s' % id(connection))
+            logger.warn(msg='Connection timeout - closing: %s' % id(connection))
             callback = self._callback_by_connection.pop(connection)
             if callback:
                 callback()

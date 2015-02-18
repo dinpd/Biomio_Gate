@@ -6,8 +6,8 @@ import tornado.httpserver
 import tornado.ioloop
 import tornado.gen
 
-from biomio.protocol.engine import BiomioProtocol
 from biomio.protocol.settings import settings
+from biomio.protocol.engine import BiomioProtocol
 from biomio.protocol.connectionhandler import ConnectionTimeoutHandler
 
 import logging
@@ -48,7 +48,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         ConnectionTimeoutHandler.instance().start_connection_timer(connection=self, timeout_callback=self.on_connection_timeout)
 
     def on_connection_timeout(self):
-        logger.debug('Connection timeout')
+        logger.warning('Connection timeout')
         self.biomio_protocol.close_connection(status_message='Connection timeout')
 
 
@@ -73,11 +73,11 @@ def run_tornado():
 # from biomio.protocol.message import BiomioMessageBuilder
 
 if __name__ == '__main__':
+    # logging.basicConfig(
+    #     format='%(levelname)-2s [%(asctime)s] %(message)s',
+    #     level=settings.logging
+    # )
 
-    logging.basicConfig(
-        format='%(levelname)-8s [%(asctime)s] %(message)s',
-        level=logging.DEBUG
-    )
     #
     # msg = {
     #   "msg" : {

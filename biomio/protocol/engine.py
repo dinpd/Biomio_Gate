@@ -46,10 +46,6 @@ def _is_header_valid(e):
         is_valid = False
         e.status = 'Protocol version is invalid'
 
-    if e.protocol_instance._last_received_message.header.appId:
-        appId = str(e.protocol_instance._last_received_message.header.appId)
-        logger.debug(appId)
-
     return is_valid
 
 
@@ -66,6 +62,11 @@ def verify_header(verify_func):
         return verify_func(e, *args, **kwargs)
 
     return wraps(verify_func)(_decorator)
+
+
+def is_message_from_probe_device(input_msg):
+    app_id = str(input_msg.header.appId)
+    return app_id.startswith('probe')
 
 
 class MessageHandler:
@@ -89,8 +90,7 @@ class MessageHandler:
                 if hasattr(e.request.msg, "secret") \
                         and e.request.msg.secret:
                     if app_data is None:
-                        appId = str(e.request.header.appId)
-                        if appId.startswith('probe'):
+                        if is_message_from_probe_device(input_msg=e.request):
                             return STATE_GETTING_RESOURCES
                         else:
                             return STATE_REGISTRATION
@@ -123,9 +123,6 @@ class MessageHandler:
 
     @staticmethod
     def on_bye_message(e):
-        if e.protocol_instance._last_received_message.header.appId:
-            appId = str(e.protocol_instance._last_received_message.header.appId)
-            logger.debug(appId)
         return STATE_DISCONNECTED
 
     @staticmethod
@@ -147,16 +144,10 @@ class MessageHandler:
 
     @staticmethod
     def on_registered(e):
-        if e.protocol_instance._last_received_message.header.appId:
-            appId = str(e.protocol_instance._last_received_message.header.appId)
-            logger.debug(appId)
         return STATE_APP_REGISTERED
 
     @staticmethod
     def on_probe_trying(e):
-        if e.protocol_instance._last_received_message.header.appId:
-            appId = str(e.protocol_instance._last_received_message.header.appId)
-            logger.debug(appId)
         return STATE_PROBE_TRYING
 
     @staticmethod
@@ -180,6 +171,11 @@ class MessageHandler:
 
 
 def handshake(e):
+    if is_message_from_probe_device(input_msg=e.request):
+        logger.info(" ------- APP HANDSHAKE: probe")
+    else:
+        logger.info(" ------- APP HANDSHAKE: extension")
+
     # Send serverHello responce after entering handshake state
     session = e.protocol_instance.get_current_session()
 
@@ -194,6 +190,11 @@ def handshake(e):
 
 
 def registration(e):
+    if is_message_from_probe_device(input_msg=e.request):
+        logger.info(" -------- APP REGISTRATION: probe")
+    else:
+        logger.info(" -------- APP REGISTRATION: extension")
+
     key, pub_key = Crypto.generate_keypair()
 
     ApplicationDataStore.instance().store_app_data(
@@ -219,10 +220,8 @@ def app_registered(e):
 
 
 def ready(e):
-    app_id = str(e.request.header.appId)
-
     # If current connection - probe connection
-    if app_id.startswith('probe'):
+    if is_message_from_probe_device(input_msg=e.request):
         user_id = str(e.request.header.id)
         ProbeResultsStore.instance().subscribe(user_id=user_id, callback=e.protocol_instance.check_if_probe_should_be_tried)
         waiting_auth = ProbeResultsStore.instance().get_probe_data(user_id=user_id, key='waiting_auth')
@@ -258,21 +257,18 @@ def disconnect(e):
     # In a case of reaching disconnected state due to invalid message,
     # request could not be passed to state change method
     request_seq = None
-    # if hasattr(e, 'request'):
-    #     request_seq = e.request.header.seq
 
-    # print "disconnect"
     if e.protocol_instance._last_received_message:
-        request_seq = e.protocol_instance._last_received_message.header.seq
-        app_id = str(e.protocol_instance._last_received_message.header.appId)
         user_id = str(e.protocol_instance._last_received_message.header.id)
-        if app_id.startswith('probe'):
+        if is_message_from_probe_device(input_msg=e.protocol_instance._last_received_message):
             ProbeResultsStore.instance().unsubscribe(user_id=user_id, callback=e.protocol_instance.check_if_probe_should_be_tried)
         else:  # Extension
             if ProbeResultsStore.instance().has_probe_results(user_id=user_id):
                 ProbeResultsStore.instance().unsubscribe_all(user_id=user_id)
                 ProbeResultsStore.instance().remove_probe_data(user_id=user_id)
-                print ""
+
+        request_seq = e.protocol_instance._last_received_message.header.seq
+
 
 
     e.protocol_instance.close_connection(request_seq=request_seq, status_message=status)
@@ -280,7 +276,7 @@ def disconnect(e):
 
 def print_state_change(e):
     """Helper function for printing state transitions to log."""
-    logger.debug('STATE_TRANSITION: event: %s, %s -> %s' % (e.event, e.src, e.dst))
+    logger.info('STATE_TRANSITION: event: %s, %s -> %s' % (e.event, e.src, e.dst))
 
 
 biomio_states = {
@@ -370,6 +366,9 @@ class BiomioProtocol:
         :param stop_connection_timer_callback: Will be called when connection timer should be stoped.
         :param check_connected_callback: Will be called to check if connected to socket. Should return True if connected.
         """
+        # helpful to separate output when auto tests is running
+        logger.info(' ===================================================== ')
+
         self._close_callback = kwargs['close_callback']
         self._send_callback = kwargs['send_callback']
         self._start_connection_timer_callback = kwargs['start_connection_timer_callback']
@@ -385,8 +384,6 @@ class BiomioProtocol:
         self._state_machine_instance = Fysom(biomio_states)
 
         self._last_received_message = None
-
-        logger.debug(' --------- ')  # helpful to separate output when auto tests is running
 
     @tornado.gen.engine
     def process_next(self, msg_string):
@@ -405,7 +402,7 @@ class BiomioProtocol:
 
         # If message is valid, perform necessary actions
         if input_msg and input_msg.msg and input_msg.header:
-            logger.debug('RECEIVED: "%s" ' % msg_string)
+            logger.debug('RECEIVED MESSAGE STRING: "%s" ' % msg_string)
 
             # Refresh session if necessary
             if self._session and hasattr(input_msg.header,
@@ -436,6 +433,7 @@ class BiomioProtocol:
         try:
             # State machine instance has callback with the same name as possible messages, that it could
             # receive from client. Retrieve function object (callback) for message and perform transition.
+            logger.info('RECEIVED MESSAGE: "%s" ' % str(input_msg.msg.oid))
             make_transition = getattr(self._state_machine_instance, '%s' % input_msg.msg.oid, None)
             if make_transition:
                 if self._state_machine_instance.current == STATE_DISCONNECTED:
@@ -475,7 +473,8 @@ class BiomioProtocol:
         :param responce: BiomioMessage instance to send.
         """
         self._send_callback(responce.serialize())
-        logger.debug('SENT: %s' % responce.serialize())
+        logger.info('SENT MESSAGE: "%s" ' % str(responce.msg.oid))
+        logger.debug('SENT MESSAGE STRING: %s' % responce.serialize())
 
     def close_connection(self, request_seq=None, status_message=None):
         """ Sends bye message and closes session.
@@ -485,7 +484,7 @@ class BiomioProtocol:
         :param request_seq: Sequence num of request, got from client. (Will be increased to got next sequence number)
         :param status_message: Status string for next message.
         """
-        logger.debug('CLOSING CONNECTION...')
+        logger.info('CLOSING CONNECTION...')
         self._stop_connection_timer_callback()
 
         # Send bye message
@@ -541,7 +540,7 @@ class BiomioProtocol:
             self._session.close_callback = None
             SessionManager.instance().set_protocol_state(token=self._session.refresh_token,
                                                          current_state=self._state_machine_instance.current)
-        logger.debug('Connection closed by client')
+        logger.warning('Connection closed by client')
 
     def _restore_state(self, refresh_token):
         """ Restores session and state machine state using given refresh token. Closes connection with appropriate message otherwice.
@@ -551,7 +550,7 @@ class BiomioProtocol:
         self._session = session_manager.restore_session(refresh_token)
 
         if self._session:
-            logger.debug('Continue session %s...' % refresh_token)
+            logger.info('Continue session %s...' % refresh_token)
             self._builder.set_header(token=self._session.session_token)
             state = session_manager.get_protocol_state(token=self._session.refresh_token)
             if state:

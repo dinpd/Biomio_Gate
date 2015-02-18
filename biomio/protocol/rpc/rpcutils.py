@@ -63,7 +63,7 @@ def rpc_call(rpc_func):
             callback = kwargs.get(CALLBACK_ARG, None)
             callback(result=result, status=status)
         except Exception as e:
-            logger.debug(msg="RPC call processing error: %s" % str(e))
+            logger.exception(msg="RPC call processing error: %s" % str(e))
 
     return wraps(rpc_func)(_decorator)
 
@@ -84,7 +84,7 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
     try:
         wait_callback()
     except Exception as e:
-        logger.debug(msg="RPC call with auth error - could not send rpc inprogress status: %s" % str(e))
+        logger.exception(msg="RPC call with auth error - could not send rpc inprogress status: %s" % str(e))
         callback(result={"error": str(e)}, status='fail')
 
     # Check if there is already connection that waiting for biometric auth
@@ -124,7 +124,7 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
         else:
             callback(result={"error": error_msg}, status='fail')
     except Exception as e:
-        logger.debug(msg="RPC call with auth processing error: %s" % str(e))
+        logger.exception(msg="RPC call with auth processing error: %s" % str(e))
 
 
 def rpc_call_with_auth(rpc_func):

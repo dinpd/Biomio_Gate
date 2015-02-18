@@ -11,7 +11,7 @@ class RpcHandler:
         pass
 
     def process_rpc_call(self, user_id, call, namespace, data, wait_callback, callback):
-        logger.debug('Processing RPC call %s/%s, with parameters: %s' % (namespace, call, data))
+        logger.info('Processing RPC call %s/%s, with parameters: %s' % (namespace, call, data))
         rpc_obj = RpcPluginManager.instance().get_rpc_object(namespace=namespace)
 
         result = None
