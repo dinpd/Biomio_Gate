@@ -70,10 +70,10 @@ def run_tornado():
     server.listen(settings.port)
     tornado.ioloop.IOLoop.instance().start()
 
-# from biomio.protocol.message import BiomioMessageBuilder
+from biomio.protocol.message import BiomioMessageBuilder
 
-import python_jsonschema_objects as pjs
-from biomio.protocol.schema import BIOMIO_protocol_json_schema
+# import python_jsonschema_objects as pjs
+# from biomio.protocol.schema import BIOMIO_protocol_json_schema
 
 if __name__ == '__main__':
 
@@ -81,13 +81,13 @@ if __name__ == '__main__':
         format='%(levelname)-8s [%(asctime)s] %(message)s',
         level=logging.DEBUG
     )
-    #
+
     # msg = {
     #   "msg" : {
-    #     "touchId" : "true",
-    #     "probeId" : 0,
     #     "oid" : "probe",
-    #     "index" : 0
+    #     "probeId" : 0,
+    #     "probeData": {"oid": "imageSamples", "samples": ["enhjYnh6YmN4emJtY2J4em1jYmFzamdhanNkZ2pzYXZkc2EgZG1hc21kbmI=", "enhjYnh6YmN4emJtY2J4em1jYmFzamdhanNkZ2pzYXZkc2EgZG1hc21kbmI="]}
+    #         # {"oid": "touchIdSamples", "samples": ["True", "False"]}
     #   },
     #   "header" : {
     #     "id" : "0UMhRvDTEOEw93x8SROygESdI",
@@ -99,35 +99,11 @@ if __name__ == '__main__':
     #     "seq" : 24
     #   }
     # }
-    msg = {
-      "msg" : {
-        "oid" : "probe",
-        "probeId" : 0,
-        "samples": [
-            "enhjYnh6YmN4emJtY2J4em1jYmFzamdhanNkZ2pzYXZkc2EgZG1hc21kbmI="
-        ]
-      },
-      "header" : {
-        "id" : "0UMhRvDTEOEw93x8SROygESdI",
-        "osId" : "iOS_8.1",
-        "devId" : "021DD1E2-5D5A-423B-9B64-37FDCD536FE8",
-        "appId" : "probe_lIErKOvKhhYcSt9esg7eXatmY",
-        "oid" : "clientHeader",
-        "protoVer" : "1.0",
-        "seq" : 24
-      }
-    }
-
-
-    builder = pjs.ObjectBuilder(BIOMIO_protocol_json_schema)
-    ns = builder.build_classes()
-    biomio_message = ns.BiomioSchema(**msg)
+    #
+    # builder = pjs.ObjectBuilder(BIOMIO_protocol_json_schema)
+    # ns = builder.build_classes()
+    # biomio_message = ns.BiomioSchema(**msg)
     # print biomio_message.serialize()
-
-    # builder = BiomioMessageBuilder(oid="serverHeader", seq=1, protoVer="1.0", token="1235217523745327465324")
-    # # msg = builder.create_message(oid="nop")
-    # msg = builder.create_message(oid='probe', probeId=0, index=0, touchId='sdfdsfdsfdsdsf')
-    # print msg.serialize()
 
     # Run tornado application
     run_tornado()
