@@ -12,6 +12,7 @@ from biomio.protocol.crypt import Crypto
 from biomio.protocol.storage.proberesultsstore import ProbeResultsStore
 from biomio.protocol.rpc.rpchandler import RpcHandler
 from biomio.protocol.storage.applicationdatastore import ApplicationDataStore
+from biomio.protocol.probes.policymanager import PolicyManager
 
 import tornado.gen
 
@@ -208,6 +209,12 @@ def app_registered(e):
     # Send serverHello responce after entering handshake state
     session = e.protocol_instance.get_current_session()
 
+    # TODO: make separate method for
+    app_id = str(e.request.header.appId)
+    user_id = str(e.request.header.id)
+    if app_id.startswith('probe'):
+        e.protocol_instance.policy = PolicyManager.get_policy_for_user(user_id=user_id)
+
     message = e.protocol_instance.create_next_message(
         request_seq=e.request.header.seq,
         oid='serverHello',
@@ -385,6 +392,8 @@ class BiomioProtocol:
         self._state_machine_instance = Fysom(biomio_states)
 
         self._last_received_message = None
+
+        self._policy = None
 
         logger.debug(' --------- ')  # helpful to separate output when auto tests is running
 
@@ -650,7 +659,6 @@ class BiomioProtocol:
         )
         self.send_message(responce=message)
 
-
     def check_if_probe_should_be_tried(self):
         user_id = str(self._last_received_message.header.id)
         waiting_auth = ProbeResultsStore.instance().get_probe_data(user_id=user_id, key='waiting_auth')
@@ -658,4 +666,3 @@ class BiomioProtocol:
             self._state_machine_instance.probetry(request=self._last_received_message, protocol_instance=self)
         else:
             ProbeResultsStore.instance().subscribe(user_id=user_id, callback=self.check_if_probe_should_be_tried)
-
