@@ -79,7 +79,6 @@ class ProbeResultsStore(RedisStore):
         subscribers = self.callback_by_key.get(probe_key, [])
         for callback in subscribers:
             self.unsubscribe(user_id=user_id, callback=callback)
-            callback()
 
     def unsubscribe(self, user_id, callback):
         user_id = 'id'
