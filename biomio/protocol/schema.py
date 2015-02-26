@@ -170,40 +170,108 @@ BIOMIO_protocol_json_schema = {
                 }
             }
         },
-        "image": {
-            "media": {
-                "type": "image/png",
-                "binaryEncoding": "base64"
-            },
-            "type": "string"
+        # "image": {
+        #     "type": "object",
+        #     "required": ["oid", "image"],
+        #     "properties": {
+        #         "oid": { "enum": ["image"] },
+        #         "image": {
+        #             "media": {
+        #                 "type": "image/png",
+        #                 "binaryEncoding": "base64"
+        #             },
+        #             "type": "string"
+        #         }
+        #     }
+        # },
+        # "image": {
+        #     "type": "object",
+        #     "required": ["oid", "imageData"],
+        #     "properties": {
+        #         "oid": { "enum": ["image"] },
+        #         "imageData": {
+        #             # "media": {
+        #             #     "type": "image/png",
+        #             #     "binaryEncoding": "base64"
+        #             # },
+        #             "type": "string"
+        #         }
+        #     }
+        # },
+        # "sound": {
+        #     "type": "object",
+        #     "required": ["oid", "soundData"],
+        #     "properties": {
+        #         "oid": { "enum": ["sound"] },
+        #         "soundData": {
+        #             # "media": {
+        #             #     "type": "sound/waw",
+        #             #     "binaryEncoding": "base64"
+        #             # },
+        #             "type": "string"
+        #         }
+        #     }
+        # },
+        "imageSamples": {
+            "type": "object",
+            "required": ["oid", "samples"],
+            "properties": {
+                "oid": { "enum": ["imageSamples"] },
+                "samples": {
+                    "type": "array",
+                    "items": {
+                        "media": {
+                            "type": "image/png",
+                            "binaryEncoding": "base64"
+                        },
+                        "type": "string"
+                    }
+                }
+            }
         },
-        "sound": {
-            "media": {
-                "type": "sound/waw",
-                "binaryEncoding": "base64"
-            },
-            "type": "string"
+        "soundSamples": {
+            "type": "object",
+            "required": ["oid", "samples"],
+            "properties": {
+                "oid": { "enum": ["soundSamples"] },
+                "samples": {
+                    "type": "array",
+                    "items": {
+                        "media": {
+                            "type": "image/png",
+                            "binaryEncoding": "base64"
+                        },
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "touchIdSamples": {
+            "type": "object",
+            "required": ["oid", "samples"],
+            "properties": {
+                "oid": { "enum": ["touchIdSamples"] },
+                "samples": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
         },
         "probe": {
             "type": "object",
-            "required": ["oid", "probeId", "index"],
+            "required": ["oid", "probeId", "probeData"],
             "properties": {
                 "oid": { "enum": ["probe"] },
                 "probeId": {"type": "number"},
-                "index": {"type": "number"},
-                "samples": {
+                "probeData": {
                     "oneOf": [
-                        {
-                            "type": "array",
-                            "items": {"$ref": "#/definitions/image"}
-                        },
-                        {
-                            "type": "array",
-                            "items": {"$ref": "#/definitions/sound"}
-                        }
+                        {"$ref": "#/definitions/imageSamples"},
+                        {"$ref": "#/definitions/soundSamples"},
+                        {"$ref": "#/definitions/touchIdSamples"}
                     ]
-                },
-                "touchId": {"type": "string"}
+                }
             }
         },
         "verify": {

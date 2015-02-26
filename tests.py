@@ -717,16 +717,16 @@ class TestRpcCalls(BiomioTest):
     def test_rpc_with_auth(self):
         message_timeout = settings.connection_timeout / 2  # Send a message every 3 seconds
 
-        message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin', call='test_func_with_auth',
-            data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
-        message = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
-            wait_for_response=False)
-
         # Separate thread with connection for
         t = threading.Thread(target=TestRpcCalls.probe_job)
         t.start()
 
         time.sleep(3)
+
+        message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin', call='test_func_with_auth',
+            data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
+        message = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+            wait_for_response=False)
 
         max_message_count = 10
         rpc_responce_message = None
@@ -735,8 +735,10 @@ class TestRpcCalls(BiomioTest):
                 message = self.read_message(websocket=self.get_curr_connection())
 
                 if message and message.msg and str(message.msg.oid) == 'rpcResp':
-                    rpc_responce_message = message
-                    break
+                    rpc_status = str(message.msg.rpcStatus)
+                    if rpc_status == 'complete' or rpc_status == 'fail':
+                        rpc_responce_message = message
+                        break
             except Exception, e:
                 pass
 

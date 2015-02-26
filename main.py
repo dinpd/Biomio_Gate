@@ -70,8 +70,6 @@ def run_tornado():
     server.listen(settings.port)
     tornado.ioloop.IOLoop.instance().start()
 
-
 if __name__ == '__main__':
-
     # Run tornado application
     run_tornado()
