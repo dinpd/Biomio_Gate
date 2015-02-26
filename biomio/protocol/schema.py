@@ -170,48 +170,6 @@ BIOMIO_protocol_json_schema = {
                 }
             }
         },
-        # "image": {
-        #     "type": "object",
-        #     "required": ["oid", "image"],
-        #     "properties": {
-        #         "oid": { "enum": ["image"] },
-        #         "image": {
-        #             "media": {
-        #                 "type": "image/png",
-        #                 "binaryEncoding": "base64"
-        #             },
-        #             "type": "string"
-        #         }
-        #     }
-        # },
-        # "image": {
-        #     "type": "object",
-        #     "required": ["oid", "imageData"],
-        #     "properties": {
-        #         "oid": { "enum": ["image"] },
-        #         "imageData": {
-        #             # "media": {
-        #             #     "type": "image/png",
-        #             #     "binaryEncoding": "base64"
-        #             # },
-        #             "type": "string"
-        #         }
-        #     }
-        # },
-        # "sound": {
-        #     "type": "object",
-        #     "required": ["oid", "soundData"],
-        #     "properties": {
-        #         "oid": { "enum": ["sound"] },
-        #         "soundData": {
-        #             # "media": {
-        #             #     "type": "sound/waw",
-        #             #     "binaryEncoding": "base64"
-        #             # },
-        #             "type": "string"
-        #         }
-        #     }
-        # },
         "imageSamples": {
             "type": "object",
             "required": ["oid", "samples"],
