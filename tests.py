@@ -510,7 +510,6 @@ class TestHandshakeState(BiomioTest):
         # so WebsocketTimeoutException will be raised
         response = self.send_message(websocket=websocket, message=message, close_connection=False,
                                      wait_for_response=True)
-        print response
 
 
 class TestReadyState(BiomioTest):
@@ -761,8 +760,6 @@ class TestRpcCalls(BiomioTest):
         message = test_obj.create_next_message(oid='rpcReq', namespace='extension_test_plugin', call='test_funch_with_auth', data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
         response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False,
                                          wait_for_response=True)
-        print 'thread', get_rpc_msg_field(message=response, key='result')
-        print 'thread', get_rpc_msg_field(message=response, key='error')
 
     @attr('slow')
     def test_rpc_with_auth_probe_first(self):
@@ -772,8 +769,6 @@ class TestRpcCalls(BiomioTest):
         t = threading.Thread(target=TestRpcCalls.extension_test_job)
         t.start()
         t.join()
-        print get_rpc_msg_field(message=response, key='result')
-        print get_rpc_msg_field(message=response, key='error')
 
 
     def test_rpc_pass_phrase_keys_generation(self):

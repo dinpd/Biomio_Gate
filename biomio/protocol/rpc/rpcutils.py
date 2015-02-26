@@ -58,9 +58,13 @@ def rpc_call(rpc_func):
         result = rpc_func(*args, **callable_kwargs)
         status = 'complete'
 
-        # Callback
-        callback = kwargs.get(CALLBACK_ARG, None)
-        callback(result=result, status=status)
+        # Send call results
+        try:
+            callback = kwargs.get(CALLBACK_ARG, None)
+            callback(result=result, status=status)
+        except Exception as e:
+            logger.exception(msg="RPC call processing error: %s" % str(e))
+
     return wraps(rpc_func)(_decorator)
 
 
@@ -76,14 +80,12 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
     wait_callback = callable_kwargs.get(WAIT_CALLBACK_ARG, None)
     callback = callable_kwargs.get(CALLBACK_ARG, None)
 
+    # Send RPC message with inprogress state
     try:
         wait_callback()
     except Exception as e:
+        logger.exception(msg="RPC call with auth error - could not send rpc inprogress status: %s" % str(e))
         callback(result={"error": str(e)}, status='fail')
-
-    if ProbeResultsStore.instance().has_probe_results(user_id=user_id):
-        if ProbeResultsStore.instance().get_probe_data(user_id=user_id, key='auth'):
-            ProbeResultsStore.instance().remove_probe_data(user_id)
 
     # Check if there is already connection that waiting for biometric auth
     if ProbeResultsStore.instance().has_probe_results(user_id=user_id):
@@ -102,23 +104,27 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
     # Create redis key - that will trigger probe try message
     yield tornado.gen.Task(ProbeResultsStore.instance().subscribe_to_data, user_id, 'auth')
 
-    status = None
+    error_msg = None
     user_authenticated = None
 
+    # Check if key does not expire
     if ProbeResultsStore.instance().has_probe_results(user_id=user_id):
         # Not expired, get probe results
         user_authenticated = ProbeResultsStore.instance().get_probe_data(user_id=user_id, key='auth')
         if not user_authenticated:
-            status = 'Biometric authentication failed.'
+            error_msg = 'Biometric authentication failed.'
     else:
-        status = 'Biometric auth timeout'
+        error_msg = 'Biometric auth timeout'
 
-    if user_authenticated:
-        kwargs = _check_rpc_arguments(callable_func=callable_func, current_kwargs=callable_kwargs)
-        result = callable_func(*callable_args, **kwargs)
-        callback(result=result, status='complete')
-    else:
-        callback(result={"error": status}, status='fail')
+    try:
+        if user_authenticated:
+            kwargs = _check_rpc_arguments(callable_func=callable_func, current_kwargs=callable_kwargs)
+            result = callable_func(*callable_args, **kwargs)
+            callback(result=result, status='complete')
+        else:
+            callback(result={"error": error_msg}, status='fail')
+    except Exception as e:
+        logger.exception(msg="RPC call with auth processing error: %s" % str(e))
 
 
 def rpc_call_with_auth(rpc_func):

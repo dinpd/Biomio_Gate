@@ -70,7 +70,6 @@ class ProbeResultsStore(RedisStore):
         key = self.redis_probe_key(user_id=user_id)
         subscribers = self.callback_by_key.get(key, [])
         if not subscribers or callback not in subscribers:
-            print "SUBSCRIBE", user_id
             subscribers.append(callback)
             self.callback_by_key[key] = subscribers
 
@@ -80,7 +79,6 @@ class ProbeResultsStore(RedisStore):
         subscribers = self.callback_by_key.get(probe_key, [])
         for callback in subscribers:
             self.unsubscribe(user_id=user_id, callback=callback)
-            callback()
 
     def unsubscribe(self, user_id, callback):
         user_id = 'id'
@@ -89,13 +87,11 @@ class ProbeResultsStore(RedisStore):
         if subscribers and callback in subscribers:
             subscribers.remove(callback)
             self.callback_by_key[key] = subscribers
-            print "UNSUBSCRIBE", user_id
             if callback in self.data_key_by_callback:
                 del self.data_key_by_callback[callback]
 
     def on_redis_message(self, msg):
         if msg.kind == 'pmessage':
-            print msg.body, msg
             if msg.body == 'set' or msg.body == 'expired' or msg.body == 'del':
                 probe_key = re.search('.*:(probe:.*)', msg.channel).group(1)
                 user_id = re.search('.*:probe:(.*)', msg.channel).group(1)
@@ -112,4 +108,3 @@ class ProbeResultsStore(RedisStore):
                             callback()
                         except Exception as e:
                             logger.warning(msg=str(e))
-                print self.callback_by_key
