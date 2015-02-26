@@ -1,14 +1,16 @@
 from biomio.protocol.probes.policies.fixedorderpolicy import FixedOrderPolicy
+import os
 
 class PolicyManager:
     @staticmethod
     def get_policy_for_user(user_id):
         # Get policy config
-        config_str = self._policy_config_for_user(user_id=user_id)
+        config_str = PolicyManager._policy_config_for_user(user_id=user_id)
         return FixedOrderPolicy(config_str=config_str)
 
     @staticmethod
     def _policy_config_for_user(user_id):
-        config_file = open('biomio/protocol/policies/default_fixedorderpolicy.conf', 'r')
+        currdir =os.path.dirname(os.path.abspath(__file__))
+        config_file = open('%s/policies/default_fixedorderpolicy.conf' % currdir, 'r')
         config_str = config_file.read()
         return config_str

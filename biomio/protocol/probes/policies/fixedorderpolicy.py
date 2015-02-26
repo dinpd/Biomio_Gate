@@ -16,7 +16,7 @@ def create_resource_item(type_str, samples):
 
 class FixedOrderPolicy(IPolicy):
     def __init__(self, config_str):
-        super(FixedOrderPolicy, self).__init__(config_str=config_str)
+        self._set_config(config_str)
         self.resource_items_ordered_dict = {}
 
     def get_resources_list_for_try(self, available_resources):
