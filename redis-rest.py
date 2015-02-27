@@ -6,17 +6,20 @@ from biomio.protocol.storage.userinfodatastore import UserInfoDataStore
  
 class RedisHandler(tornado.web.RequestHandler):
     def post(self):
-        email = tornado.escape.url_unescape(self.get_argument('email'))
-        print email
-        email = 'andriy.lobashchuk@vakoms.com.ua'
-        user_id = UserInfoDataStore.instance().get_user_id_by_email(email=email)
-        print user_id
-        user_data = UserInfoDataStore.instance().get_user_data_by_id(user_id=user_id,
-                                                                     key=UserInfoDataStore.USER_DATA_KEY)
-        print 'user data: ', user_data
-        del user_data[email]
-        print user_data
-        UserInfoDataStore.instance().store_user_data(user_id=user_id, user_data=user_data)
+        try:
+            email = tornado.escape.url_unescape(self.get_argument('email'))
+            user_id = UserInfoDataStore.instance().get_user_id_by_email(email=email)
+            user_data = UserInfoDataStore.instance().get_user_data_by_id(user_id=user_id,
+                                                                        key=UserInfoDataStore.USER_DATA_KEY)
+            try:
+                del user_data[email]
+            except KeyError:
+                pass
+
+            UserInfoDataStore.instance().store_user_data(user_id=user_id, user_data=user_data)
+
+        except Exception as e:
+            email = str(e)
         self.write(email)
   
 application = tornado.web.Application([
