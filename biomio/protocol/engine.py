@@ -162,7 +162,11 @@ class MessageHandler:
     def on_getting_probe(e):
         user_id = str(e.request.header.id)
         ttl = settings.bioauth_timeout
-        result = (str(e.request.msg.touchId).lower() == 'true')
+        result = False
+        for sample in e.request.msg.probeData.samples:
+            if str(sample).lower() == 'true':
+                result = True
+        # result = (str(e.request.msg.touchId).lower() == 'true')
         ProbeResultsStore.instance().store_probe_data(user_id=user_id, ttl=ttl, waiting_auth=False, auth=result)
         return STATE_READY
 
@@ -230,12 +234,12 @@ def app_registered(e):
 def ready(e):
     # If current connection - probe connection
     if is_message_from_probe_device(input_msg=e.request):
-        user_id = str(e.request.header.id)
-        ProbeResultsStore.instance().subscribe(user_id=user_id, callback=e.protocol_instance.check_if_probe_should_be_tried)
-        waiting_auth = ProbeResultsStore.instance().get_probe_data(user_id=user_id, key='waiting_auth')
-        if waiting_auth:
-            e.protocol_instance.check_if_probe_should_be_tried()
-
+        #TODO: remove commented code
+        # user_id = str(e.request.header.id)
+        # ProbeResultsStore.instance().subscribe(user_id=user_id, callback=e.protocol_instance.check_if_probe_should_be_tried)
+        # waiting_auth = ProbeResultsStore.instance().get_probe_data(user_id=user_id, key='waiting_auth')
+        # if waiting_auth:
+        e.protocol_instance.check_if_probe_should_be_tried()
 
 def probe_trying(e):
     if not e.src == STATE_PROBE_TRYING:
@@ -262,24 +266,7 @@ def disconnect(e):
     if hasattr(e, 'status'):
         status = e.status
 
-    # In a case of reaching disconnected state due to invalid message,
-    # request could not be passed to state change method
-    request_seq = None
-
-    if e.protocol_instance._last_received_message:
-        user_id = str(e.protocol_instance._last_received_message.header.id)
-        if is_message_from_probe_device(input_msg=e.protocol_instance._last_received_message):
-            ProbeResultsStore.instance().unsubscribe(user_id=user_id, callback=e.protocol_instance.check_if_probe_should_be_tried)
-        else:  # Extension
-            if ProbeResultsStore.instance().has_probe_results(user_id=user_id):
-                ProbeResultsStore.instance().unsubscribe_all(user_id=user_id)
-                ProbeResultsStore.instance().remove_probe_data(user_id=user_id)
-
-        request_seq = e.protocol_instance._last_received_message.header.seq
-
-
-
-    e.protocol_instance.close_connection(request_seq=request_seq, status_message=status)
+    e.protocol_instance.close_connection(status_message=status)
 
 
 def print_state_change(e):
@@ -488,7 +475,7 @@ class BiomioProtocol:
         logger.info('SENT MESSAGE: "%s" ' % str(responce.msg.oid))
         logger.debug('SENT MESSAGE STRING: %s' % responce.serialize())
 
-    def close_connection(self, request_seq=None, status_message=None):
+    def close_connection(self, status_message=None, is_closed_by_client=None):
         """ Sends bye message and closes session.
 
         :note Temporary session object will be created to send bye message with status if necessary.
@@ -499,16 +486,34 @@ class BiomioProtocol:
         logger.info('CLOSING CONNECTION...')
         self._stop_connection_timer_callback()
 
-        # Send bye message
-        if self._check_connected_callback():
-            if not self._session:
-                # Create temporary session object to send bye message if necessary
-                self.start_new_session()
-            message = self.create_next_message(request_seq=request_seq, status=status_message, oid='bye')
-            self.send_message(responce=message)
+        request_seq = None
 
-        if self._session and self._session.is_open:
-            SessionManager.instance().close_session(session=self._session)
+        if self._last_received_message:
+            request_seq = self._last_received_message.header.seq
+
+            if not is_closed_by_client:
+                # Send bye message
+                #TODO: use last message variable instead
+                if self._check_connected_callback():
+                    if not self._session:
+                        # Create temporary session object to send bye message if necessary
+                        self.start_new_session()
+                    message = self.create_next_message(request_seq=request_seq, status=status_message, oid='bye')
+                    self.send_message(responce=message)
+
+                if self._session and self._session.is_open:
+                    SessionManager.instance().close_session(session=self._session)
+
+            user_id = str(self._last_received_message.header.id)
+            if is_message_from_probe_device(input_msg=self._last_received_message):
+                logger.info('UNUBSCRIBING PROBE SESSION...')
+                ProbeResultsStore.instance().unsubscribe(user_id=user_id, callback=self.check_if_probe_should_be_tried)
+            else:  # Extension
+                logger.info('UNUBSCRIBING EXTENSION SESSION...')
+                ProbeResultsStore.instance().unsubscribe_all(user_id=user_id)
+                if ProbeResultsStore.instance().has_probe_results(user_id=user_id):
+                    logger.info('REMOVING OLD PROBE AUTH RESULTS...')
+                    ProbeResultsStore.instance().remove_probe_data(user_id=user_id)
 
         # Close connection
         self._close_callback()
@@ -553,6 +558,7 @@ class BiomioProtocol:
             SessionManager.instance().set_protocol_state(token=self._session.refresh_token,
                                                          current_state=self._state_machine_instance.current)
         logger.warning('Connection closed by client')
+        self.close_connection(is_closed_by_client=True)
 
     def _restore_state(self, refresh_token):
         """ Restores session and state machine state using given refresh token. Closes connection with appropriate message otherwice.
@@ -667,4 +673,5 @@ class BiomioProtocol:
         if waiting_auth and (self._state_machine_instance.current == STATE_READY):
             self._state_machine_instance.probetry(request=self._last_received_message, protocol_instance=self)
         else:
+            logger.info('SUBSCRIBING PROBE SESSION...')
             ProbeResultsStore.instance().subscribe(user_id=user_id, callback=self.check_if_probe_should_be_tried)

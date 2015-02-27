@@ -689,11 +689,15 @@ class TestRpcCalls(BiomioTest):
                 # TRY <-
                 if message and message.msg and str(message.msg.oid) == 'try':
                     # PROBE ->
-                    probe_msg = test_obj.create_next_message(oid='probe', probeId=0, index=0, touchId='True')
+                    probe_msg = test_obj.create_next_message(oid='probe', probeId=0,
+                                                             probeData={"oid": "touchIdSamples", "samples": ["True"]})
+
                     response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=probe_msg,
                                                  close_connection=False, wait_for_response=False)
+
                     break
             except Exception, e:
+                print e
                 pass
 
             message = test_obj.create_next_message(oid='nop')
