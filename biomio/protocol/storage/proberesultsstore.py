@@ -78,7 +78,8 @@ class ProbeResultsStore(RedisStore):
         probe_key = self.redis_probe_key(user_id)
         subscribers = self.callback_by_key.get(probe_key, [])
         for callback in subscribers:
-            self.unsubscribe(user_id=user_id, callback=callback)
+            self.unsubscribe\
+                (user_id=user_id, callback=callback)
 
     def unsubscribe(self, user_id, callback):
         user_id = 'id'
@@ -99,12 +100,15 @@ class ProbeResultsStore(RedisStore):
 
                 if msg.body == 'expired' and self.has_probe_results(user_id):
                     return
-                
+
+                logger.debug("GOT SUBSCRIBED MESSAGE: %s" % (str(msg)))
                 for callback in subscribers:
                     data_key = self.data_key_by_callback.get(callback, None)
                     if not data_key or (data_key and ProbeResultsStore.instance().get_probe_data(user_id=user_id, key=data_key)):
                         self.unsubscribe(user_id=user_id, callback=callback)
                         try:
+                            logger.debug("CALLED: %s" % str(callback))
                             callback()
+                            logger.debug("DONE")
                         except Exception as e:
-                            logger.warning(msg=str(e))
+                            logger.exception(msg=str(e))
