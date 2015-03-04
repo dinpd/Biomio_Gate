@@ -659,6 +659,7 @@ class TestRpcCalls(BiomioTest):
         ok_(str(response.msg.oid) != 'bye', msg='Connection closed. Status: %s' % response.status)
 
     @staticmethod
+    @nottest
     def probe_job():
         test_obj = BiomioTest()
         test_obj.setup_test_for_for_new_id()
@@ -717,6 +718,16 @@ class TestRpcCalls(BiomioTest):
         response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False)
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
 
+    @staticmethod
+    @nottest
+    def extension_test_job():
+        time.sleep(10)
+        test_obj = BiomioTest()
+        test_obj.setup_test_with_handshake()
+        message = test_obj.create_next_message(oid='rpcReq', namespace='extension_test_plugin', call='test_funch_with_auth', data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
+        response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False,
+                                         wait_for_response=True)
+
     @attr('slow')
     def test_rpc_with_auth(self):
         message_timeout = settings.connection_timeout / 2  # Send a message every 3 seconds
@@ -725,12 +736,12 @@ class TestRpcCalls(BiomioTest):
         t = threading.Thread(target=TestRpcCalls.probe_job)
         t.start()
 
-        time.sleep(3)
+        time.sleep(1)
 
         message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin', call='test_func_with_auth',
             data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
-        message = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
-            wait_for_response=False)
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+            wait_for_response=True)
 
         max_message_count = 10
         rpc_responce_message = None
@@ -757,15 +768,6 @@ class TestRpcCalls(BiomioTest):
 
         ok_(rpc_responce_message, msg='No RPC response on auth')
         ok_(get_rpc_msg_field(message=rpc_responce_message, key="error") is None, msg='Errors during RPC call')
-
-    @staticmethod
-    def extension_test_job():
-        time.sleep(10)
-        test_obj = BiomioTest()
-        test_obj.setup_test_with_handshake()
-        message = test_obj.create_next_message(oid='rpcReq', namespace='extension_test_plugin', call='test_funch_with_auth', data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
-        response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False,
-                                         wait_for_response=True)
 
     @attr('slow')
     def test_rpc_with_auth_probe_first(self):
