@@ -12,7 +12,7 @@ from biomio.protocol.storage.proberesultsstore import ProbeResultsStore
 from biomio.protocol.rpc.rpchandler import RpcHandler
 from biomio.protocol.storage.applicationdatastore import ApplicationDataStore
 from biomio.protocol.probes.policymanager import PolicyManager
-
+from biomio.protocol.rpc.bioauthflow import BioauthFlow
 
 import tornado.gen
 
@@ -283,6 +283,8 @@ def protocol_connection_established(protocol_instance, user_id, app_id):
     if app_id.startswith('probe'):
         protocol_instance.policy = PolicyManager.get_policy_for_user(user_id=user_id)
 
+    bioauth_flow = BioauthFlow(user_id=user_id, app_id=app_id)
+
 
 biomio_states = {
     'initial': STATE_CONNECTED,
@@ -390,7 +392,8 @@ class BiomioProtocol:
 
         self._last_received_message = None
 
-        self._policy = None
+        self.policy = None
+        self.bioauth_flow = None
 
         logger.debug(' --------- ')  # helpful to separate output when auto tests is running
 
