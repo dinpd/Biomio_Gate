@@ -130,15 +130,20 @@ class MessageHandler:
     @staticmethod
     @verify_header
     def on_auth_message(e):
+        app_id = str(e.request.header.appId)
+        user_id = str(e.request.header.id)
+
         key = ApplicationDataStore.instance().get_app_data(
-            account_id=e.request.header.id,
-            application_id=e.request.header.appId,
+            account_id=user_id,
+            application_id=app_id,
             key='public_key'
         )
 
         header_str = BiomioMessageBuilder.header_from_message(e.request)
 
         if Crypto.check_digest(key=key, data=header_str, digest=str(e.request.msg.key)):
+            protocol_connection_established(protocol_instance=e.protocol_instance, user_id=user_id, app_id=app_id)
+
             return STATE_READY
 
         e.status = 'Handshake failed. Invalid signature.'
@@ -215,11 +220,9 @@ def app_registered(e):
     # Send serverHello responce after entering handshake state
     session = e.protocol_instance.get_current_session()
 
-    # TODO: make separate method for
     app_id = str(e.request.header.appId)
     user_id = str(e.request.header.id)
-    if app_id.startswith('probe'):
-        e.protocol_instance.policy = PolicyManager.get_policy_for_user(user_id=user_id)
+    protocol_connection_established(protocol_instance=e.protocol_instance, user_id=user_id, app_id=app_id)
 
     message = e.protocol_instance.create_next_message(
         request_seq=e.request.header.seq,
@@ -240,6 +243,7 @@ def ready(e):
         # waiting_auth = ProbeResultsStore.instance().get_probe_data(user_id=user_id, key='waiting_auth')
         # if waiting_auth:
         e.protocol_instance.check_if_probe_should_be_tried()
+
 
 def probe_trying(e):
     if not e.src == STATE_PROBE_TRYING:
@@ -272,6 +276,12 @@ def disconnect(e):
 def print_state_change(e):
     """Helper function for printing state transitions to log."""
     logger.info('STATE_TRANSITION: event: %s, %s -> %s' % (e.event, e.src, e.dst))
+
+
+def protocol_connection_established(protocol_instance, user_id, app_id):
+    # TODO: make separate method for
+    if app_id.startswith('probe'):
+        protocol_instance.policy = PolicyManager.get_policy_for_user(user_id=user_id)
 
 
 biomio_states = {
@@ -488,22 +498,25 @@ class BiomioProtocol:
 
         request_seq = None
 
+        if not is_closed_by_client:
+            # Send bye message
+            if self._check_connected_callback():
+                if not self._session:
+                    # Create temporary session object to send bye message if necessary
+                    self.start_new_session()
+
+                request_seq = 1
+                # Use request seq number from last message if possible
+                if self._last_received_message:
+                    request_seq = self._last_received_message.header.seq
+
+                message = self.create_next_message(request_seq=request_seq, status=status_message, oid='bye')
+                self.send_message(responce=message)
+
+            if self._session and self._session.is_open:
+                SessionManager.instance().close_session(session=self._session)
+
         if self._last_received_message:
-            request_seq = self._last_received_message.header.seq
-
-            if not is_closed_by_client:
-                # Send bye message
-                #TODO: use last message variable instead
-                if self._check_connected_callback():
-                    if not self._session:
-                        # Create temporary session object to send bye message if necessary
-                        self.start_new_session()
-                    message = self.create_next_message(request_seq=request_seq, status=status_message, oid='bye')
-                    self.send_message(responce=message)
-
-                if self._session and self._session.is_open:
-                    SessionManager.instance().close_session(session=self._session)
-
             user_id = str(self._last_received_message.header.id)
             if is_message_from_probe_device(input_msg=self._last_received_message):
                 logger.info('UNUBSCRIBING PROBE SESSION...')
