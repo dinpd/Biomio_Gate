@@ -283,7 +283,7 @@ def protocol_connection_established(protocol_instance, user_id, app_id):
     if app_id.startswith('probe'):
         protocol_instance.policy = PolicyManager.get_policy_for_user(user_id=user_id)
 
-    bioauth_flow = BioauthFlow(user_id=user_id, app_id=app_id)
+    protocol_instance.bioauth_flow = BioauthFlow(user_id=user_id, app_id=app_id)
 
 
 biomio_states = {
@@ -499,8 +499,6 @@ class BiomioProtocol:
         logger.info('CLOSING CONNECTION...')
         self._stop_connection_timer_callback()
 
-        request_seq = None
-
         if not is_closed_by_client:
             # Send bye message
             if self._check_connected_callback():
@@ -508,7 +506,7 @@ class BiomioProtocol:
                     # Create temporary session object to send bye message if necessary
                     self.start_new_session()
 
-                request_seq = 1
+                request_seq = None
                 # Use request seq number from last message if possible
                 if self._last_received_message:
                     request_seq = self._last_received_message.header.seq
@@ -518,6 +516,9 @@ class BiomioProtocol:
 
             if self._session and self._session.is_open:
                 SessionManager.instance().close_session(session=self._session)
+
+        if self.bioauth_flow:
+            self.bioauth_flow.reset()
 
         if self._last_received_message:
             user_id = str(self._last_received_message.header.id)
@@ -614,12 +615,15 @@ class BiomioProtocol:
 
             wait_callback = self.send_in_progress_responce
 
+            print self.bioauth_flow
+
             args = yield tornado.gen.Task(self._rpc_handler.process_rpc_call,
                 str(user_id),
                 str(input_msg.msg.call),
                 str(input_msg.msg.namespace),
                 data,
-                wait_callback
+                wait_callback,
+                self.bioauth_flow
             )
             status = args.kwargs.get('status', None)
             result = args.kwargs.get('result', None)

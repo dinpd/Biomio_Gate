@@ -60,7 +60,7 @@ class ProbeResultsStore(RedisStore):
         self._redis.delete(self.redis_probe_key(user_id=user_id))
 
     @tornado.gen.engine
-    def subscribe_to_data(self, user_id, data_key, callback=None):
+    def subscribe_to_data(self, user_id, data_key, callback):
         self.data_key_by_callback[callback] = data_key
         self.subscribe(user_id, callback)
 
