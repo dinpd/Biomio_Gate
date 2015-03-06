@@ -11,7 +11,14 @@ def run_job():
     print 'End SAVE'
     print 'START GET'
     q.enqueue(get_data_job)
-    print 'END GET'
+    print 'End GET'
+    print 'Start UPDATE Job'
+    q.enqueue(update_data_job)
+    print 'END UPDATE'
+    print 'START GET'
+    q.enqueue(get_data_job)
+    print 'End GET'
+
 
 if __name__ == '__main__':
     use_connection()
