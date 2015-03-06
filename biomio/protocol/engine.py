@@ -8,7 +8,6 @@ from biomio.third_party.fysom import Fysom, FysomError
 from biomio.protocol.sessionmanager import SessionManager
 from biomio.protocol.settings import settings
 from biomio.protocol.crypt import Crypto
-from biomio.protocol.storage.proberesultsstore import ProbeResultsStore
 from biomio.protocol.rpc.rpchandler import RpcHandler
 from biomio.protocol.storage.applicationdatastore import ApplicationDataStore
 from biomio.protocol.probes.policymanager import PolicyManager
@@ -165,14 +164,17 @@ class MessageHandler:
     @staticmethod
     @verify_header
     def on_getting_probe(e):
+        # TOOO: analysis of different probe types
         user_id = str(e.request.header.id)
         ttl = settings.bioauth_timeout
         result = False
         for sample in e.request.msg.probeData.samples:
             if str(sample).lower() == 'true':
                 result = True
+        # TODO: remove comments
         # result = (str(e.request.msg.touchId).lower() == 'true')
-        ProbeResultsStore.instance().store_probe_data(user_id=user_id, ttl=ttl, waiting_auth=False, auth=result)
+        # ProbeResultsStore.instance().store_probe_data(user_id=user_id, ttl=ttl, waiting_auth=False, auth=result)
+        e.protocol_instance.bioauth_flow.set_auth_results(result=result)
         return STATE_READY
 
     @staticmethod
@@ -235,14 +237,16 @@ def app_registered(e):
 
 
 def ready(e):
-    # If current connection - probe connection
-    if is_message_from_probe_device(input_msg=e.request):
-        #TODO: remove commented code
-        # user_id = str(e.request.header.id)
-        # ProbeResultsStore.instance().subscribe(user_id=user_id, callback=e.protocol_instance.check_if_probe_should_be_tried)
-        # waiting_auth = ProbeResultsStore.instance().get_probe_data(user_id=user_id, key='waiting_auth')
-        # if waiting_auth:
-        e.protocol_instance.check_if_probe_should_be_tried()
+    if e.protocol_instance.bioauth_flow is None:
+        user_id = str(e.request.header.id)
+        app_id = str(e.request.header.appId)
+        auth_wait_callback = e.protocol_instance.try_probe
+        e.protocol_instance.bioauth_flow = BioauthFlow(user_id=user_id, app_id=app_id, auth_wait_callback=auth_wait_callback, auto_initialize=False)
+
+        if e.protocol_instance.bioauth_flow.is_probe_owner():
+            e.protocol_instance.policy = PolicyManager.get_policy_for_user(user_id=user_id)
+
+        e.protocol_instance.bioauth_flow.initialize()
 
 
 def probe_trying(e):
@@ -280,11 +284,7 @@ def print_state_change(e):
 
 def protocol_connection_established(protocol_instance, user_id, app_id):
     # TODO: make separate method for
-    if app_id.startswith('probe'):
-        protocol_instance.policy = PolicyManager.get_policy_for_user(user_id=user_id)
-
-    protocol_instance.bioauth_flow = BioauthFlow(user_id=user_id, app_id=app_id)
-
+    pass
 
 biomio_states = {
     'initial': STATE_CONNECTED,
@@ -518,19 +518,7 @@ class BiomioProtocol:
                 SessionManager.instance().close_session(session=self._session)
 
         if self.bioauth_flow:
-            self.bioauth_flow.reset()
-
-        if self._last_received_message:
-            user_id = str(self._last_received_message.header.id)
-            if is_message_from_probe_device(input_msg=self._last_received_message):
-                logger.info('UNUBSCRIBING PROBE SESSION...')
-                ProbeResultsStore.instance().unsubscribe(user_id=user_id, callback=self.check_if_probe_should_be_tried)
-            else:  # Extension
-                logger.info('UNUBSCRIBING EXTENSION SESSION...')
-                ProbeResultsStore.instance().unsubscribe_all(user_id=user_id)
-                if ProbeResultsStore.instance().has_probe_results(user_id=user_id):
-                    logger.info('REMOVING OLD PROBE AUTH RESULTS...')
-                    ProbeResultsStore.instance().remove_probe_data(user_id=user_id)
+            self.bioauth_flow.shutdown()
 
         # Close connection
         self._close_callback()
@@ -615,8 +603,6 @@ class BiomioProtocol:
 
             wait_callback = self.send_in_progress_responce
 
-            print self.bioauth_flow
-
             args = yield tornado.gen.Task(self._rpc_handler.process_rpc_call,
                 str(user_id),
                 str(input_msg.msg.call),
@@ -687,11 +673,6 @@ class BiomioProtocol:
         )
         self.send_message(responce=message)
 
-    def check_if_probe_should_be_tried(self):
-        user_id = str(self._last_received_message.header.id)
-        waiting_auth = ProbeResultsStore.instance().get_probe_data(user_id=user_id, key='waiting_auth')
-        if waiting_auth and (self._state_machine_instance.current == STATE_READY):
-            self._state_machine_instance.probetry(request=self._last_received_message, protocol_instance=self)
-        else:
-            logger.info('SUBSCRIBING PROBE SESSION...')
-            ProbeResultsStore.instance().subscribe(user_id=user_id, callback=self.check_if_probe_should_be_tried)
+    def try_probe(self):
+        self._state_machine_instance.probetry(request=self._last_received_message, protocol_instance=self)
+        self.bioauth_flow.auth_started()

@@ -59,7 +59,6 @@ class ProbeResultsStore(RedisStore):
     def remove_probe_data(self, user_id):
         self._redis.delete(self.redis_probe_key(user_id=user_id))
 
-    @tornado.gen.engine
     def subscribe_to_data(self, user_id, data_key, callback):
         self.data_key_by_callback[callback] = data_key
         self.subscribe(user_id, callback)
@@ -78,8 +77,7 @@ class ProbeResultsStore(RedisStore):
         probe_key = self.redis_probe_key(user_id)
         subscribers = self.callback_by_key.get(probe_key, [])
         for callback in subscribers:
-            self.unsubscribe\
-                (user_id=user_id, callback=callback)
+            self.unsubscribe(user_id=user_id, callback=callback)
 
     def unsubscribe(self, user_id, callback):
         user_id = 'id'
@@ -105,7 +103,6 @@ class ProbeResultsStore(RedisStore):
                 for callback in subscribers:
                     data_key = self.data_key_by_callback.get(callback, None)
                     if not data_key or (data_key and ProbeResultsStore.instance().get_probe_data(user_id=user_id, key=data_key)):
-                        self.unsubscribe(user_id=user_id, callback=callback)
                         try:
                             logger.debug("CALLED: %s" % str(callback))
                             callback()

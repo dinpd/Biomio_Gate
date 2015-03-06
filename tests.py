@@ -27,6 +27,7 @@ ssl_options = {
 class BiomioTest:
     _registered_key = None
     _registered_user_id = None
+    _registered_app_id = None
 
     @classmethod
     def set_registered_user_id(cls):
@@ -139,6 +140,7 @@ class BiomioTest:
         if is_registration_required and not secret:
             self.check_app_registered()
             self._builder.set_header(id=BiomioTest._registered_user_id)
+            self._builder.set_header(appId=BiomioTest._registered_app_id)
         elif secret:
             params['secret'] = secret
 
@@ -183,10 +185,11 @@ class BiomioTest:
         return Crypto.create_digest(data=header_str, key=BiomioTest._registered_key)
 
     @nottest
-    def check_app_registered(self, id_to_create=None):
+    def check_app_registered(self, id_to_create=None, app_id_prefix='extension'):
         if not self._registered_key or id_to_create is not None:
             # id_to_create = '1amxHFtymG7tIHfj96zbzgbTY'
-            self._builder.set_header(id=sha1(urandom(64)).hexdigest() if id_to_create is None else id_to_create)
+            self._builder.set_header(id=sha1(urandom(64)).hexdigest() if id_to_create is None else id_to_create,
+                                     appId='%s_%s' % (app_id_prefix, str(sha1(urandom(64)).hexdigest())))
             message = self.create_next_message(oid='clientHello', secret='secret')
             response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
                                          wait_for_response=True)
@@ -198,6 +201,7 @@ class BiomioTest:
                               wait_for_response=False)
             BiomioTest._registered_key = str(response.msg.key)
             BiomioTest._registered_user_id = str(message.header.id)
+            BiomioTest._registered_app_id = str(message.header.appId)
 
             self.teardown_test()
             self.setup_test()
@@ -747,14 +751,15 @@ class TestRpcCalls(BiomioTest):
         rpc_responce_message = None
         for i in range(max_message_count):
             try:
-                message = self.read_message(websocket=self.get_curr_connection())
+                response = self.read_message(websocket=self.get_curr_connection())
 
-                if message and message.msg and str(message.msg.oid) == 'rpcResp':
-                    rpc_status = str(message.msg.rpcStatus)
+                if response and response.msg and str(response.msg.oid) == 'rpcResp':
+                    rpc_status = str(response.msg.rpcStatus)
                     if rpc_status == 'complete' or rpc_status == 'fail':
-                        rpc_responce_message = message
+                        rpc_responce_message = response
                         break
             except Exception, e:
+                print e
                 pass
 
             message = self.create_next_message(oid='nop')
@@ -762,8 +767,16 @@ class TestRpcCalls(BiomioTest):
             try:
                 response = self.send_message(websocket=self.get_curr_connection(), message=message,
                                              close_connection=False, wait_for_response=True)
+
+                if response and response.msg and str(response.msg.oid) == 'rpcResp':
+                    rpc_status = str(response.msg.rpcStatus)
+                    if rpc_status == 'complete' or rpc_status == 'fail':
+                        rpc_responce_message = response
+                        break
+
                 ok_(str(response.msg.oid) == 'nop', msg='No responce on nop message')
             except Exception, e:
+                print e
                 pass
 
         ok_(rpc_responce_message, msg='No RPC response on auth')
@@ -791,11 +804,13 @@ class TestRpcCalls(BiomioTest):
     def test_rpc_get_pass_phrase(self):
         message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin',
                                            call='get_pass_phrase',
+                                           onBehalfOf='test@mail.com',
                                            data={'keys': ['email'], 'values': ['test@mail.com']})
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
                           wait_for_response=True)
         message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin',
                                            call='get_pass_phrase',
+                                           onBehalfOf='test@mail.com',
                                            data={'keys': ['email'], 'values': ['test@mail.com']})
         response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
                                      wait_for_response=True)
