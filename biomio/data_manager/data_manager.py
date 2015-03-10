@@ -46,7 +46,6 @@ class DataManager():
                 result.update({res_property: getattr(res, res_property)})
             return result
 
-
     @pny.db_session
     def update_data(self, module_name, table_name, update_object_pk, **kwargs):
         table_class = self.get_table_class(module_name, table_name)
@@ -62,8 +61,7 @@ class DataManager():
         if delete_object is not None:
             delete_object.delete()
 
-
     @staticmethod
     def get_table_class(module_name, table_name):
-        module = __import__(module_name)
+        module = __import__(module_name, globals())
         return getattr(module, table_name)

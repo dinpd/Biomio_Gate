@@ -1,6 +1,8 @@
 from rq import Queue, use_connection
 from redis import Redis
-from worker_jobs import *
+
+from biomio.workers_processor.worker_jobs import *
+
 
 q = None
 
