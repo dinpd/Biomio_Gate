@@ -14,6 +14,6 @@ define('session_ttl', default=DEFAULT_SESSION_TTL, help='Number of seconds in wh
 define('redis_port', default=DEFAULT_REDIS_PORT, help='Redis port')
 define('redis_host', default=DEFAULT_REDIS_HOST, help='Redis host address')
 
-parse_config_file(path='biomio.conf')
+parse_config_file(path='../../biomio.conf')
 settings = options
 

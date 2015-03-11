@@ -3,11 +3,15 @@ import ast
 
 from biomio.protocol.settings import settings
 
+
 class RedisStore:
     _instance = None
 
     def __init__(self):
         self._redis = StrictRedis(host=settings.redis_host, port=settings.redis_port)
+
+    def get_redis_session(self):
+        return self._redis
 
     @classmethod
     def instance(cls):

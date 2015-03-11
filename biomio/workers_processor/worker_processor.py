@@ -1,28 +1,15 @@
 from rq import Queue, use_connection
 from redis import Redis
+from biomio.protocol.redisstore import RedisStore
 
 from biomio.workers_processor.worker_jobs import *
 
 
-q = None
+use_connection()
+q = Queue(connection=RedisStore.instance().get_redis_session())
 
 
-def run_job():
-    print 'Start SAVE'
-    q.enqueue(save_data_job)
-    print 'End SAVE'
-    print 'START GET'
-    q.enqueue(get_data_job)
-    print 'End GET'
-    print 'Start UPDATE Job'
-    q.enqueue(update_data_job)
-    print 'END UPDATE'
-    print 'START GET'
-    q.enqueue(get_data_job)
-    print 'End GET'
-
-
-if __name__ == '__main__':
-    use_connection()
-    q = Queue(connection=Redis())
-    run_job()
+def run_worker_job(job_to_run, **kwargs):
+    print 'Running job - %s' % str(job_to_run)
+    print kwargs
+    q.enqueue(job_to_run, **kwargs)
