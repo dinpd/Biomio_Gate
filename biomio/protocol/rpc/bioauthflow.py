@@ -58,10 +58,15 @@ def on_got_results(e):
 def on_state_changed(e):
     flow = e.bioauth_flow
     next_state = ProbeResultsStore.instance().get_probe_data(user_id=flow.user_id, key=_PROBESTORE_STATE_KEY)
-    logger.debug('BIOMETRIC AUTH [%s, %s]: STATE CHANGED - %s' % (flow.user_id, flow.app_id, next_state))
     if next_state is None:
-        next_state = STATE_AUTH_ERROR
+        if ProbeResultsStore.instance().has_probe_results(user_id=flow.user_id):
+            next_state = STATE_AUTH_ERROR
+            logger.debug('BIOMETRIC AUTH [%s, %s]: AUTH INTERNAL ERROR - state not set')
+        else:
+            next_state = STATE_AUTH_TIMEOUT
+            logger.debug('BIOMETRIC AUTH [%s, %s]: AUTH TIMEOUT')
 
+    logger.debug('BIOMETRIC AUTH [%s, %s]: STATE CHANGED - %s' % (flow.user_id, flow.app_id, next_state))
     return next_state
 
 # State callbacks
@@ -136,11 +141,10 @@ _PROBESTORE_STATE_KEY = 'state'
 
 # Helper Methods
 
-
 def _store_state(e):
     # TODO: check if we need to set ttl again
     data = {_PROBESTORE_STATE_KEY: e.fsm.current}
-    ProbeResultsStore.instance().store_probe_data(user_id=e.bioauth_flow.user_id, ttl=None, **data)
+    ProbeResultsStore.instance().store_probe_data(user_id=e.bioauth_flow.user_id, ttl=settings.bioauth_timeout, **data)
 
 
 class BioauthFlow:
@@ -200,7 +204,7 @@ class BioauthFlow:
     def _store_state(self):
         # TODO: check if we need to set ttl again
         data = {_PROBESTORE_STATE_KEY: self._state_machine_instance.current}
-        ProbeResultsStore.instance().store_probe_data(user_id=self.user_id, ttl=None, **data)
+        ProbeResultsStore.instance().store_probe_data(user_id=self.user_id, ttl=settings.bioauth_timeout, **data)
 
     def reset(self):
         self._state_machine_instance.reset(bioauth_flow=self)
