@@ -6,8 +6,8 @@ import tornado.httpserver
 import tornado.ioloop
 import tornado.gen
 
-from biomio.protocol.engine import BiomioProtocol
 from biomio.protocol.settings import settings
+from biomio.protocol.engine import BiomioProtocol
 from biomio.protocol.connectionhandler import ConnectionTimeoutHandler
 
 import logging
@@ -20,9 +20,7 @@ ssl_options = {
 
 
 class WebSocketHandler(tornado.websocket.WebSocketHandler):
-    connections = {}
-    timeouts = {}
-
+    
     def check_origin(self, origin):
         return True
 
@@ -50,7 +48,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         ConnectionTimeoutHandler.instance().start_connection_timer(connection=self, timeout_callback=self.on_connection_timeout)
 
     def on_connection_timeout(self):
-        logger.debug('Connection timeout')
+        logger.warning('Connection timeout')
         self.biomio_protocol.close_connection(status_message='Connection timeout')
 
 
@@ -72,13 +70,6 @@ def run_tornado():
     server.listen(settings.port)
     tornado.ioloop.IOLoop.instance().start()
 
-
 if __name__ == '__main__':
-
-    logging.basicConfig(
-        format='%(levelname)-8s [%(asctime)s] %(message)s',
-        level=logging.DEBUG
-    )
-
     # Run tornado application
     run_tornado()

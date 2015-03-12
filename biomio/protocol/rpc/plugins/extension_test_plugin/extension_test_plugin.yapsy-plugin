@@ -1,0 +1,6 @@
+[Core]
+Name = ExtensionTestPlugin
+Module = extension_test_plugin
+
+[Documentation]
+Description = First Test Plugin

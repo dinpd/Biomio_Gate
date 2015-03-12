@@ -1,15 +1,22 @@
-from biomio.protocol.message import BiomioMessageBuilder
-from biomio.third_party.fysom import Fysom, FysomError
-from biomio.protocol.sessionmanager import SessionManager, Session
-from biomio.protocol.settings import settings
-from biomio.protocol.crypt import Crypto
-from biomio.protocol.redisstore import RedisStore
-
-from jsonschema import ValidationError
+from itertools import izip
 from functools import wraps
 
-import logging
+from jsonschema import ValidationError
 
+from biomio.protocol.message import BiomioMessageBuilder
+from biomio.third_party.fysom import Fysom, FysomError
+from biomio.protocol.sessionmanager import SessionManager
+from biomio.protocol.settings import settings
+from biomio.protocol.crypt import Crypto
+from biomio.protocol.storage.proberesultsstore import ProbeResultsStore
+from biomio.protocol.rpc.rpchandler import RpcHandler
+from biomio.protocol.storage.applicationdatastore import ApplicationDataStore
+from biomio.protocol.probes.policymanager import PolicyManager
+
+
+import tornado.gen
+
+import logging
 logger = logging.getLogger(__name__)
 
 PROTOCOL_VERSION = '1.0'
@@ -18,9 +25,12 @@ PROTOCOL_VERSION = '1.0'
 STATE_CONNECTED = 'connected'
 STATE_HANDSHAKE = 'handshake'
 STATE_REGISTRATION = 'registration'
+STATE_GETTING_RESOURCES = 'resourceget'
 STATE_APP_REGISTERED = 'appregistered'
 STATE_READY = 'ready'
 STATE_DISCONNECTED = 'disconnected'
+STATE_PROBE_TRYING = 'probetrying'
+STATE_GETTING_PROBES = 'probegetting'
 
 
 def _is_header_valid(e):
@@ -56,6 +66,11 @@ def verify_header(verify_func):
     return wraps(verify_func)(_decorator)
 
 
+def is_message_from_probe_device(input_msg):
+    app_id = str(input_msg.header.appId)
+    return app_id.startswith('probe')
+
+
 class MessageHandler:
     @staticmethod
     @verify_header
@@ -69,7 +84,7 @@ class MessageHandler:
                 # Create new session
                 # TODO: move to some state handling callback
                 e.protocol_instance.start_new_session()
-                app_data = RedisStore.instance().get_app_data(
+                app_data = ApplicationDataStore.instance().get_app_data(
                     account_id=e.request.header.id,
                     application_id=e.request.header.appId,
                     key='public_key'
@@ -77,7 +92,10 @@ class MessageHandler:
                 if hasattr(e.request.msg, "secret") \
                         and e.request.msg.secret:
                     if app_data is None:
-                        return STATE_REGISTRATION
+                        if is_message_from_probe_device(input_msg=e.request):
+                            return STATE_GETTING_RESOURCES
+                        else:
+                            return STATE_REGISTRATION
                     e.status = "Registration handshake is inappropriate. Given app is already registered."
                 else:
                     if app_data is not None:
@@ -93,13 +111,15 @@ class MessageHandler:
     @staticmethod
     @verify_header
     def on_nop_message(e):
-        if e.src == STATE_READY:
+        if e.src == STATE_READY \
+                or e.src == STATE_PROBE_TRYING\
+                or e.src == STATE_GETTING_PROBES:
             message = e.protocol_instance.create_next_message(
                 request_seq=e.request.header.seq,
                 oid='nop'
             )
             e.protocol_instance.send_message(responce=message)
-            return STATE_READY
+            return e.src
 
         return STATE_DISCONNECTED
 
@@ -110,7 +130,7 @@ class MessageHandler:
     @staticmethod
     @verify_header
     def on_auth_message(e):
-        key = RedisStore.instance().get_app_data(
+        key = ApplicationDataStore.instance().get_app_data(
             account_id=e.request.header.id,
             application_id=e.request.header.appId,
             key='public_key'
@@ -128,8 +148,40 @@ class MessageHandler:
     def on_registered(e):
         return STATE_APP_REGISTERED
 
+    @staticmethod
+    def on_probe_trying(e):
+        return STATE_PROBE_TRYING
+
+    @staticmethod
+    @verify_header
+    def on_getting_resources(e):
+        return STATE_REGISTRATION
+
+    @staticmethod
+    @verify_header
+    def on_getting_probe(e):
+        user_id = str(e.request.header.id)
+        ttl = settings.bioauth_timeout
+        result = False
+        for sample in e.request.msg.probeData.samples:
+            if str(sample).lower() == 'true':
+                result = True
+        # result = (str(e.request.msg.touchId).lower() == 'true')
+        ProbeResultsStore.instance().store_probe_data(user_id=user_id, ttl=ttl, waiting_auth=False, auth=result)
+        return STATE_READY
+
+    @staticmethod
+    @verify_header
+    def on_resources(e):
+        return STATE_REGISTRATION
+
 
 def handshake(e):
+    if is_message_from_probe_device(input_msg=e.request):
+        logger.info(" ------- APP HANDSHAKE: probe")
+    else:
+        logger.info(" ------- APP HANDSHAKE: extension")
+
     # Send serverHello responce after entering handshake state
     session = e.protocol_instance.get_current_session()
 
@@ -144,9 +196,14 @@ def handshake(e):
 
 
 def registration(e):
+    if is_message_from_probe_device(input_msg=e.request):
+        logger.info(" -------- APP REGISTRATION: probe")
+    else:
+        logger.info(" -------- APP REGISTRATION: extension")
+
     key, pub_key = Crypto.generate_keypair()
 
-    RedisStore.instance().store_app_data(
+    ApplicationDataStore.instance().store_app_data(
         account_id=e.request.header.id,
         application_id=e.request.header.appId,
         public_key=pub_key
@@ -158,6 +215,12 @@ def app_registered(e):
     # Send serverHello responce after entering handshake state
     session = e.protocol_instance.get_current_session()
 
+    # TODO: make separate method for
+    app_id = str(e.request.header.appId)
+    user_id = str(e.request.header.id)
+    if app_id.startswith('probe'):
+        e.protocol_instance.policy = PolicyManager.get_policy_for_user(user_id=user_id)
+
     message = e.protocol_instance.create_next_message(
         request_seq=e.request.header.seq,
         oid='serverHello',
@@ -168,6 +231,34 @@ def app_registered(e):
     e.protocol_instance.send_message(responce=message)
 
 
+def ready(e):
+    # If current connection - probe connection
+    if is_message_from_probe_device(input_msg=e.request):
+        #TODO: remove commented code
+        # user_id = str(e.request.header.id)
+        # ProbeResultsStore.instance().subscribe(user_id=user_id, callback=e.protocol_instance.check_if_probe_should_be_tried)
+        # waiting_auth = ProbeResultsStore.instance().get_probe_data(user_id=user_id, key='waiting_auth')
+        # if waiting_auth:
+        e.protocol_instance.check_if_probe_should_be_tried()
+
+def probe_trying(e):
+    if not e.src == STATE_PROBE_TRYING:
+        message = e.protocol_instance.create_next_message(
+            request_seq=e.request.header.seq,
+            oid='try',
+            resource=[{'rType': 'fp-scanner', 'samples': 1}]
+        )
+        e.protocol_instance.send_message(responce=message)
+
+
+def getting_probe(e):
+    pass
+
+
+def getting_resouces(e):
+    pass
+
+
 def disconnect(e):
     # If status parameter passed to state change method
     # we will add it as a status for message
@@ -175,18 +266,12 @@ def disconnect(e):
     if hasattr(e, 'status'):
         status = e.status
 
-    # In a case of reaching disconnected state due to invalid message,
-    # request could not be passed to state change method
-    request_seq = None
-    if hasattr(e, 'request'):
-        request_seq = e.request.header.seq
-
-    e.protocol_instance.close_connection(request_seq=request_seq, status_message=status)
+    e.protocol_instance.close_connection(status_message=status)
 
 
 def print_state_change(e):
     """Helper function for printing state transitions to log."""
-    logger.debug('STATE_TRANSITION: event: %s, %s -> %s' % (e.event, e.src, e.dst))
+    logger.info('STATE_TRANSITION: event: %s, %s -> %s' % (e.event, e.src, e.dst))
 
 
 biomio_states = {
@@ -195,7 +280,7 @@ biomio_states = {
         {
             'name': 'clientHello',
             'src': STATE_CONNECTED,
-            'dst': [STATE_HANDSHAKE, STATE_REGISTRATION, STATE_DISCONNECTED],
+            'dst': [STATE_HANDSHAKE, STATE_REGISTRATION, STATE_GETTING_RESOURCES, STATE_DISCONNECTED],
             'decision': MessageHandler.on_client_hello_message
         },
         {
@@ -211,9 +296,15 @@ biomio_states = {
             'decision': MessageHandler.on_registered
         },
         {
+            'name': 'resources',
+            'src': STATE_GETTING_RESOURCES,
+            'dst': [STATE_REGISTRATION, STATE_DISCONNECTED],
+            'decision': MessageHandler.on_resources
+        },
+        {
             'name': 'nop',
-            'src': STATE_READY,
-            'dst': [STATE_READY, STATE_DISCONNECTED],
+            'src': [STATE_READY, STATE_PROBE_TRYING, STATE_GETTING_PROBES],
+            'dst': [STATE_READY, STATE_PROBE_TRYING, STATE_GETTING_PROBES, STATE_DISCONNECTED],
             'decision': MessageHandler.on_nop_message
         },
         {
@@ -227,6 +318,18 @@ biomio_states = {
             'src': STATE_HANDSHAKE,
             'dst': [STATE_READY, STATE_DISCONNECTED],
             'decision': MessageHandler.on_auth_message
+        },
+        {
+            'name': 'probetry',
+            'src': STATE_READY,
+            'dst': [STATE_PROBE_TRYING, STATE_DISCONNECTED],
+            'decision': MessageHandler.on_probe_trying
+        },
+        {
+            'name': 'probe',
+            'src': STATE_PROBE_TRYING,
+            'dst': [STATE_GETTING_PROBES, STATE_READY, STATE_DISCONNECTED],
+            'decision': MessageHandler.on_getting_probe
         }
     ],
     'callbacks': {
@@ -234,6 +337,10 @@ biomio_states = {
         'ondisconnected': disconnect,
         'onregistration': registration,
         'onappregistered': app_registered,
+        'onready': ready,
+        'onprobetrying': probe_trying,
+        'onprobegetting': getting_probe,
+        'resourceget': getting_resouces,
         'onchangestate': print_state_change
     }
 }
@@ -254,6 +361,9 @@ class BiomioProtocol:
         :param stop_connection_timer_callback: Will be called when connection timer should be stoped.
         :param check_connected_callback: Will be called to check if connected to socket. Should return True if connected.
         """
+        # helpful to separate output when auto tests is running
+        logger.info(' ===================================================== ')
+
         self._close_callback = kwargs['close_callback']
         self._send_callback = kwargs['send_callback']
         self._start_connection_timer_callback = kwargs['start_connection_timer_callback']
@@ -263,11 +373,18 @@ class BiomioProtocol:
         self._session = None
         self._builder = BiomioMessageBuilder(oid='serverHeader', seq=1, protoVer=PROTOCOL_VERSION)
 
+        self._rpc_handler = RpcHandler()
+
         # Initialize state machine
         self._state_machine_instance = Fysom(biomio_states)
 
+        self._last_received_message = None
+
+        self._policy = None
+
         logger.debug(' --------- ')  # helpful to separate output when auto tests is running
 
+    @tornado.gen.engine
     def process_next(self, msg_string):
         """ Processes next message received from client.
         :param msg_string: String containing next message.
@@ -284,7 +401,7 @@ class BiomioProtocol:
 
         # If message is valid, perform necessary actions
         if input_msg and input_msg.msg and input_msg.header:
-            logger.debug('RECEIVED: "%s" ' % msg_string)
+            logger.debug('RECEIVED MESSAGE STRING: "%s" ' % msg_string)
 
             # Refresh session if necessary
             if self._session and hasattr(input_msg.header,
@@ -295,6 +412,13 @@ class BiomioProtocol:
             if not self._session and hasattr(input_msg.header, 'token') and input_msg.header.token:
                 self._restore_state(str(input_msg.header.token))
 
+            # Try to process RPC request subset, if message is RCP request - exit after processing
+
+            if input_msg.msg.oid in ('rpcReq', 'rpcEnumNsReq', 'rpcEnumCallsReq'):
+                self.process_rpc_request(input_msg)
+                return
+
+            # Process protocol message
             if not self._state_machine_instance.current == STATE_DISCONNECTED:
                 self._process_message(input_msg)
         else:
@@ -308,11 +432,13 @@ class BiomioProtocol:
         try:
             # State machine instance has callback with the same name as possible messages, that it could
             # receive from client. Retrieve function object (callback) for message and perform transition.
+            logger.info('RECEIVED MESSAGE: "%s" ' % str(input_msg.msg.oid))
             make_transition = getattr(self._state_machine_instance, '%s' % input_msg.msg.oid, None)
             if make_transition:
                 if self._state_machine_instance.current == STATE_DISCONNECTED:
                     return
 
+                self._last_received_message = input_msg
                 make_transition(request=input_msg, protocol_instance=self)
 
                 # Start connection timer, if state machine does no reach its final state
@@ -346,9 +472,10 @@ class BiomioProtocol:
         :param responce: BiomioMessage instance to send.
         """
         self._send_callback(responce.serialize())
-        logger.debug('SENT: %s' % responce.serialize())
+        logger.info('SENT MESSAGE: "%s" ' % str(responce.msg.oid))
+        logger.debug('SENT MESSAGE STRING: %s' % responce.serialize())
 
-    def close_connection(self, request_seq=None, status_message=None):
+    def close_connection(self, status_message=None, is_closed_by_client=None):
         """ Sends bye message and closes session.
 
         :note Temporary session object will be created to send bye message with status if necessary.
@@ -356,19 +483,37 @@ class BiomioProtocol:
         :param request_seq: Sequence num of request, got from client. (Will be increased to got next sequence number)
         :param status_message: Status string for next message.
         """
-        logger.debug('CLOSING CONNECTION...')
+        logger.info('CLOSING CONNECTION...')
         self._stop_connection_timer_callback()
 
-        # Send bye message
-        if self._check_connected_callback():
-            if not self._session:
-                # Create temporary session object to send bye message if necessary
-                self.start_new_session()
-            message = self.create_next_message(request_seq=request_seq, status=status_message, oid='bye')
-            self.send_message(responce=message)
+        request_seq = None
 
-        if self._session and self._session.is_open:
-            SessionManager.instance().close_session(session=self._session)
+        if self._last_received_message:
+            request_seq = self._last_received_message.header.seq
+
+            if not is_closed_by_client:
+                # Send bye message
+                #TODO: use last message variable instead
+                if self._check_connected_callback():
+                    if not self._session:
+                        # Create temporary session object to send bye message if necessary
+                        self.start_new_session()
+                    message = self.create_next_message(request_seq=request_seq, status=status_message, oid='bye')
+                    self.send_message(responce=message)
+
+                if self._session and self._session.is_open:
+                    SessionManager.instance().close_session(session=self._session)
+
+            user_id = str(self._last_received_message.header.id)
+            if is_message_from_probe_device(input_msg=self._last_received_message):
+                logger.info('UNUBSCRIBING PROBE SESSION...')
+                ProbeResultsStore.instance().unsubscribe(user_id=user_id, callback=self.check_if_probe_should_be_tried)
+            else:  # Extension
+                logger.info('UNUBSCRIBING EXTENSION SESSION...')
+                ProbeResultsStore.instance().unsubscribe_all(user_id=user_id)
+                if ProbeResultsStore.instance().has_probe_results(user_id=user_id):
+                    logger.info('REMOVING OLD PROBE AUTH RESULTS...')
+                    ProbeResultsStore.instance().remove_probe_data(user_id=user_id)
 
         # Close connection
         self._close_callback()
@@ -412,7 +557,8 @@ class BiomioProtocol:
             self._session.close_callback = None
             SessionManager.instance().set_protocol_state(token=self._session.refresh_token,
                                                          current_state=self._state_machine_instance.current)
-        logger.debug('Connection closed by client')
+        logger.warning('Connection closed by client')
+        self.close_connection(is_closed_by_client=True)
 
     def _restore_state(self, refresh_token):
         """ Restores session and state machine state using given refresh token. Closes connection with appropriate message otherwice.
@@ -422,7 +568,7 @@ class BiomioProtocol:
         self._session = session_manager.restore_session(refresh_token)
 
         if self._session:
-            logger.debug('Continue session %s...' % refresh_token)
+            logger.info('Continue session %s...' % refresh_token)
             self._builder.set_header(token=self._session.session_token)
             state = session_manager.get_protocol_state(token=self._session.refresh_token)
             if state:
@@ -434,3 +580,98 @@ class BiomioProtocol:
                                                  status='Internal error: Could not restore protpcol state after last disconnection')
         else:
             self._state_machine_instance.bye(protocol_instance=self, status='Invalid token')
+
+    @tornado.gen.engine
+    def process_rpc_request(self, input_msg):
+        message_id = str(input_msg.msg.oid)
+        self._last_received_message = input_msg
+
+        if message_id == 'rpcReq':
+            data = {}
+            if input_msg.msg.data:
+                for k,v in izip(list(input_msg.msg.data.keys), list(input_msg.msg.data.values)):
+                    data[str(k)] = str(v)
+
+            user_id = ''
+            if hasattr(input_msg.msg, 'onBehalfOf'):
+                user_id = str(input_msg.msg.onBehalfOf)
+
+            wait_callback = self.send_in_progress_responce
+
+            args = yield tornado.gen.Task(self._rpc_handler.process_rpc_call,
+                str(user_id),
+                str(input_msg.msg.call),
+                str(input_msg.msg.namespace),
+                data,
+                wait_callback
+            )
+            status = args.kwargs.get('status', None)
+            result = args.kwargs.get('result', None)
+
+            res_keys = []
+            res_values = []
+
+            res_params = {
+                'oid': 'rpcResp',
+                'namespace': str(input_msg.msg.namespace),
+                'call': str(input_msg.msg.call),
+                'rpcStatus': status
+            }
+
+            if result is not None:
+                for k, v in result.iteritems():
+                    res_keys.append(k)
+                    res_values.append(str(v))
+
+            res_params['data'] = {'keys': res_keys, 'values': res_values}
+
+            message = self.create_next_message(
+                request_seq=input_msg.header.seq,
+                **res_params
+            )
+            self.send_message(responce=message)
+        elif message_id == 'rpcEnumNsReq':
+            namespaces = self._rpc_handler.get_available_namespaces()
+            message = self.create_next_message(request_seq=input_msg.header.seq, oid='rpcEnumNsReq', namespaces=namespaces)
+            self.send_message(responce=message)
+        elif message_id == 'rpcEnumCallsReq':
+            self._rpc_handler.get_available_calls(namespace=input_msg.msg.namespace)
+
+    def send_in_progress_responce(self):
+        # Should be last RPC request
+        input_msg = self._last_received_message
+
+        wait_message = 'To proceed with encryption it is required to identify yourself \
+        on Biom.io service. Server will wait for your probe for 5 minutes.'
+
+        res_keys = []
+        res_values = []
+
+        res_params = {
+                'oid': 'rpcResp',
+                'namespace': str(input_msg.msg.namespace),
+                'call': str(input_msg.msg.call),
+                'rpcStatus': 'inprogress'
+        }
+
+        result = {'msg': wait_message, 'timeout': settings.bioauth_timeout}
+        for k, v in result.iteritems():
+            res_keys.append(k)
+            res_values.append(str(v))
+
+        res_params['data'] = {'keys': res_keys, 'values': res_values}
+
+        message = self.create_next_message(
+            request_seq=input_msg.header.seq,
+            **res_params
+        )
+        self.send_message(responce=message)
+
+    def check_if_probe_should_be_tried(self):
+        user_id = str(self._last_received_message.header.id)
+        waiting_auth = ProbeResultsStore.instance().get_probe_data(user_id=user_id, key='waiting_auth')
+        if waiting_auth and (self._state_machine_instance.current == STATE_READY):
+            self._state_machine_instance.probetry(request=self._last_received_message, protocol_instance=self)
+        else:
+            logger.info('SUBSCRIBING PROBE SESSION...')
+            ProbeResultsStore.instance().subscribe(user_id=user_id, callback=self.check_if_probe_should_be_tried)

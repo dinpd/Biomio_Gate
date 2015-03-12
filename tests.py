@@ -1,6 +1,8 @@
 #!/usr/bin/env python
+import random
 
 from ssl import SSLError
+import string
 from websocket import create_connection, WebSocketTimeoutException, WebSocket
 
 from biomio.protocol.message import BiomioMessageBuilder
@@ -14,7 +16,8 @@ import time
 import logging
 from hashlib import sha1
 from os import urandom
-
+import threading
+from itertools import izip
 
 ssl_options = {
     "ca_certs": "server.pem"
@@ -24,6 +27,10 @@ ssl_options = {
 class BiomioTest:
     _registered_key = None
     _registered_user_id = None
+
+    @classmethod
+    def set_registered_user_id(cls):
+        cls._registered_user_id = None
 
     def __init__(self):
         self._ws = None
@@ -178,6 +185,7 @@ class BiomioTest:
     @nottest
     def check_app_registered(self, id_to_create=None):
         if not self._registered_key or id_to_create is not None:
+            # id_to_create = '1amxHFtymG7tIHfj96zbzgbTY'
             self._builder.set_header(id=sha1(urandom(64)).hexdigest() if id_to_create is None else id_to_create)
             message = self.create_next_message(oid='clientHello', secret='secret')
             response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
@@ -302,8 +310,9 @@ class TestRegistration(BiomioTest):
         # Send message and wait for response,
         # server should not respond and close connection,
         # so WebsocketTimeoutException will be raised
-        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
                           wait_for_response=True)
+
 
 
 class TestConnectedState(BiomioTest):
@@ -501,7 +510,6 @@ class TestHandshakeState(BiomioTest):
         # so WebsocketTimeoutException will be raised
         response = self.send_message(websocket=websocket, message=message, close_connection=False,
                                      wait_for_response=True)
-        print response
 
 
 class TestReadyState(BiomioTest):
@@ -621,6 +629,228 @@ class TestReadyState(BiomioTest):
         ok_(not expired, msg='Session expired instead of refresh')
         ok_(not old_session_token == self.current_session_token,
             msg='New session token not generated (old one present).')
+
+@nottest
+def get_rpc_msg_field(message, key):
+    for k,v in izip(list(message.msg.data.keys), list(message.msg.data.values)):
+        if str(k) == key:
+            return str(v)
+
+
+class TestRpcCalls(BiomioTest):
+    def setup(self):
+        self.setup_test_with_handshake(is_registration_required=True)
+
+    def teardown(self):
+        self.teardown_test()
+
+    def test_rpc_call(self):
+        message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin', call='test_func',
+                                           onBehalfOf='test@test.com',
+                                           data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
+        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+                                     wait_for_response=True)
+        ok_(str(response.msg.oid) != 'bye', msg='Connection closed. Status: %s' % response.status)
+
+    def test_rpc_ns_list(self):
+        message = self.create_next_message(oid='rpcEnumNsReq')
+        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+                                     wait_for_response=True)
+        ok_(str(response.msg.oid) != 'bye', msg='Connection closed. Status: %s' % response.status)
+
+    @staticmethod
+    def probe_job():
+        test_obj = BiomioTest()
+        test_obj.setup_test_for_for_new_id()
+        test_obj._builder.set_header(appId='probe_%s' % (sha1(urandom(64)).hexdigest()))
+
+        # CLIENT HELLO ->
+        message = test_obj.create_next_message(oid='clientHello', secret='secret')
+        test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False, wait_for_response=False)
+
+        # RESOURCES ->
+        message = test_obj.create_next_message(oid='resources', data=[{"rType": "video", "rProperties": "1500x1000"},
+            {"rType": "fp-scanner", "rProperties": "true"}, {"rType": "mic", "rProperties": "true"}])
+        # SERVER HELLO <-
+        response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False, wait_for_response=True)
+
+        # ACK ->
+        message = test_obj.create_next_message(oid='ack')
+        test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False,
+                          wait_for_response=False)
+
+        message_timeout = settings.connection_timeout / 2  # Send a message every 3 seconds
+        max_message_count = 10
+        rpc_responce_message = None
+        for i in range(max_message_count):
+            try:
+                message = test_obj.read_message(websocket=test_obj.get_curr_connection())
+
+                # TRY <-
+                if message and message.msg and str(message.msg.oid) == 'try':
+                    # PROBE ->
+                    probe_msg = test_obj.create_next_message(oid='probe', probeId=0,
+                                                             probeData={"oid": "touchIdSamples", "samples": ["True"]})
+
+                    response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=probe_msg,
+                                                 close_connection=False, wait_for_response=False)
+
+                    break
+            except Exception, e:
+                print e
+                pass
+
+            message = test_obj.create_next_message(oid='nop')
+            message.header.token = test_obj.session_refresh_token
+            try:
+                # NOP ->
+                # NOP <-
+                response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message,
+                                             close_connection=False, wait_for_response=True)
+                ok_(str(response.msg.oid) == 'nop', msg='No responce on nop message')
+            except Exception, e:
+                pass
+
+        message = test_obj.create_next_message(oid='bye')
+        # BYE ->
+        # BYE <-
+        response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False)
+        eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
+
+    @attr('slow')
+    def test_rpc_with_auth(self):
+        message_timeout = settings.connection_timeout / 2  # Send a message every 3 seconds
+
+        # Separate thread with connection for
+        t = threading.Thread(target=TestRpcCalls.probe_job)
+        t.start()
+
+        time.sleep(3)
+
+        message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin', call='test_func_with_auth',
+            data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
+        message = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+            wait_for_response=False)
+
+        max_message_count = 10
+        rpc_responce_message = None
+        for i in range(max_message_count):
+            try:
+                message = self.read_message(websocket=self.get_curr_connection())
+
+                if message and message.msg and str(message.msg.oid) == 'rpcResp':
+                    rpc_status = str(message.msg.rpcStatus)
+                    if rpc_status == 'complete' or rpc_status == 'fail':
+                        rpc_responce_message = message
+                        break
+            except Exception, e:
+                pass
+
+            message = self.create_next_message(oid='nop')
+            message.header.token = self.session_refresh_token
+            try:
+                response = self.send_message(websocket=self.get_curr_connection(), message=message,
+                                             close_connection=False, wait_for_response=True)
+                ok_(str(response.msg.oid) == 'nop', msg='No responce on nop message')
+            except Exception, e:
+                pass
+
+        ok_(rpc_responce_message, msg='No RPC response on auth')
+        ok_(get_rpc_msg_field(message=rpc_responce_message, key="error") is None, msg='Errors during RPC call')
+
+    @staticmethod
+    def extension_test_job():
+        time.sleep(10)
+        test_obj = BiomioTest()
+        test_obj.setup_test_with_handshake()
+        message = test_obj.create_next_message(oid='rpcReq', namespace='extension_test_plugin', call='test_funch_with_auth', data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
+        response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False,
+                                         wait_for_response=True)
+
+    @attr('slow')
+    def test_rpc_with_auth_probe_first(self):
+        message = self.create_next_message(oid='rpcReq', namespace='probe_test_plugin', call='test_probe_valid')
+        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+                                         wait_for_response=True)
+        t = threading.Thread(target=TestRpcCalls.extension_test_job)
+        t.start()
+        t.join()
+
+
+    def test_rpc_pass_phrase_keys_generation(self):
+        message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin',
+                                           call='get_pass_phrase',
+                                           data={'keys': ['email'], 'values': ['test@mail.com']})
+        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+                                     wait_for_response=True)
+        ok_(str(response.msg.oid) != 'bye', msg='Connection closed. Status %s' % response.status)
+        ok_('private_pgp_key' in response.msg.data.keys, msg='Response does not contain private pgp key.')
+
+    def test_rpc_get_pass_phrase(self):
+        message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin',
+                                           call='get_pass_phrase',
+                                           data={'keys': ['email'], 'values': ['test@mail.com']})
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+                          wait_for_response=True)
+        message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin',
+                                           call='get_pass_phrase',
+                                           data={'keys': ['email'], 'values': ['test@mail.com']})
+        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+                                     wait_for_response=True)
+        ok_(str(response.msg.oid) != 'bye', msg='Connection closed. Status %s' % response.status)
+        ok_('private_pgp_key' not in response.msg.data.keys, msg='Response contains private pgp key.')
+        ok_('pass_phrase' in response.msg.data.keys, msg='Response does not contain pass phrase.')
+
+    @attr('slow')
+    def test_rpc_get_users_pgp_keys_generation(self):
+        fake_email = ['%s@mail.com' % ''.join(random.choice(string.lowercase) for _ in range(10)) for x in range(2)]
+        message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin',
+                                           call='get_users_public_pgp_keys',
+                                           data={'keys': ['emails'], 'values': [','.join(fake_email)]})
+        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+                                     wait_for_response=True)
+        ok_(str(response.msg.oid) != 'bye', msg='Connection closed. Status %s' % response.status)
+        ok_('public_pgp_keys' in response.msg.data.keys, msg='Response does not contain public pgp key.')
+
+    def test_rpc_get_users_public_pgp_keys(self):
+        message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin',
+                                           call='get_users_public_pgp_keys',
+                                           data={'keys': ['emails'], 'values': ['test@mail.com, test1@mail.com']})
+        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+                                     wait_for_response=True)
+        ok_(str(response.msg.oid) != 'bye', msg='Connection closed. Status %s' % response.status)
+        ok_('public_pgp_keys' in response.msg.data.keys, msg='Response does not contain public pgp key.')
+
+
+class TestProbes(BiomioTest):
+    def setup(self):
+        self.setup_test_with_handshake(is_registration_required=True)
+
+    def teardown(self):
+        self.teardown_test()
+
+    def test_send_resources(self):
+        self.setup_test_for_for_new_id()
+        self._builder.set_header(appId='probe_%s' % (sha1(urandom(64)).hexdigest()))
+
+        message = self.create_next_message(oid='clientHello', secret='secret')
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=False)
+
+        message = self.create_next_message(oid='resources', data=[{"rType": "video", "rProperties": "1500x1000"},
+            {"rType": "fp-scanner", "rProperties": "true"}, {"rType": "mic", "rProperties": "true"}])
+        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False, wait_for_response=True)
+
+        message = self.create_next_message(oid='ack')
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+                          wait_for_response=False)
+
+        # response = self.read_message(websocket=self.get_curr_connection())
+
+        # message = self.create_next_message(oid='nop')
+        # response = self.send_message(websocket=self.get_curr_connection(), message=message,
+        #                              close_connection=False, wait_for_response=True)
+        # eq_(response.msg.oid, 'serverHello', msg='Response does not contains serverHello message')
+        # ok_(hasattr(response.msg, 'key') and response.msg.key, msg="Responce does not contains generated private key.")
 
 
 def main():

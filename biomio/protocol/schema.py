@@ -67,6 +67,14 @@ BIOMIO_protocol_json_schema = {
                 "rProperties": {"type": "string"}
             }
         },
+        "resourceItem": {
+            "type": "object",
+            "required": ["rType", "samples"],
+            "properties": {
+                "rType": {"enum": ["video", "fp-scanner", "mic"]},
+                "samples": {"type": "number"}
+            }
+        },
         "serverHeader": {
             "type": "object",
             "name": "serverHeader",
@@ -92,9 +100,11 @@ BIOMIO_protocol_json_schema = {
             "type": "object",
             "required": ["oid", "resource"],
             "properties": {
-            "oid": { "enum": ["try"] },
-                "resource": {"$ref": "#/definitions/resource"},
-                "samples": {"type": "number"}
+                "oid": { "enum": ["try"] },
+                "resource": {
+                    "type": "array",
+                    "items": {"$ref": "#/definitions/resourceItem"}
+                }
             }
         },
         "data": {
@@ -114,7 +124,7 @@ BIOMIO_protocol_json_schema = {
         },
         "clientHeader": {
             "type": "object",
-            "required": ["oid", "seq", "id", "protoVer", "osId", "appId"],
+            "required": ["oid", "seq", "protoVer", "osId", "appId"],
             "properties": {
                 "oid": { "enum": ["clientHeader"] },
                 "seq": {"type": "number"},
@@ -160,36 +170,64 @@ BIOMIO_protocol_json_schema = {
                 }
             }
         },
-        "image": {
-            "media": {
-                "type": "image/png",
-                "binaryEncoding": "base64"
-            },
-            "type": "string"
+        "imageSamples": {
+            "type": "object",
+            "required": ["oid", "samples"],
+            "properties": {
+                "oid": { "enum": ["imageSamples"] },
+                "samples": {
+                    "type": "array",
+                    "items": {
+                        "media": {
+                            "type": "image/png",
+                            "binaryEncoding": "base64"
+                        },
+                        "type": "string"
+                    }
+                }
+            }
         },
-        "sound": {
-            "media": {
-                "type": "sound/waw",
-                "binaryEncoding": "base64"
-            },
-            "type": "string"
+        "soundSamples": {
+            "type": "object",
+            "required": ["oid", "samples"],
+            "properties": {
+                "oid": { "enum": ["soundSamples"] },
+                "samples": {
+                    "type": "array",
+                    "items": {
+                        "media": {
+                            "type": "image/png",
+                            "binaryEncoding": "base64"
+                        },
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "touchIdSamples": {
+            "type": "object",
+            "required": ["oid", "samples"],
+            "properties": {
+                "oid": { "enum": ["touchIdSamples"] },
+                "samples": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
         },
         "probe": {
             "type": "object",
-            "required": ["oid", "probeId", "samples"],
+            "required": ["oid", "probeId", "probeData"],
             "properties": {
-            "oid": { "enum": ["probe"] },
+                "oid": { "enum": ["probe"] },
                 "probeId": {"type": "number"},
-                "samples": {
+                "probeData": {
                     "oneOf": [
-                        {
-                            "type": "array",
-                            "items": {"$ref": "#/definitions/image"}
-                        },
-                        {
-                            "type": "array",
-                            "items": {"$ref": "#/definitions/sound"}
-                        }
+                        {"$ref": "#/definitions/imageSamples"},
+                        {"$ref": "#/definitions/soundSamples"},
+                        {"$ref": "#/definitions/touchIdSamples"}
                     ]
                 }
             }
@@ -287,7 +325,8 @@ BIOMIO_protocol_json_schema = {
                 "oid": { "enum": ["rpcResp"] },
                 "namespace": {"type": "string"},
                 "call": {"type": "string"},
-                "data": {"$ref": "#/definitions/rpcData"}
+                "data": {"$ref": "#/definitions/rpcData"},
+                "rpcStatus": {"enum": ["complete", "inprogress", "fail"]}
             }
         },
         "rect": {
