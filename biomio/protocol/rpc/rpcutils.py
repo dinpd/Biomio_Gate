@@ -89,12 +89,15 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
 
     try:
         if bioauth_flow.is_current_state(state=bioauthflow.STATE_AUTH_READY):
-            yield tornado.gen.Task(bioauth_flow.request_auth)
-        else:
-            error = "RPC ERROR: authentication already in progress"
-            logger.error(msg=error)
-            callback(result={"error": error}, status='fail')
-            return
+            bioauth_flow.reset()
+        yield tornado.gen.Task(bioauth_flow.request_auth)
+        # if bioauth_flow.is_current_state(state=bioauthflow.STATE_AUTH_READY):
+        #     yield tornado.gen.Task(bioauth_flow.request_auth)
+        # else:
+        #     error = "RPC ERROR: authentication already in progress"
+        #     logger.error(msg=error)
+        #     callback(result={"error": error}, status='fail')
+        #     return
 
     except Exception as e:
         logger.exception(msg="Bioauth flow error: %s" % str(e))
