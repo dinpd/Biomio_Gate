@@ -88,7 +88,7 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
         callback(result={"error": str(e)}, status='fail')
 
     try:
-        if bioauth_flow.is_current_state(state=bioauthflow.STATE_AUTH_READY):
+        if not bioauth_flow.is_current_state(state=bioauthflow.STATE_AUTH_READY):
             bioauth_flow.reset()
         yield tornado.gen.Task(bioauth_flow.request_auth)
         # if bioauth_flow.is_current_state(state=bioauthflow.STATE_AUTH_READY):
@@ -104,13 +104,11 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
         callback(result={"error": str(e)}, status='fail')
         return
 
-
     try:
         if bioauth_flow.is_current_state(bioauthflow.STATE_AUTH_SUCCEED):
             kwargs = _check_rpc_arguments(callable_func=callable_func, current_kwargs=callable_kwargs)
             result = callable_func(*callable_args, **kwargs)
             callback(result=result, status='complete')
-            bioauth_flow.accept_results()
         else:
             if bioauth_flow.is_current_state(bioauthflow.STATE_AUTH_FAILED):
                 error_msg = 'Biometric authentication failed.'
@@ -119,6 +117,7 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
             else:
                 error_msg = 'Biometric auth internal error'
             callback(result={"error": error_msg}, status='fail')
+        bioauth_flow.accept_results()
     except Exception as e:
         logger.exception(msg="RPC call with auth processing error: %s" % str(e))
 
