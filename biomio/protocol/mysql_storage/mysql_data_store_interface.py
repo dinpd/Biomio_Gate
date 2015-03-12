@@ -8,7 +8,7 @@ Default methods input values:
 
 
 """
-from data_manager import DataManager
+from biomio.protocol.mysql_storage.mysql_data_store import DataManager
 
 
 def record_updates(func):
@@ -51,7 +51,7 @@ class DataManagerInterface:
                                            update_object_pk=object_id, **kwargs)
 
     @staticmethod
-    def get_data(module_name, table_name, values=None):
+    def select_data(module_name, table_name):
         """
             Gets all data for specified table.
         :param module_name: string name of the module
@@ -60,7 +60,7 @@ class DataManagerInterface:
         :return: dict(key=obj_id, value=dict(key=arg, value=val))
 
         """
-        return DataManager.instance().get_data(module_name=module_name, table_name=table_name, values=values)
+        return DataManager.instance().select_data(module_name=module_name, table_name=table_name)
 
     @staticmethod
     @record_updates
@@ -78,12 +78,12 @@ class DataManagerInterface:
     def update_data_set(module_name, update_table_name, update_object_id, add_table_name, add_object_id, set_attr):
         """
             Updates specified update_object Set attribute with specified add_object
-        :param module_name:
-        :param update_table_name:
-        :param update_object_id:
-        :param add_table_name:
-        :param add_object_id:
-        :param set_attr:
+        :param module_name: string name of the module
+        :param update_table_name: string name of the class (table) to update
+        :param update_object_id: unique ID of the update object
+        :param add_table_name: string name of the class (table) to add
+        :param add_object_id: unique ID of the add object
+        :param set_attr: name of the Set attribute
 
         """
         DataManager.instance().update_data_set(module_name=module_name, update_table_name=update_table_name,
@@ -94,9 +94,10 @@ class DataManagerInterface:
     def get_object(module_name, table_name, object_id):
         """
             Returns single object for given table_name
-        :param module_name:
-        :param table_name:
-        :param object_id:
-        :return:
+        :param module_name: string name of the module
+        :param table_name: string name of the class (table)
+        :param object_id: unique ID to get the object
+        :return: Specified table_name class instance.
+
         """
         return DataManager.instance().get_object(module_name=module_name, table_name=table_name, object_id=object_id)

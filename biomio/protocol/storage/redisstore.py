@@ -22,3 +22,12 @@ class RedisStore:
             current_data[k] = v
 
         self._redis.set(name=key, value=current_data, ex=ex)
+
+    def delete_data(self, key):
+        self._redis.delete(key)
+
+    @classmethod
+    def instance(cls):
+        if cls._instance is None:
+            cls._instance = RedisStore()
+        return cls._instance

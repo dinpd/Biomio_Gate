@@ -18,7 +18,7 @@ if __name__ == '__main__':
     run_worker_job(create_user_job, user_id=USER_ID, name=USER_NAME)
     time.sleep(10)
     run_worker_job(create_app_job, app_id=APP_ID, app_public_key=APP_PUBLIC_KEY, user_id=USER_ID)
-    run_worker_job(create_add_user_email, email=EMAIL, pass_phrase=PASS_PHRASE, public_pgp_key=PUBLIC_PGP_KEY,
+    run_worker_job(create_user_email, email=EMAIL, pass_phrase=PASS_PHRASE, public_pgp_key=PUBLIC_PGP_KEY,
                    user_id=USER_ID)
     time.sleep(10)
     run_worker_job(delete_app_job, app_id=APP_ID)
