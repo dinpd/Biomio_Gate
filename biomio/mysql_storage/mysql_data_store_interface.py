@@ -8,20 +8,20 @@ Default methods input values:
 
 
 """
-from biomio.protocol.mysql_storage.mysql_data_store import DataManager
+from biomio.mysql_storage.mysql_data_store import MySQLDataStore
 
 
 def record_updates(func):
     def func_wrapper(module_name, table_name, object_id, **kwargs):
-        table_class = DataManager.instance().get_table_class(module_name=module_name, table_name=table_name)
+        table_class = MySQLDataStore.instance().get_table_class(module_name=module_name, table_name=table_name)
         redis_key = table_class.get_redis_key(object_id)
-        DataManager.instance().insert_data(module_name=module_name, table_name='ChangesTable', redis_key=redis_key)
+        MySQLDataStore.instance().insert_data(module_name=module_name, table_name='ChangesTable', redis_key=redis_key)
         return func(module_name, table_name, object_id, **kwargs)
 
     return func_wrapper
 
 
-class DataManagerInterface:
+class MySQLDataStoreInterface:
     def __init__(self):
         pass
 
@@ -34,7 +34,7 @@ class DataManagerInterface:
         :param kwargs: col name value pair parameters.
 
         """
-        DataManager.instance().insert_data(module_name=module_name, table_name=table_name, **kwargs)
+        MySQLDataStore.instance().insert_data(module_name=module_name, table_name=table_name, **kwargs)
 
     @staticmethod
     @record_updates
@@ -47,7 +47,7 @@ class DataManagerInterface:
         :param kwargs: col name value pair parameters.
 
         """
-        DataManager.instance().update_data(module_name=module_name, table_name=table_name,
+        MySQLDataStore.instance().update_data(module_name=module_name, table_name=table_name,
                                            update_object_pk=object_id, **kwargs)
 
     @staticmethod
@@ -60,7 +60,7 @@ class DataManagerInterface:
         :return: dict(key=obj_id, value=dict(key=arg, value=val))
 
         """
-        return DataManager.instance().select_data(module_name=module_name, table_name=table_name)
+        return MySQLDataStore.instance().select_data(module_name=module_name, table_name=table_name)
 
     @staticmethod
     @record_updates
@@ -72,7 +72,7 @@ class DataManagerInterface:
         :param object_id: int ID of the object(record) to delete.
 
         """
-        DataManager.instance().delete_data(module_name=module_name, table_name=table_name, delete_object_pk=object_id)
+        MySQLDataStore.instance().delete_data(module_name=module_name, table_name=table_name, delete_object_pk=object_id)
 
     @staticmethod
     def update_data_set(module_name, update_table_name, update_object_id, add_table_name, add_object_id, set_attr):
@@ -86,7 +86,7 @@ class DataManagerInterface:
         :param set_attr: name of the Set attribute
 
         """
-        DataManager.instance().update_data_set(module_name=module_name, update_table_name=update_table_name,
+        MySQLDataStore.instance().update_data_set(module_name=module_name, update_table_name=update_table_name,
                                                update_object_pk=update_object_id, add_table_name=add_table_name,
                                                add_object_pk=add_object_id, set_attr=set_attr)
 
@@ -100,4 +100,4 @@ class DataManagerInterface:
         :return: Specified table_name class instance.
 
         """
-        return DataManager.instance().get_object(module_name=module_name, table_name=table_name, object_id=object_id)
+        return MySQLDataStore.instance().get_object(module_name=module_name, table_name=table_name, object_id=object_id)

@@ -1,13 +1,12 @@
-import inspect
 import logging
 
-from biomio.protocol.mysql_storage.mysql_data_entities import pny, database
+from biomio.mysql_storage.mysql_data_entities import pny, database
 from mysql_settings import *
 
 logger = logging.getLogger(__name__)
 
 
-class DataManager():
+class MySQLDataStore():
     _instance = None
 
     def __init__(self):
@@ -24,7 +23,7 @@ class DataManager():
     @classmethod
     def instance(cls):
         if cls._instance is None:
-            cls._instance = DataManager()
+            cls._instance = MySQLDataStore()
         return cls._instance
 
     @pny.db_session
@@ -39,20 +38,6 @@ class DataManager():
         table_class_ = self.get_table_class(module_name, table_name)
         result = pny.select(r for r in table_class_)
         return [res.to_dict() for res in result]
-        #global_result = {}
-        # for res in result:
-        #     if values is None or len(values) == 0:
-        #         res_properties = [i[0] for i in inspect.getmembers(res) if
-        #                           type(i[1]) in [dict, int, str, None, list, unicode] and not i[0].startswith('_') and not
-        #                           i[0].startswith('__')]
-        #     else:
-        #         res_properties = values
-        #     curr_res = {}
-        #     for res_property in res_properties:
-        #         print res_property + ' = ' + str(getattr(res, res_property))
-        #         curr_res.update({res_property: getattr(res, res_property)})
-        #     global_result.update({curr_res.get('id'): curr_res})
-        #return global_result
 
     @pny.db_session
     def get_object(self, module_name, table_name, object_id):
@@ -96,3 +81,4 @@ class DataManager():
     def get_table_class(module_name, table_name):
         module = __import__(module_name, globals())
         return getattr(module, table_name)
+

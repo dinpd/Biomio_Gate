@@ -17,6 +17,6 @@ define('redis_host', default=DEFAULT_REDIS_HOST, help='Redis host address')
 define('bioauth_timeout', default=DEFAULT_BIOAUTH_TIMEOUT, help='Biometric authentication timeout')
 
 # options.logging = None
-parse_config_file(path='biomio.conf')
+parse_config_file(path='../../biomio.conf')
 settings = options
 

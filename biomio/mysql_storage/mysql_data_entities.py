@@ -1,15 +1,14 @@
-import datetime
+# from datetime import datetime
 import pony.orm as pny
 import abc
+from biomio.constants import REDIS_USER_KEY
 
 database = pny.Database()
 pny.sql_debug(True)
 
 
-class BaseEntityClass(database.Entity):
-    create_date = pny.Required(datetime, sql_default='CURRENT_TIMESTAMP')
-
-    __metaclass__ = abc.ABCMeta
+class BaseEntityClass(object):
+    # create_date = pny.Required(datetime, sql_default='CURRENT_TIMESTAMP')
 
     @staticmethod
     @abc.abstractmethod
@@ -41,7 +40,7 @@ class BaseEntityClass(database.Entity):
         """
 
 
-class UserInformation(BaseEntityClass):
+class UserInformation(BaseEntityClass, database.Entity):
     user_id = pny.Required(str, unique=True)
     name = pny.Optional(str, nullable=True)
     emails = pny.Set('EmailPGPInformation')
@@ -49,7 +48,7 @@ class UserInformation(BaseEntityClass):
 
     @staticmethod
     def get_redis_key(user_id):
-        return 'user:%s' % user_id
+        return REDIS_USER_KEY % user_id
 
     @staticmethod
     def get_unique_search_attribute():
@@ -60,7 +59,7 @@ class UserInformation(BaseEntityClass):
         UserInformation(**kwargs)
 
 
-class EmailPGPInformation(BaseEntityClass):
+class EmailPGPInformation(BaseEntityClass, database.Entity):
     email = pny.Required(str, unique=True)
     pass_phrase = pny.Required(str)
     public_pgp_key = pny.Required(str)
@@ -84,7 +83,7 @@ class EmailPGPInformation(BaseEntityClass):
         EmailPGPInformation(**kwargs)
 
 
-class AppInformation(BaseEntityClass):
+class AppInformation(BaseEntityClass, database.Entity):
     app_id = pny.Required(str, unique=True)
     app_public_key = pny.Required(str)
     users = pny.Set(UserInformation)
@@ -99,7 +98,6 @@ class AppInformation(BaseEntityClass):
 
     @staticmethod
     def create_record(**kwargs):
-        print kwargs
         if 'users' in kwargs:
             search_query = {UserInformation.get_unique_search_attribute(): kwargs.get('users')}
             user = UserInformation.get(**search_query)
@@ -107,7 +105,7 @@ class AppInformation(BaseEntityClass):
         AppInformation(**kwargs)
 
 
-class ChangesTable(BaseEntityClass):
+class ChangesTable(BaseEntityClass, database.Entity):
     redis_key = pny.Required(str, unique=True)
 
     @staticmethod
