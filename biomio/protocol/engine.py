@@ -209,7 +209,8 @@ def handshake(e):
         request_seq=e.request.header.seq,
         oid='serverHello',
         refreshToken=session.refresh_token,
-        ttl=settings.session_ttl
+        connectionttl=settings.connection_timeout,
+        sessionttl=settings.session_ttl
     )
 
     e.protocol_instance.send_message(responce=message)
@@ -242,7 +243,8 @@ def app_registered(e):
         request_seq=e.request.header.seq,
         oid='serverHello',
         refreshToken=session.refresh_token,
-        ttl=settings.session_ttl,
+        sessionttl=settings.session_ttl,
+        connectionttl=settings.connection_timeout,
         key=e.key
     )
     e.protocol_instance.send_message(responce=message)
@@ -281,6 +283,7 @@ def probe_trying(e):
                 request_seq=e.request.header.seq,
                 oid='try',
                 resource=resources,
+                authTimeout=settings.bioauth_timeout,
                 message=try_message_str
             )
             e.protocol_instance.send_message(responce=message)

@@ -95,19 +95,21 @@ BIOMIO_protocol_json_schema = {
         },
         "serverHello": {
             "type": "object",
-            "required": ["oid", "refreshToken", "ttl"],
+            "required": ["oid", "refreshToken", "sessionttl", "connectionttl"],
             "properties": {
                 "oid": { "enum": ["serverHello"] },
                 "refreshToken": {"type": "string"},
-                "ttl": {"type": "number"},
+                "sessionttl": {"type": "number"},
+                "connectionttl": {"type": "number"},
                 "key": {"type": "string"}
             }
         },
         "try": {
             "type": "object",
-            "required": ["oid", "resource"],
+            "required": ["oid", "resource", "authTimeout"],
             "properties": {
                 "oid": { "enum": ["try"] },
+                "authTimeout": {"type": "number"},
                 "resource": {
                     "type": "array",
                     "items": {"$ref": "#/definitions/resourceItem"}
