@@ -1,10 +1,10 @@
-from biomio.workers_processor.worker_jobs import get_user_job
-from biomio.workers_processor.worker_processor import run_worker_job
+from biomio.constants import REDIS_USER_KEY, USER_DATA_PREFIX
 from redisstore import RedisStore
 
 
 class UserDataStore(RedisStore):
     _instance = None
+    _data_prefix = USER_DATA_PREFIX
 
     def __init__(self):
         RedisStore.__init__(self)
@@ -15,13 +15,15 @@ class UserDataStore(RedisStore):
             cls._instance = UserDataStore()
         return cls._instance
 
-    def store_user_data(self, key, data):
-        self._redis.set(name=key, value=data)
+    @staticmethod
+    def get_user_redis_key(user_id):
+        return REDIS_USER_KEY % user_id
 
-    def get_user_data(self, user_id, callback, *args):
-        user_data = self._redis.get(name=user_id)
-        if user_data is None:
-            run_worker_job(get_user_job, user_id=user_id)
-        else:
-            callback(user_data=user_data, *args)
+    def get_user_data(self, user_id, callback):
+        self._get_data(self.get_user_redis_key(user_id), self._data_prefix, {'user_id': user_id}, callback)
 
+    def delete_user_data(self, user_id):
+        self._delete_data(self.get_user_redis_key(user_id), self._data_prefix, {'user_id': user_id})
+
+    def store_user_data(self, user_id, store_mysql=True, **kwargs):
+        self._store_data_dict(self.get_user_redis_key(user_id), self._data_prefix, store_mysql=store_mysql, **kwargs)

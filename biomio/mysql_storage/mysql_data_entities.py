@@ -1,7 +1,7 @@
 # from datetime import datetime
 import pony.orm as pny
 import abc
-from biomio.constants import REDIS_USER_KEY
+from biomio.constants import REDIS_USER_KEY, REDIS_SESSION_KEY
 
 database = pny.Database()
 pny.sql_debug(True)
@@ -119,3 +119,23 @@ class ChangesTable(BaseEntityClass, database.Entity):
     @staticmethod
     def get_unique_search_attribute():
         return 'redis_key'
+
+
+class SessionData(BaseEntityClass, database.Entity):
+    refresh_token = pny.Required(str)
+    state = pny.Required(str)
+    ttl = pny.Optional(int)
+
+    pny.composite_key(refresh_token, state)
+
+    @staticmethod
+    def get_redis_key(refresh_token):
+        return REDIS_SESSION_KEY % refresh_token
+
+    @staticmethod
+    def get_unique_search_attribute():
+        return 'refresh_token'
+
+    @staticmethod
+    def create_record(**kwargs):
+        SessionData(**kwargs)

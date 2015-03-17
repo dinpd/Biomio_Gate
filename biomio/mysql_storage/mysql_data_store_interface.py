@@ -8,17 +8,8 @@ Default methods input values:
 
 
 """
+from biomio.constants import TABLES_MODULE
 from biomio.mysql_storage.mysql_data_store import MySQLDataStore
-
-
-def record_updates(func):
-    def func_wrapper(module_name, table_name, object_id, **kwargs):
-        table_class = MySQLDataStore.instance().get_table_class(module_name=module_name, table_name=table_name)
-        redis_key = table_class.get_redis_key(object_id)
-        MySQLDataStore.instance().insert_data(module_name=module_name, table_name='ChangesTable', redis_key=redis_key)
-        return func(module_name, table_name, object_id, **kwargs)
-
-    return func_wrapper
 
 
 class MySQLDataStoreInterface:
@@ -26,7 +17,7 @@ class MySQLDataStoreInterface:
         pass
 
     @staticmethod
-    def create_data(module_name, table_name, **kwargs):
+    def create_data(table_name, module_name=TABLES_MODULE, **kwargs):
         """
             Saves specified data into specified table.
         :param module_name: string name of the module.
@@ -37,8 +28,7 @@ class MySQLDataStoreInterface:
         MySQLDataStore.instance().insert_data(module_name=module_name, table_name=table_name, **kwargs)
 
     @staticmethod
-    @record_updates
-    def update_data(module_name, table_name, object_id, **kwargs):
+    def update_data(table_name, object_id, module_name=TABLES_MODULE, **kwargs):
         """
             Updates specified object with specified data.
         :param module_name: string name of the module.
@@ -48,10 +38,10 @@ class MySQLDataStoreInterface:
 
         """
         MySQLDataStore.instance().update_data(module_name=module_name, table_name=table_name,
-                                           update_object_pk=object_id, **kwargs)
+                                              update_object_pk=object_id, **kwargs)
 
     @staticmethod
-    def select_data(module_name, table_name):
+    def select_data(table_name, module_name=TABLES_MODULE):
         """
             Gets all data for specified table.
         :param module_name: string name of the module
@@ -63,8 +53,7 @@ class MySQLDataStoreInterface:
         return MySQLDataStore.instance().select_data(module_name=module_name, table_name=table_name)
 
     @staticmethod
-    @record_updates
-    def delete_data(module_name, table_name, object_id):
+    def delete_data(table_name, object_id, module_name=TABLES_MODULE):
         """
             Deletes specified record from the specified table.
         :param module_name: string name of the module
@@ -72,10 +61,12 @@ class MySQLDataStoreInterface:
         :param object_id: int ID of the object(record) to delete.
 
         """
-        MySQLDataStore.instance().delete_data(module_name=module_name, table_name=table_name, delete_object_pk=object_id)
+        MySQLDataStore.instance().delete_data(module_name=module_name, table_name=table_name,
+                                              delete_object_pk=object_id)
 
     @staticmethod
-    def update_data_set(module_name, update_table_name, update_object_id, add_table_name, add_object_id, set_attr):
+    def update_data_set(update_table_name, update_object_id, add_table_name, add_object_id, set_attr,
+                        module_name=TABLES_MODULE):
         """
             Updates specified update_object Set attribute with specified add_object
         :param module_name: string name of the module
@@ -87,11 +78,11 @@ class MySQLDataStoreInterface:
 
         """
         MySQLDataStore.instance().update_data_set(module_name=module_name, update_table_name=update_table_name,
-                                               update_object_pk=update_object_id, add_table_name=add_table_name,
-                                               add_object_pk=add_object_id, set_attr=set_attr)
+                                                  update_object_pk=update_object_id, add_table_name=add_table_name,
+                                                  add_object_pk=add_object_id, set_attr=set_attr)
 
     @staticmethod
-    def get_object(module_name, table_name, object_id):
+    def get_object(table_name, object_id, module_name=TABLES_MODULE):
         """
             Returns single object for given table_name
         :param module_name: string name of the module

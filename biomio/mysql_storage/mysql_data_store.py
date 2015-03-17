@@ -1,7 +1,7 @@
 import logging
 
 from biomio.mysql_storage.mysql_data_entities import pny, database
-from mysql_settings import *
+from biomio.protocol.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -11,8 +11,8 @@ class MySQLDataStore():
 
     def __init__(self):
         self.database = database
-        self.database.bind('mysql', host=MYSQL_HOST, user=MYSQL_USER, passwd=MYSQL_PASSWORD,
-                           db=MYSQL_DATABASE_NAME)
+        self.database.bind('mysql', host=settings.mysql_host, user=settings.mysql_user, passwd=settings.mysql_pass,
+                           db=settings.mysql_db_name)
         self.database.generate_mapping(create_tables=True)
         logger.debug('Connection opened.')
 
