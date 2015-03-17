@@ -29,6 +29,6 @@ define('mysql_pass', default=DEFAULT_MYSQL_PASSWORD, help='MySQL user password.'
 define('mysql_db_name', default=DEFAULT_MYSQL_DATABASE_NAME, help='MySQL database name.')
 
 # options.logging = None
-parse_config_file(path='../../biomio.conf')
+parse_config_file(path='biomio.conf')
 settings = options
 
