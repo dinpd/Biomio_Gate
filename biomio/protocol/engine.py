@@ -164,22 +164,24 @@ class MessageHandler:
     @staticmethod
     @verify_header
     def on_getting_probe(e):
-        # TOOO: analysis of different probe types
+        # TODO: analysis of different probe types
         user_id = str(e.request.header.id)
         ttl = settings.bioauth_timeout
         result = False
         for sample in e.request.msg.probeData.samples:
             if str(sample).lower() == 'true':
                 result = True
-        # TODO: remove comments
-        # result = (str(e.request.msg.touchId).lower() == 'true')
-        # ProbeResultsStore.instance().store_probe_data(user_id=user_id, ttl=ttl, waiting_auth=False, auth=result)
+        e.protocol_instance.bioauth_flow.set_next_auth_result(id=int(e.request.msg.probeId), type=str(e.request.msg.probeData.oid), data=str(e.request.msg.probeData.samples))
         e.protocol_instance.bioauth_flow.set_auth_results(result=result)
         return STATE_READY
 
     @staticmethod
     @verify_header
     def on_resources(e):
+        for item in e.request.msg.data:
+            resource_type = str(item.rType)
+            logger.debug(msg='RESOURCES: %s available' % resource_type)
+            e.protocol_instance.available_resources.append(resource_type)
         return STATE_REGISTRATION
 
 
@@ -251,10 +253,15 @@ def ready(e):
 
 def probe_trying(e):
     if not e.src == STATE_PROBE_TRYING:
+        resources = e.protocol_instance.policy.get_resources_list_for_try(available_resources=e.protocol_instance.bioauth_flow)
+        e.protocol_instance.bioauth_flow.auth_started(resource_list=e.protocol_instance.available_resources)
+
+        # Send "try" message to probe
         message = e.protocol_instance.create_next_message(
             request_seq=e.request.header.seq,
             oid='try',
-            resource=[{'rType': 'fp-scanner', 'samples': 1}]
+            resource=resources
+            # resource=[{'rType': 'fp-scanner', 'samples': 1}]
         )
         e.protocol_instance.send_message(responce=message)
 
@@ -394,6 +401,9 @@ class BiomioProtocol:
 
         self.policy = None
         self.bioauth_flow = None
+        self.available_resources = []
+
+        self.auth_items = []
 
         logger.debug(' --------- ')  # helpful to separate output when auto tests is running
 
@@ -675,4 +685,3 @@ class BiomioProtocol:
 
     def try_probe(self):
         self._state_machine_instance.probetry(request=self._last_received_message, protocol_instance=self)
-        self.bioauth_flow.auth_started()

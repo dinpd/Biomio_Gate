@@ -2,6 +2,7 @@
 from biomio.third_party.fysom import Fysom, FysomError
 from biomio.protocol.storage.proberesultsstore import ProbeResultsStore
 from biomio.protocol.settings import settings
+from biomio.protocol.probes.probeauthbackend import ProbeAuthBackend
 import tornado.gen
 
 import logging
@@ -139,8 +140,8 @@ auth_states = {
 
 _PROBESTORE_STATE_KEY = 'state'
 
-# Helper Methods
 
+# Helper Methods
 def _store_state(e):
     # TODO: check if we need to set ttl again
     data = {_PROBESTORE_STATE_KEY: e.fsm.current}
@@ -158,6 +159,8 @@ class BioauthFlow:
         self._state_machine_instance = Fysom(auth_states)
         self._state_machine_instance.onchangestate = self._get_state_machine_logger_callback()
         self._change_state_callback = self._get_change_state_callback()
+
+        self._resources_list = []
 
         if auto_initialize:
             self.initialize()
@@ -219,8 +222,18 @@ class BioauthFlow:
         self._state_machine_instance.request(bioauth_flow=self)
         self._store_state()
 
-    def auth_started(self):
+    def auth_started(self, resource_list=None):
+        self._resources_list = resource_list
         self._state_machine_instance.start(bioauth_flow=self)
+        self._store_state()
+
+    @tornado.gen.engine
+    def set_next_auth_result(self, id, type, data):
+        if not self._resources_list:
+            logger.warning(msg='resource item list for probe is empty')
+
+        result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, type, data)
+        logger.debug(msg='SET NEXT AUTH RESULT: %s' % str(result))
         self._store_state()
 
     def set_auth_results(self, result):
