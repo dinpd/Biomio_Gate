@@ -11,4 +11,5 @@ python-gnupg==0.3.7
 tornado-redis==2.4.18
 git+https://bitbucket.org/biomio/rq.git
 git+https://github.com/zhangliyong/rq-gevent-worker.git
+PyMySQL==0.6.6
 pony==0.6.1

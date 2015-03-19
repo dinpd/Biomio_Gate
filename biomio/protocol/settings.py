@@ -8,8 +8,8 @@ DEFAULT_REDIS_HOST = 'localhost'
 DEFAULT_BIOAUTH_TIMEOUT = 5 * 60
 
 DEFAULT_MYSQL_HOST = 'localhost'
-DEFAULT_MYSQL_USER = 'root'
-DEFAULT_MYSQL_PASSWORD = 'root'
+DEFAULT_MYSQL_USER = 'biomio_mysql_user'
+DEFAULT_MYSQL_PASSWORD = 'b10m10p@$$'
 DEFAULT_MYSQL_DATABASE_NAME = 'biomio_storage'
 
 # Setting Tornado options
@@ -27,7 +27,6 @@ define('mysql_host', default=DEFAULT_MYSQL_HOST, help='MySQL server host.')
 define('mysql_user', default=DEFAULT_MYSQL_USER, help='MySQL user.')
 define('mysql_pass', default=DEFAULT_MYSQL_PASSWORD, help='MySQL user password.')
 define('mysql_db_name', default=DEFAULT_MYSQL_DATABASE_NAME, help='MySQL database name.')
-
 # options.logging = None
 parse_config_file(path='biomio.conf')
 settings = options
