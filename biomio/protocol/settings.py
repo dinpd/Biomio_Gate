@@ -8,7 +8,7 @@ DEFAULT_REDIS_HOST = 'localhost'
 DEFAULT_BIOAUTH_TIMEOUT = 5 * 60
 
 DEFAULT_MYSQL_HOST = 'localhost'
-DEFAULT_MYSQL_USER = 'biomio_mysql_user'
+DEFAULT_MYSQL_USER = 'biomio_user'
 DEFAULT_MYSQL_PASSWORD = 'b10m10p@$$'
 DEFAULT_MYSQL_DATABASE_NAME = 'biomio_storage'
 

@@ -1,6 +1,6 @@
 in mysql console:
-create user 'biomio_mysql_user'@'localhost' identified by password 'b10m10p@$$';
-GRANT ALL PRIVILEGES ON * . * TO 'biomio_mysql_user'@'localhost';
+create user 'biomio_user'@'localhost' identified by 'b10m10p@$$';
+GRANT ALL PRIVILEGES ON * . * TO 'biomio_user'@'localhost';
 FLUSH PRIVILEGES;
 
 to create a database:

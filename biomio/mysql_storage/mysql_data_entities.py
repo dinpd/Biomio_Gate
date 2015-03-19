@@ -105,7 +105,10 @@ class AppInformation(BaseEntityClass, database.Entity):
 
 
 class ChangesTable(BaseEntityClass, database.Entity):
-    redis_key = pny.Required(str, unique=True)
+    table_name = pny.Required(str)
+    object_id = pny.Required(str)
+
+    pny.composite_key(table_name, object_id)
 
     @staticmethod
     def create_record(**kwargs):
