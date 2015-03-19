@@ -14,10 +14,6 @@ REDIS_APPLICATION_KEY = 'application:%s'
 REDIS_USER_KEY = 'user:%s'
 REDIS_EMAILS_KEY = 'email:%s'
 REDIS_SESSION_KEY = 'token:%s'
+REDIS_JOB_RESULT_KEY = 'job_result:%s:%s'
 
 # Other constants
-
-USER_DATA_PREFIX = 'user_data_%s'
-APP_DATA_PREFIX = 'app_data_%s'
-EMAIL_DATA_PREFIX = 'email_data_%s'
-SESSION_DATA_PREFIX = 'session_data_%s'

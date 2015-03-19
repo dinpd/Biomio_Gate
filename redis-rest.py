@@ -1,8 +1,10 @@
 import tornado.escape
 import tornado.ioloop
 import tornado.web
+from biomio.protocol.data_stores.base_data_store import BaseDataStore
+
+from biomio.protocol.data_stores.session_data_store import SessionDataStore
 from biomio.protocol.storage.redisstore import RedisStore
-from biomio.protocol.storage.session_data_store import SessionDataStore
 from biomio.protocol.storage.userinfodatastore import UserInfoDataStore
 
 
@@ -27,13 +29,16 @@ class RedisHandler(tornado.web.RequestHandler):
 
 class RQTest(tornado.web.RequestHandler):
     def post(self):
-        SessionDataStore.instance().store_session_data(refresh_token='test_refresh_token', ttl=15, state='Test_State')
-        RedisStore.instance().delete_custom_data('token:test_refresh_token')
-        SessionDataStore.instance().get_session_data('test_refresh_token', test_get_result)
+        SessionDataStore.instance().store_data(refresh_token='test_refresh_token', ttl=10000,
+                                               state='Test Refresh State')
+        BaseDataStore.instance().delete_custom_redis_data('token:test_refresh_token')
+        SessionDataStore.instance().get_data('test_refresh_token', test_get_result)
+
+        RedisStore.instance()
 
 
 def test_get_result(result):
-    print result
+    print 'Result of the GET method - %s' % result
 
 
 application = tornado.web.Application([

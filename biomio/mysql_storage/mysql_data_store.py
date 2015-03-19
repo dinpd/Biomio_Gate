@@ -5,6 +5,9 @@ from biomio.protocol.settings import settings
 
 logger = logging.getLogger(__name__)
 
+if settings.logging == 'DEBUG':
+    pny.sql_debug(True)
+
 
 class MySQLDataStore():
     _instance = None

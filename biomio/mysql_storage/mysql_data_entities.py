@@ -4,7 +4,6 @@ import abc
 from biomio.constants import REDIS_USER_KEY, REDIS_SESSION_KEY
 
 database = pny.Database()
-pny.sql_debug(True)
 
 
 class BaseEntityClass(object):
