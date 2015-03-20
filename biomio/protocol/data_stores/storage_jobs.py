@@ -57,3 +57,7 @@ def update_redis_job():
         logger.debug('Redis Key', redis_keys.get('redis_key'))
         BaseDataStore.instance().delete_custom_redis_data(redis_keys.get('redis_key'))
     logger.info('REDIS UPDATE done.')
+
+
+def test_schedule_job(message):
+    logger.info(message)
