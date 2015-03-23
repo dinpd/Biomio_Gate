@@ -1,5 +1,7 @@
 import ast
 from redis.client import StrictRedis
+from biomio.constants import REDIS_CONFIG_MAX_MEMORY_OPTION_KEY, REDIS_CONFIG_MEMORY_SAMPLES_OPTION_KEY, \
+    REDIS_CONFIG_EVICTION_POLICY_OPTION_KEY
 from biomio.protocol.settings import settings
 
 
@@ -8,6 +10,12 @@ class RedisStorage():
 
     def __init__(self):
         self._redis = StrictRedis(host=settings.redis_host, port=settings.redis_port)
+        self._configure_redis_instance()
+
+    def _configure_redis_instance(self):
+        self._redis.config_set(REDIS_CONFIG_MAX_MEMORY_OPTION_KEY, settings.redis_max_memory)
+        self._redis.config_set(REDIS_CONFIG_EVICTION_POLICY_OPTION_KEY, settings.redis_eviction_policy)
+        self._redis.config_set(REDIS_CONFIG_MEMORY_SAMPLES_OPTION_KEY, settings.redis_max_memory_samples)
 
     @classmethod
     def instance(cls):
