@@ -230,6 +230,7 @@ BIOMIO_protocol_json_schema = {
                         {"$ref": "#/definitions/touchIdSamples"}
                     ]
                 }
+                #TODO: status field
             }
         },
         "verify": {

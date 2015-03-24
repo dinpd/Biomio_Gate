@@ -1,4 +1,7 @@
 in mysql console:
+mysql -u root
+
+
 create user 'biomio_user'@'localhost' identified by 'b10m10p@$$';
 GRANT ALL PRIVILEGES ON * . * TO 'biomio_user'@'localhost';
 FLUSH PRIVILEGES;

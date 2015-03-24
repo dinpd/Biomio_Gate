@@ -1,5 +1,6 @@
 from itertools import izip
 from functools import wraps
+import ast
 
 from jsonschema import ValidationError
 
@@ -10,9 +11,8 @@ from biomio.protocol.settings import settings
 from biomio.protocol.crypt import Crypto
 from biomio.protocol.storage.proberesultsstore import ProbeResultsStore
 from biomio.protocol.rpc.rpchandler import RpcHandler
-from biomio.protocol.storage.applicationdatastore import ApplicationDataStore
+from biomio.protocol.data_stores.application_data_store import ApplicationDataStore
 from biomio.protocol.probes.policymanager import PolicyManager
-
 
 import tornado.gen
 
@@ -70,6 +70,25 @@ def is_message_from_probe_device(input_msg):
     app_id = str(input_msg.header.appId)
     return app_id.startswith('probe')
 
+@tornado.gen.coroutine
+def get_app_data_helper(e, key=None):
+    app_data = yield tornado.gen.Task(ApplicationDataStore.instance().get_data, str(e.request.header.appId))
+
+    value = None
+    if not app_data:
+        app_data = {}
+    else:
+        try:
+            app_data = ast.literal_eval(app_data)
+        except (ValueError, SyntaxError):
+            app_data = {}
+
+    if key is not None:
+        value = app_data.get(key, None)
+
+    dict = {'sdfsdf': 'sdfsdfs'}
+    raise tornado.gen.Return(value=dict)
+
 
 class MessageHandler:
     @staticmethod
@@ -84,11 +103,9 @@ class MessageHandler:
                 # Create new session
                 # TODO: move to some state handling callback
                 e.protocol_instance.start_new_session()
-                app_data = ApplicationDataStore.instance().get_app_data(
-                    account_id=e.request.header.id,
-                    application_id=e.request.header.appId,
-                    key='public_key'
-                )
+                app_data = get_app_data_helper(e, key='public_key').result()
+                print "PUBLIC KEY: %s", app_data
+
                 if hasattr(e.request.msg, "secret") \
                         and e.request.msg.secret:
                     if app_data is None:
@@ -130,11 +147,7 @@ class MessageHandler:
     @staticmethod
     @verify_header
     def on_auth_message(e):
-        key = ApplicationDataStore.instance().get_app_data(
-            account_id=e.request.header.id,
-            application_id=e.request.header.appId,
-            key='public_key'
-        )
+        key = get_app_data_helper(e, key='public_key').result()
 
         header_str = BiomioMessageBuilder.header_from_message(e.request)
 
@@ -203,9 +216,8 @@ def registration(e):
 
     key, pub_key = Crypto.generate_keypair()
 
-    ApplicationDataStore.instance().store_app_data(
-        account_id=e.request.header.id,
-        application_id=e.request.header.appId,
+    ApplicationDataStore.instance().store_data(
+        app_id=str(e.request.header.appId),
         public_key=pub_key
     )
     e.fsm.registered(protocol_instance=e.protocol_instance, request=e.request, key=key)
@@ -215,10 +227,8 @@ def app_registered(e):
     # Send serverHello responce after entering handshake state
     session = e.protocol_instance.get_current_session()
 
-    # TODO: make separate method for
-    app_id = str(e.request.header.appId)
     user_id = str(e.request.header.id)
-    if app_id.startswith('probe'):
+    if is_message_from_probe_device(input_msg=e.request):
         e.protocol_instance.policy = PolicyManager.get_policy_for_user(user_id=user_id)
 
     message = e.protocol_instance.create_next_message(
@@ -234,11 +244,6 @@ def app_registered(e):
 def ready(e):
     # If current connection - probe connection
     if is_message_from_probe_device(input_msg=e.request):
-        #TODO: remove commented code
-        # user_id = str(e.request.header.id)
-        # ProbeResultsStore.instance().subscribe(user_id=user_id, callback=e.protocol_instance.check_if_probe_should_be_tried)
-        # waiting_auth = ProbeResultsStore.instance().get_probe_data(user_id=user_id, key='waiting_auth')
-        # if waiting_auth:
         e.protocol_instance.check_if_probe_should_be_tried()
 
 def probe_trying(e):
@@ -384,7 +389,6 @@ class BiomioProtocol:
 
         logger.debug(' --------- ')  # helpful to separate output when auto tests is running
 
-    @tornado.gen.engine
     def process_next(self, msg_string):
         """ Processes next message received from client.
         :param msg_string: String containing next message.
@@ -399,6 +403,7 @@ class BiomioProtocol:
         except ValidationError, e:
             logger.exception(e)
 
+
         # If message is valid, perform necessary actions
         if input_msg and input_msg.msg and input_msg.header:
             logger.debug('RECEIVED MESSAGE STRING: "%s" ' % msg_string)
@@ -410,7 +415,7 @@ class BiomioProtocol:
 
             # Restore session and state (if no session, and message contains token)
             if not self._session and hasattr(input_msg.header, 'token') and input_msg.header.token:
-                self._restore_state(str(input_msg.header.token))
+                self._restore_state(refresh_token=str(input_msg.header.token))
 
             # Try to process RPC request subset, if message is RCP request - exit after processing
 
@@ -486,24 +491,25 @@ class BiomioProtocol:
         logger.info('CLOSING CONNECTION...')
         self._stop_connection_timer_callback()
 
-        request_seq = None
-
+        request_seq = 1
         if self._last_received_message:
             request_seq = self._last_received_message.header.seq
+            print "disconnect"
 
-            if not is_closed_by_client:
-                # Send bye message
-                #TODO: use last message variable instead
-                if self._check_connected_callback():
-                    if not self._session:
-                        # Create temporary session object to send bye message if necessary
-                        self.start_new_session()
-                    message = self.create_next_message(request_seq=request_seq, status=status_message, oid='bye')
-                    self.send_message(responce=message)
+        if not is_closed_by_client:
+            # Send bye message
+            #TODO: use last message variable instead
+            if self._check_connected_callback():
+                if not self._session:
+                    # Create temporary session object to send bye message if necessary
+                    self.start_new_session()
+                message = self.create_next_message(request_seq=request_seq, status=status_message, oid='bye')
+                self.send_message(responce=message)
 
-                if self._session and self._session.is_open:
-                    SessionManager.instance().close_session(session=self._session)
+            if self._session and self._session.is_open:
+                SessionManager.instance().close_session(session=self._session)
 
+        if self._last_received_message:
             user_id = str(self._last_received_message.header.id)
             if is_message_from_probe_device(input_msg=self._last_received_message):
                 logger.info('UNUBSCRIBING PROBE SESSION...')
@@ -570,7 +576,7 @@ class BiomioProtocol:
         if self._session:
             logger.info('Continue session %s...' % refresh_token)
             self._builder.set_header(token=self._session.session_token)
-            state = session_manager.get_protocol_state(token=self._session.refresh_token)
+            state = session_manager.get_protocol_state(token=self._session.session_token)
             if state:
                 # Restore state
                 logger.debug('State : %s' % state)

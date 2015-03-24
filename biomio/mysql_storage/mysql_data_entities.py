@@ -1,7 +1,7 @@
 # from datetime import datetime
 import pony.orm as pny
 import abc
-from biomio.constants import REDIS_USER_KEY, REDIS_SESSION_KEY
+from biomio.constants import REDIS_USER_KEY, REDIS_SESSION_KEY, REDIS_APPLICATION_KEY
 
 database = pny.Database()
 
@@ -42,8 +42,6 @@ class BaseEntityClass(object):
 class UserInformation(BaseEntityClass, database.Entity):
     user_id = pny.Required(str, unique=True)
     name = pny.Optional(str, nullable=True)
-    emails = pny.Set('EmailPGPInformation')
-    applications = pny.Set('AppInformation')
 
     @staticmethod
     def get_redis_key(user_id):
@@ -63,7 +61,6 @@ class EmailPGPInformation(BaseEntityClass, database.Entity):
     pass_phrase = pny.Required(str)
     public_pgp_key = pny.Required(str)
     private_pgp_key = pny.Optional(str, nullable=True)
-    user = pny.Required(UserInformation)
 
     @staticmethod
     def get_redis_key(email):
@@ -84,12 +81,11 @@ class EmailPGPInformation(BaseEntityClass, database.Entity):
 
 class AppInformation(BaseEntityClass, database.Entity):
     app_id = pny.Required(str, unique=True)
-    app_public_key = pny.Required(str)
-    users = pny.Set(UserInformation)
+    public_key = pny.Required(str)
 
     @staticmethod
     def get_redis_key(app_id):
-        return 'acount:%s:%s' % ('id', app_id)
+        return REDIS_APPLICATION_KEY % app_id
 
     @staticmethod
     def get_unique_search_attribute():
