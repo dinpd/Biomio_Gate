@@ -6,11 +6,15 @@ from biomio.protocol.settings import settings
 
 
 class RedisStorage():
-    _instance = None
+    _lru_instance = None
+    _persistence_instance = None
 
-    def __init__(self):
-        self._redis = StrictRedis(host=settings.redis_host, port=settings.redis_port)
-        self._configure_redis_instance()
+    def __init__(self, lru_instance=True):
+        if lru_instance:
+            self._redis = StrictRedis(host=settings.redis_host, port=settings.redis_port)
+            self._configure_redis_instance()
+        else:
+            self._redis = StrictRedis(host=settings.redis_host, port=settings.redis_port)
 
     def _configure_redis_instance(self):
         self._redis.config_set(REDIS_CONFIG_MAX_MEMORY_OPTION_KEY, settings.redis_max_memory)
@@ -18,15 +22,26 @@ class RedisStorage():
         self._redis.config_set(REDIS_CONFIG_MEMORY_SAMPLES_OPTION_KEY, settings.redis_max_memory_samples)
 
     @classmethod
-    def instance(cls):
+    def lru_instance(cls):
         """
-            Returns current RedisStorage instance. If it doesn't exist creates new one.
+            Returns current RedisStorage LRU instance. If it doesn't exist creates new one.
 
-        :return: RedisStorage instance.
+        :return: RedisStorage LRU instance.
         """
-        if cls._instance is None:
-            cls._instance = RedisStorage()
-        return cls._instance
+        if cls._lru_instance is None:
+            cls._lru_instance = RedisStorage()
+        return cls._lru_instance
+
+    @classmethod
+    def persistence_instance(cls):
+        """
+            Returns current RedisStorage persistence (without Eviction) instance.
+            If it doesn't exist creates new one.
+        :return: RedisStorage persistence instance.
+        """
+        if cls._persistence_instance is None:
+            cls._persistence_instance = RedisStorage(lru_instance=False)
+        return cls._persistence_instance
 
     def store_data(self, key, ex=None, **kwargs):
         """
