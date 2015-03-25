@@ -19,7 +19,7 @@ class RedisResultsListener():
     def __init__(self):
         self._redis_client = Client(host=settings.redis_host, port=settings.redis_port)
         self._result_callbacks = {}
-        self._redis = RedisStorage.instance()
+        self._redis = RedisStorage.lru_instance()
         self._listen()
 
     @classmethod

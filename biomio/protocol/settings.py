@@ -12,6 +12,10 @@ DEFAULT_MYSQL_USER = 'biomio_user'
 DEFAULT_MYSQL_PASSWORD = 'b10m10p@$$'
 DEFAULT_MYSQL_DATABASE_NAME = 'biomio_storage'
 
+DEFAULT_REDIS_MAX_MEMORY = '100000000'
+DEFAULT_REDIS_MEMORY_SAMPLES = '5'
+DEFAULT_REDIS_EVICTION_POLICY = 'allkeys-lru'
+
 # Setting Tornado options
 define('connection_timeout', default=DEFAULT_CONNECTION_TTL,
        help='Number of seconds in which inactive connection will be closed.')
@@ -22,11 +26,18 @@ define('redis_port', default=DEFAULT_REDIS_PORT, help='Redis port')
 define('redis_host', default=DEFAULT_REDIS_HOST, help='Redis host address')
 define('bioauth_timeout', default=DEFAULT_BIOAUTH_TIMEOUT, help='Biometric authentication timeout')
 
-# Settings MySQL options
+# Setting MySQL options
 define('mysql_host', default=DEFAULT_MYSQL_HOST, help='MySQL server host.')
 define('mysql_user', default=DEFAULT_MYSQL_USER, help='MySQL user.')
 define('mysql_pass', default=DEFAULT_MYSQL_PASSWORD, help='MySQL user password.')
 define('mysql_db_name', default=DEFAULT_MYSQL_DATABASE_NAME, help='MySQL database name.')
+
+# Setting Redis options
+define('redis_max_memory', default=DEFAULT_REDIS_MAX_MEMORY, help='Redis max memory option.')
+define('redis_max_memory_samples', default=DEFAULT_REDIS_MEMORY_SAMPLES, help='Redis number of samples to check '
+                                                                              'for every eviction.')
+define('redis_eviction_policy', default=DEFAULT_REDIS_EVICTION_POLICY, help='Data eviction policy.')
+
 # options.logging = None
 parse_config_file(path='biomio.conf')
 settings = options

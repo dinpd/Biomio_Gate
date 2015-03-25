@@ -17,3 +17,6 @@ REDIS_SESSION_KEY = 'token:%s'
 REDIS_JOB_RESULT_KEY = 'job_result:%s:%s'
 
 # Other constants
+REDIS_CONFIG_MAX_MEMORY_OPTION_KEY = 'maxmemory'
+REDIS_CONFIG_MEMORY_SAMPLES_OPTION_KEY = 'maxmemory-samples'
+REDIS_CONFIG_EVICTION_POLICY_OPTION_KEY = 'maxmemory-policy'

@@ -10,7 +10,7 @@ class BaseDataStore():
     _instance = None
 
     def __init__(self):
-        self._redis = RedisStorage.instance()
+        self._redis = RedisStorage.lru_instance()
 
         import biomio.protocol.data_stores.storage_jobs as sj
 
