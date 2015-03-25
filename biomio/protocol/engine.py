@@ -15,6 +15,7 @@ from biomio.protocol.data_stores.application_data_store import ApplicationDataSt
 from biomio.protocol.probes.policymanager import PolicyManager
 
 import tornado.gen
+import greenado
 
 import logging
 logger = logging.getLogger(__name__)
@@ -70,7 +71,7 @@ def is_message_from_probe_device(input_msg):
     app_id = str(input_msg.header.appId)
     return app_id.startswith('probe')
 
-@tornado.gen.coroutine
+@greenado.generator
 def get_app_data_helper(e, key=None):
     app_data = yield tornado.gen.Task(ApplicationDataStore.instance().get_data, str(e.request.header.appId))
 
@@ -86,8 +87,7 @@ def get_app_data_helper(e, key=None):
     if key is not None:
         value = app_data.get(key, None)
 
-    dict = {'sdfsdf': 'sdfsdfs'}
-    raise tornado.gen.Return(value=dict)
+    raise tornado.gen.Return(value=value)
 
 
 class MessageHandler:
@@ -103,11 +103,12 @@ class MessageHandler:
                 # Create new session
                 # TODO: move to some state handling callback
                 e.protocol_instance.start_new_session()
-                app_data = get_app_data_helper(e, key='public_key').result()
+                app_data = get_app_data_helper(e, key='public_key')
                 print "PUBLIC KEY: %s", app_data
 
                 if hasattr(e.request.msg, "secret") \
                         and e.request.msg.secret:
+                    #TODO: ---
                     if app_data is None:
                         if is_message_from_probe_device(input_msg=e.request):
                             return STATE_GETTING_RESOURCES
@@ -147,7 +148,7 @@ class MessageHandler:
     @staticmethod
     @verify_header
     def on_auth_message(e):
-        key = get_app_data_helper(e, key='public_key').result()
+        key = get_app_data_helper(e, key='public_key')
 
         header_str = BiomioMessageBuilder.header_from_message(e.request)
 

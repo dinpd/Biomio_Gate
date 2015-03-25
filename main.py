@@ -5,6 +5,7 @@ import tornado.websocket
 import tornado.httpserver
 import tornado.ioloop
 import tornado.gen
+import greenado
 
 from biomio.protocol.settings import settings
 from biomio.protocol.engine import BiomioProtocol
@@ -34,6 +35,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         )
         self.start_connection_timer()
 
+    @greenado.groutine
     def on_message(self, message_string):
         self.biomio_protocol.process_next(message_string)
 

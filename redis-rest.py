@@ -1,12 +1,16 @@
 import tornado.escape
 import tornado.ioloop
 import tornado.web
+import tornado.gen
 from biomio.protocol.data_stores.base_data_store import BaseDataStore
 
 from biomio.protocol.data_stores.session_data_store import SessionDataStore
 from biomio.protocol.storage.redisstore import RedisStore
 from biomio.protocol.storage.userinfodatastore import UserInfoDataStore
+from biomio.protocol.data_stores.user_data_store import UserDataStore
 
+import ast
+import greenado
 
 class RedisHandler(tornado.web.RequestHandler):
     def post(self):
@@ -26,18 +30,44 @@ class RedisHandler(tornado.web.RequestHandler):
             email = str(e)
         self.write(email)
 
+@greenado.generator
+def get_user_data_helper(user_id, key=None):
+    app_data = yield tornado.gen.Task(UserDataStore.instance().get_data, str(user_id))
+
+    value = None
+    if app_data is None:
+        app_data = {}
+
+    if key is not None:
+        value = app_data.get(key, None)
+
+    raise tornado.gen.Return(value=value)
+
+
+def get_name():
+    return get_user_data_helper(user_id='userid', key='name')
+
 
 class RQTest(tornado.web.RequestHandler):
+
+    @greenado.groutine
     def post(self):
-        SessionDataStore.instance().store_data(refresh_token='test_refresh_token', ttl=10000,
-                                               state='Test Refresh State')
-        BaseDataStore.instance().delete_custom_redis_data('token:test_refresh_token')
-        SessionDataStore.instance().get_data('test_refresh_token', test_get_result)
-
-        RedisStore.instance()
+        # SessionDataStore.instance().store_data(refresh_token='test_refresh_token', ttl=10000,
+        #                                        state='Test Refresh State')
+        # BaseDataStore.instance().delete_custom_redis_data('token:test_refresh_token')
+        # SessionDataStore.instance().get_data('test_refresh_token', test_get_result)
 
 
-def test_get_result(result):
+        UserDataStore.instance().store_data(user_id='userid', name='datavalue')
+        BaseDataStore.instance().delete_custom_redis_data(UserDataStore.get_data_key('userid'))
+
+        name = get_name()
+        print " NAME : ", name
+
+        # UserDataStore.instance().get_data(user_id='userid', callback=test_get_result)
+
+
+def test_get_result(result=None):
     print 'Result of the GET method - %s' % result
 
 

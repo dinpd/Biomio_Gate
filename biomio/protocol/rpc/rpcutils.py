@@ -1,5 +1,6 @@
 from functools import wraps
 import tornado.gen
+import greenado
 import inspect
 
 from biomio.protocol.storage.proberesultsstore import ProbeResultsStore
