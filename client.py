@@ -81,6 +81,7 @@ class ExtensionSession(QtCore.QThread):
 
     @QtCore.pyqtSlot()
     def slot_rpc(self):
+        print 'rpc_req', self.rpc_req
         self.rpc_req = True
 
     def run(self):
@@ -113,6 +114,11 @@ class ExtensionSession(QtCore.QThread):
             except Exception, e:
                 pass
 
+            # RPC RESP <-
+            if response and response.msg and str(response.msg.oid) == 'rpcResp':
+                if response.msg.rpcStatus == 'complete':
+                    print 'finished!'
+                    self.rpcFinishedSignal.emit()
 
             if self.disconnect:
                 probe_msg = test_obj.create_next_message(oid='bye')
@@ -124,8 +130,10 @@ class ExtensionSession(QtCore.QThread):
                 if self.rpc_req:
                     message = test_obj.create_next_message(oid='rpcReq', namespace='extension_test_plugin', call='test_func_with_auth',
                         data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
+                    print "rpc request"
                     test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False,
                         wait_for_response=True)
+                    print "send!"
                     self.rpc_req = False
 
                 message = test_obj.create_next_message(oid='nop')
@@ -135,15 +143,15 @@ class ExtensionSession(QtCore.QThread):
                     # NOP <-
                     response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message,
                                                  close_connection=False, wait_for_response=True)
+                                # RPC RESP <-
+                    if response and response.msg and str(response.msg.oid) == 'rpcResp':
+                        if response.msg.rpcStatus == 'complete':
+                            print 'finished!'
+                            self.rpcFinishedSignal.emit()
+
                     ok_(str(response.msg.oid) == 'nop', msg='No responce on nop message')
                 except Exception, e:
                     pass
-            # RPC RESP <-
-            if response and response.msg and str(response.msg.oid) == 'rpcResp':
-                if response.msg.rpcStatus == 'complete':
-                    print 'finished!'
-                    self.rpcFinishedSignal.emit()
-                    break
 
 
 class ProbeSession(QtCore.QThread):

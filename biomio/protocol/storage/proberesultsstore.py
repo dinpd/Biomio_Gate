@@ -59,8 +59,7 @@ class ProbeResultsStore(RedisStore):
     def remove_probe_data(self, user_id):
         self._redis.delete(self.redis_probe_key(user_id=user_id))
 
-    @tornado.gen.engine
-    def subscribe_to_data(self, user_id, data_key, callback=None):
+    def subscribe_to_data(self, user_id, data_key, callback):
         self.data_key_by_callback[callback] = data_key
         self.subscribe(user_id, callback)
 
@@ -99,12 +98,14 @@ class ProbeResultsStore(RedisStore):
 
                 if msg.body == 'expired' and self.has_probe_results(user_id):
                     return
-                
+
+                logger.debug("GOT SUBSCRIBED MESSAGE: %s" % (str(msg)))
                 for callback in subscribers:
                     data_key = self.data_key_by_callback.get(callback, None)
                     if not data_key or (data_key and ProbeResultsStore.instance().get_probe_data(user_id=user_id, key=data_key)):
-                        self.unsubscribe(user_id=user_id, callback=callback)
                         try:
+                            logger.debug("CALLED: %s" % str(callback))
                             callback()
+                            logger.debug("DONE")
                         except Exception as e:
-                            logger.warning(msg=str(e))
+                            logger.exception(msg=str(e))

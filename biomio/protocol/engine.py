@@ -9,10 +9,10 @@ from biomio.third_party.fysom import Fysom, FysomError
 from biomio.protocol.sessionmanager import SessionManager
 from biomio.protocol.settings import settings
 from biomio.protocol.crypt import Crypto
-from biomio.protocol.storage.proberesultsstore import ProbeResultsStore
 from biomio.protocol.rpc.rpchandler import RpcHandler
 from biomio.protocol.data_stores.application_data_store import ApplicationDataStore
 from biomio.protocol.probes.policymanager import PolicyManager
+from biomio.protocol.rpc.bioauthflow import BioauthFlow
 
 import tornado.gen
 import greenado
@@ -103,7 +103,7 @@ class MessageHandler:
                 # Create new session
                 # TODO: move to some state handling callback
                 e.protocol_instance.start_new_session()
-                app_data = get_app_data_helper(e, key='public_key')
+                app_data = get_app_data_helper(e, key='public_key') #TODO: make separate state instead
                 print "PUBLIC KEY: %s", app_data
 
                 if hasattr(e.request.msg, "secret") \
@@ -148,11 +148,13 @@ class MessageHandler:
     @staticmethod
     @verify_header
     def on_auth_message(e):
-        key = get_app_data_helper(e, key='public_key')
+        key = get_app_data_helper(e, key='public_key') #TODO: use separate state instead
 
         header_str = BiomioMessageBuilder.header_from_message(e.request)
 
         if Crypto.check_digest(key=key, data=header_str, digest=str(e.request.msg.key)):
+            protocol_connection_established(protocol_instance=e.protocol_instance, user_id=user_id, app_id=app_id)
+
             return STATE_READY
 
         e.status = 'Handshake failed. Invalid signature.'
@@ -174,14 +176,17 @@ class MessageHandler:
     @staticmethod
     @verify_header
     def on_getting_probe(e):
+        # TOOO: analysis of different probe types
         user_id = str(e.request.header.id)
         ttl = settings.bioauth_timeout
         result = False
         for sample in e.request.msg.probeData.samples:
             if str(sample).lower() == 'true':
                 result = True
+        # TODO: remove comments
         # result = (str(e.request.msg.touchId).lower() == 'true')
-        ProbeResultsStore.instance().store_probe_data(user_id=user_id, ttl=ttl, waiting_auth=False, auth=result)
+        # ProbeResultsStore.instance().store_probe_data(user_id=user_id, ttl=ttl, waiting_auth=False, auth=result)
+        e.protocol_instance.bioauth_flow.set_auth_results(result=result)
         return STATE_READY
 
     @staticmethod
@@ -228,9 +233,9 @@ def app_registered(e):
     # Send serverHello responce after entering handshake state
     session = e.protocol_instance.get_current_session()
 
+    app_id = str(e.request.header.appId)
     user_id = str(e.request.header.id)
-    if is_message_from_probe_device(input_msg=e.request):
-        e.protocol_instance.policy = PolicyManager.get_policy_for_user(user_id=user_id)
+    protocol_connection_established(protocol_instance=e.protocol_instance, user_id=user_id, app_id=app_id)
 
     message = e.protocol_instance.create_next_message(
         request_seq=e.request.header.seq,
@@ -243,9 +248,17 @@ def app_registered(e):
 
 
 def ready(e):
-    # If current connection - probe connection
-    if is_message_from_probe_device(input_msg=e.request):
-        e.protocol_instance.check_if_probe_should_be_tried()
+    if e.protocol_instance.bioauth_flow is None:
+        user_id = str(e.request.header.id)
+        app_id = str(e.request.header.appId)
+        auth_wait_callback = e.protocol_instance.try_probe
+        e.protocol_instance.bioauth_flow = BioauthFlow(user_id=user_id, app_id=app_id, auth_wait_callback=auth_wait_callback, auto_initialize=False)
+
+        if e.protocol_instance.bioauth_flow.is_probe_owner():
+            e.protocol_instance.policy = PolicyManager.get_policy_for_user(user_id=user_id)
+
+        e.protocol_instance.bioauth_flow.initialize()
+
 
 def probe_trying(e):
     if not e.src == STATE_PROBE_TRYING:
@@ -279,6 +292,10 @@ def print_state_change(e):
     """Helper function for printing state transitions to log."""
     logger.info('STATE_TRANSITION: event: %s, %s -> %s' % (e.event, e.src, e.dst))
 
+
+def protocol_connection_established(protocol_instance, user_id, app_id):
+    # TODO: make separate method for
+    pass
 
 biomio_states = {
     'initial': STATE_CONNECTED,
@@ -386,7 +403,8 @@ class BiomioProtocol:
 
         self._last_received_message = None
 
-        self._policy = None
+        self.policy = None
+        self.bioauth_flow = None
 
         logger.debug(' --------- ')  # helpful to separate output when auto tests is running
 
@@ -492,35 +510,26 @@ class BiomioProtocol:
         logger.info('CLOSING CONNECTION...')
         self._stop_connection_timer_callback()
 
-        request_seq = 1
-        if self._last_received_message:
-            request_seq = self._last_received_message.header.seq
-            print "disconnect"
-
         if not is_closed_by_client:
             # Send bye message
-            #TODO: use last message variable instead
             if self._check_connected_callback():
                 if not self._session:
                     # Create temporary session object to send bye message if necessary
                     self.start_new_session()
+
+                request_seq = 1
+                # Use request seq number from last message if possible
+                if self._last_received_message:
+                    request_seq = self._last_received_message.header.seq
+
                 message = self.create_next_message(request_seq=request_seq, status=status_message, oid='bye')
                 self.send_message(responce=message)
 
             if self._session and self._session.is_open:
                 SessionManager.instance().close_session(session=self._session)
 
-        if self._last_received_message:
-            user_id = str(self._last_received_message.header.id)
-            if is_message_from_probe_device(input_msg=self._last_received_message):
-                logger.info('UNUBSCRIBING PROBE SESSION...')
-                ProbeResultsStore.instance().unsubscribe(user_id=user_id, callback=self.check_if_probe_should_be_tried)
-            else:  # Extension
-                logger.info('UNUBSCRIBING EXTENSION SESSION...')
-                ProbeResultsStore.instance().unsubscribe_all(user_id=user_id)
-                if ProbeResultsStore.instance().has_probe_results(user_id=user_id):
-                    logger.info('REMOVING OLD PROBE AUTH RESULTS...')
-                    ProbeResultsStore.instance().remove_probe_data(user_id=user_id)
+        if self.bioauth_flow:
+            self.bioauth_flow.shutdown()
 
         # Close connection
         self._close_callback()
@@ -610,7 +619,8 @@ class BiomioProtocol:
                 str(input_msg.msg.call),
                 str(input_msg.msg.namespace),
                 data,
-                wait_callback
+                wait_callback,
+                self.bioauth_flow
             )
             status = args.kwargs.get('status', None)
             result = args.kwargs.get('result', None)
@@ -674,11 +684,6 @@ class BiomioProtocol:
         )
         self.send_message(responce=message)
 
-    def check_if_probe_should_be_tried(self):
-        user_id = str(self._last_received_message.header.id)
-        waiting_auth = ProbeResultsStore.instance().get_probe_data(user_id=user_id, key='waiting_auth')
-        if waiting_auth and (self._state_machine_instance.current == STATE_READY):
-            self._state_machine_instance.probetry(request=self._last_received_message, protocol_instance=self)
-        else:
-            logger.info('SUBSCRIBING PROBE SESSION...')
-            ProbeResultsStore.instance().subscribe(user_id=user_id, callback=self.check_if_probe_should_be_tried)
+    def try_probe(self):
+        self._state_machine_instance.probetry(request=self._last_received_message, protocol_instance=self)
+        self.bioauth_flow.auth_started()

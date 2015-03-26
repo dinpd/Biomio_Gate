@@ -27,6 +27,7 @@ ssl_options = {
 class BiomioTest:
     _registered_key = None
     _registered_user_id = None
+    _registered_app_id = None
 
     @classmethod
     def set_registered_user_id(cls):
@@ -139,6 +140,7 @@ class BiomioTest:
         if is_registration_required and not secret:
             self.check_app_registered()
             self._builder.set_header(id=BiomioTest._registered_user_id)
+            self._builder.set_header(appId=BiomioTest._registered_app_id)
         elif secret:
             params['secret'] = secret
 
@@ -183,10 +185,11 @@ class BiomioTest:
         return Crypto.create_digest(data=header_str, key=BiomioTest._registered_key)
 
     @nottest
-    def check_app_registered(self, id_to_create=None):
+    def check_app_registered(self, id_to_create=None, app_id_prefix='extension'):
         if not self._registered_key or id_to_create is not None:
             # id_to_create = '1amxHFtymG7tIHfj96zbzgbTY'
-            self._builder.set_header(id=sha1(urandom(64)).hexdigest() if id_to_create is None else id_to_create)
+            self._builder.set_header(id=sha1(urandom(64)).hexdigest() if id_to_create is None else id_to_create,
+                                     appId='%s_%s' % (app_id_prefix, str(sha1(urandom(64)).hexdigest())))
             message = self.create_next_message(oid='clientHello', secret='secret')
             response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
                                          wait_for_response=True)
@@ -198,6 +201,7 @@ class BiomioTest:
                               wait_for_response=False)
             BiomioTest._registered_key = str(response.msg.key)
             BiomioTest._registered_user_id = str(message.header.id)
+            BiomioTest._registered_app_id = str(message.header.appId)
 
             self.teardown_test()
             self.setup_test()
@@ -439,11 +443,6 @@ class TestConnectedState(BiomioTest):
         self.teardown_test()
         self.setup_test()
 
-        id_to_create = sha1(urandom(64)).hexdigest()
-        self.check_app_registered(id_to_create)
-
-        self._builder.set_header(id=id_to_create)
-
         message = self.create_next_message(oid='clientHello', secret='secret')
         response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
                                      wait_for_response=True)
@@ -659,7 +658,8 @@ class TestRpcCalls(BiomioTest):
         ok_(str(response.msg.oid) != 'bye', msg='Connection closed. Status: %s' % response.status)
 
     @staticmethod
-    def probe_job():
+    @nottest
+    def probe_job(result=True):
         test_obj = BiomioTest()
         test_obj.setup_test_for_for_new_id()
         test_obj._builder.set_header(appId='probe_%s' % (sha1(urandom(64)).hexdigest()))
@@ -689,8 +689,14 @@ class TestRpcCalls(BiomioTest):
                 # TRY <-
                 if message and message.msg and str(message.msg.oid) == 'try':
                     # PROBE ->
+                    touchIdSample = None
+                    if result:
+                        touchIdSample = 'True'
+                    else:
+                        touchIdSample = 'False'
+
                     probe_msg = test_obj.create_next_message(oid='probe', probeId=0,
-                                                             probeData={"oid": "touchIdSamples", "samples": ["True"]})
+                                                             probeData={"oid": "touchIdSamples", "samples": [touchIdSample]})
 
                     response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=probe_msg,
                                                  close_connection=False, wait_for_response=False)
@@ -717,64 +723,147 @@ class TestRpcCalls(BiomioTest):
         response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False)
         eq_(response.msg.oid, 'bye', msg='Response does not contains bye message')
 
+    @staticmethod
+    @nottest
+    def is_rpc_response_status(message, status):
+        return message and message.msg and str(message.msg.oid) == 'rpcResp' and str(message.msg.rpcStatus) == status
+
+    @staticmethod
+    @nottest
+    def keep_connection_and_communicate(biomio_test, message_callback=None, max_message_count=10):
+        class BiomioBye(Exception):
+            pass
+
+        def close_connection_callback():
+            raise BiomioBye
+
+        def process_message(biomio_test, message_callback, response):
+            if message_callback:
+                message = message_callback(response, close_connection_callback)
+                if message:
+                    biomio_test.send_message(websocket=biomio_test.get_curr_connection(), message=message, close_connection=False,
+                        wait_for_response=True)
+
+        for i in range(max_message_count):
+            try:
+                response = biomio_test.read_message(websocket=biomio_test.get_curr_connection())
+                process_message(biomio_test, message_callback, response)
+
+            except BiomioBye, e:
+                is_quit = True
+                break
+            except Exception, e:
+                if not e == WebSocketTimeoutException:
+                    print e
+
+            nop_message = biomio_test.create_next_message(oid='nop')
+            nop_message.header.token = biomio_test.session_refresh_token
+
+            try:
+                response = biomio_test.send_message(websocket=biomio_test.get_curr_connection(), message=nop_message,
+                    close_connection=False, wait_for_response=True)
+                process_message(biomio_test, message_callback, response)
+
+                ok_(str(response.msg.oid) == 'nop', msg='No responce on nop message')
+            except BiomioBye, e:
+                is_quit = True
+                break
+            except Exception, e:
+                print e
+
+        return is_quit
+
     @attr('slow')
     def test_rpc_with_auth(self):
-        message_timeout = settings.connection_timeout / 2  # Send a message every 3 seconds
+
+        results = {'rpcResp': None }
+
+        def on_message(message, close_connection_callback):
+            if str(message.msg.oid) == 'nop':
+                print "NOP"
+            elif str(message.msg.oid) == 'rpcResp':
+                if TestRpcCalls.is_rpc_response_status(message=message, status='complete') \
+                        or TestRpcCalls.is_rpc_response_status(message=message, status='fail'):
+                    results['rpcResp'] = message
+                    close_connection_callback()
+
+        message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin', call='test_func_with_auth',
+            data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+            wait_for_response=True)
 
         # Separate thread with connection for
         t = threading.Thread(target=TestRpcCalls.probe_job)
         t.start()
 
-        time.sleep(3)
+        time.sleep(1)
+
+        self.keep_connection_and_communicate(biomio_test=self, message_callback=on_message)
+        rpcResp = results['rpcResp']
+        ok_(rpcResp is not None, msg='No RPC response on auth.')
+        eq_(str(rpcResp.msg.rpcStatus), 'complete', msg='RPC authentication failed, but result is positive')
+
+
+    @attr('slow')
+    def test_rpc_with_auth_failed(self):
+
+        results = {'rpcResp': None }
+
+        def on_message(message, close_connection_callback):
+            if str(message.msg.oid) == 'nop':
+                print "NOP"
+            elif str(message.msg.oid) == 'rpcResp':
+                if TestRpcCalls.is_rpc_response_status(message=message, status='complete') \
+                        or TestRpcCalls.is_rpc_response_status(message=message, status='fail'):
+                    results['rpcResp'] = message
+                    close_connection_callback()
+
+        # Separate thread with connection for
+        t = threading.Thread(target=TestRpcCalls.probe_job, args=(False,))
+        t.start()
+
+        time.sleep(1)
 
         message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin', call='test_func_with_auth',
             data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
-        message = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
-            wait_for_response=False)
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+            wait_for_response=True)
 
-        max_message_count = 10
-        rpc_responce_message = None
-        for i in range(max_message_count):
-            try:
-                message = self.read_message(websocket=self.get_curr_connection())
+        self.keep_connection_and_communicate(biomio_test=self, message_callback=on_message)
+        rpcResp = results['rpcResp']
+        ok_(rpcResp is not None, msg='No RPC response on auth.')
+        eq_(str(rpcResp.msg.rpcStatus), 'fail', msg='RPC authentication succeeded, but result is negative')
 
-                if message and message.msg and str(message.msg.oid) == 'rpcResp':
-                    rpc_status = str(message.msg.rpcStatus)
-                    if rpc_status == 'complete' or rpc_status == 'fail':
-                        rpc_responce_message = message
-                        break
-            except Exception, e:
-                pass
-
-            message = self.create_next_message(oid='nop')
-            message.header.token = self.session_refresh_token
-            try:
-                response = self.send_message(websocket=self.get_curr_connection(), message=message,
-                                             close_connection=False, wait_for_response=True)
-                ok_(str(response.msg.oid) == 'nop', msg='No responce on nop message')
-            except Exception, e:
-                pass
-
-        ok_(rpc_responce_message, msg='No RPC response on auth')
-        ok_(get_rpc_msg_field(message=rpc_responce_message, key="error") is None, msg='Errors during RPC call')
-
-    @staticmethod
-    def extension_test_job():
-        time.sleep(10)
-        test_obj = BiomioTest()
-        test_obj.setup_test_with_handshake()
-        message = test_obj.create_next_message(oid='rpcReq', namespace='extension_test_plugin', call='test_funch_with_auth', data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
-        response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False,
-                                         wait_for_response=True)
 
     @attr('slow')
     def test_rpc_with_auth_probe_first(self):
-        message = self.create_next_message(oid='rpcReq', namespace='probe_test_plugin', call='test_probe_valid')
-        response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
-                                         wait_for_response=True)
-        t = threading.Thread(target=TestRpcCalls.extension_test_job)
+        results = {'rpcResp': None }
+
+        def on_message(message, close_connection_callback):
+            if str(message.msg.oid) == 'nop':
+                print "NOP"
+            elif str(message.msg.oid) == 'rpcResp':
+                if TestRpcCalls.is_rpc_response_status(message=message, status='complete') \
+                        or TestRpcCalls.is_rpc_response_status(message=message, status='fail'):
+                    results['rpcResp'] = message
+                    close_connection_callback()
+
+        # Separate thread with connection for
+        t = threading.Thread(target=TestRpcCalls.probe_job)
         t.start()
-        t.join()
+
+        time.sleep(1)
+
+        message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin', call='test_func_with_auth',
+            data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+            wait_for_response=True)
+
+        self.keep_connection_and_communicate(biomio_test=self, message_callback=on_message)
+        rpcResp = results['rpcResp']
+        ok_(rpcResp is not None, msg='No RPC response on auth.')
+        eq_(str(rpcResp.msg.rpcStatus), 'complete', msg='RPC authentication failed, but result is positive')
+
 
 
     def test_rpc_pass_phrase_keys_generation(self):
@@ -789,11 +878,13 @@ class TestRpcCalls(BiomioTest):
     def test_rpc_get_pass_phrase(self):
         message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin',
                                            call='get_pass_phrase',
+                                           onBehalfOf='test@mail.com',
                                            data={'keys': ['email'], 'values': ['test@mail.com']})
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
                           wait_for_response=True)
         message = self.create_next_message(oid='rpcReq', namespace='extension_test_plugin',
                                            call='get_pass_phrase',
+                                           onBehalfOf='test@mail.com',
                                            data={'keys': ['email'], 'values': ['test@mail.com']})
         response = self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
                                      wait_for_response=True)
