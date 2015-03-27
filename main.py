@@ -5,7 +5,7 @@ import tornado.websocket
 import tornado.httpserver
 import tornado.ioloop
 import tornado.gen
-import greenado
+import traceback
 
 from biomio.protocol.settings import settings
 from biomio.protocol.engine import BiomioProtocol
@@ -35,9 +35,17 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         )
         self.start_connection_timer()
 
-    @greenado.groutine
     def on_message(self, message_string):
-        self.biomio_protocol.process_next(message_string)
+        tornado.ioloop.IOLoop.current().add_future(self.biomio_protocol.process_next(message_string),
+                                                   callback=WebSocketHandler.message_processed)
+
+    @staticmethod
+    def message_processed(future):
+        if future.exception():
+            info = future.exc_info()
+            logger.exception(msg='Error during next message processing: %s' % ''.join(traceback.format_exception(*info)))
+        else:
+            logger.debug(msg='--- Message processed successfully')
 
     def on_close(self):
         ConnectionTimeoutHandler.instance().stop_connection_timer(connection=self)
@@ -52,7 +60,6 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
     def on_connection_timeout(self):
         logger.warning('Connection timeout')
         self.biomio_protocol.close_connection(status_message='Connection timeout')
-
 
     def check_connected(self):
         return bool(self.ws_connection)

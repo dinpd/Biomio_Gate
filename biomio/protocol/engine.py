@@ -73,19 +73,22 @@ def is_message_from_probe_device(input_msg):
 
 @greenado.generator
 def get_app_data_helper(e, key=None):
-    app_data = yield tornado.gen.Task(ApplicationDataStore.instance().get_data, str(e.request.header.appId))
-
     value = None
-    if not app_data:
-        app_data = {}
-    else:
-        try:
-            app_data = ast.literal_eval(app_data)
-        except (ValueError, SyntaxError):
-            app_data = {}
+    try:
+        app_data = yield tornado.gen.Task(ApplicationDataStore.instance().get_data, str('app Id'))
 
-    if key is not None:
-        value = app_data.get(key, None)
+        if not app_data:
+            app_data = {}
+        else:
+            try:
+                app_data = ast.literal_eval(app_data)
+            except (ValueError, SyntaxError):
+                app_data = {}
+
+        if key is not None:
+            value = app_data.get(key, None)
+    except Exception as e:
+        logger.exception(e)
 
     raise tornado.gen.Return(value=value)
 
@@ -103,20 +106,21 @@ class MessageHandler:
                 # Create new session
                 # TODO: move to some state handling callback
                 e.protocol_instance.start_new_session()
-                app_data = get_app_data_helper(e, key='public_key') #TODO: make separate state instead
-                print "PUBLIC KEY: %s", app_data
+                pub_key = get_app_data_helper(e, key='public_key') #TODO: make separate state instead
+
+                if pub_key:
+                    logger.debug("PUBLIC KEY: %s" % pub_key)
 
                 if hasattr(e.request.msg, "secret") \
                         and e.request.msg.secret:
-                    #TODO: ---
-                    if app_data is None:
+                    if pub_key is None:
                         if is_message_from_probe_device(input_msg=e.request):
                             return STATE_GETTING_RESOURCES
                         else:
                             return STATE_REGISTRATION
                     e.status = "Registration handshake is inappropriate. Given app is already registered."
                 else:
-                    if app_data is not None:
+                    if pub_key is not None:
                         return STATE_HANDSHAKE
                     e.status = "Regular handshake is inappropriate. It is required to run registration handshake first."
         return STATE_DISCONNECTED
@@ -272,7 +276,6 @@ def probe_trying(e):
             request_seq=e.request.header.seq,
             oid='try',
             resource=resources
-            # resource=[{'rType': 'fp-scanner', 'samples': 1}]
         )
         e.protocol_instance.send_message(responce=message)
 
@@ -375,7 +378,6 @@ biomio_states = {
     }
 }
 
-
 class BiomioProtocol:
     """ The BiomioProtocol class is an abstraction for protocol implementation.
         For every client connection unique instance of BiomioProtocol is created.
@@ -418,6 +420,7 @@ class BiomioProtocol:
 
         logger.debug(' --------- ')  # helpful to separate output when auto tests is running
 
+    @greenado.groutine
     def process_next(self, msg_string):
         """ Processes next message received from client.
         :param msg_string: String containing next message.
@@ -431,7 +434,6 @@ class BiomioProtocol:
             input_msg = self._builder.create_message_from_json(msg_string)
         except ValidationError, e:
             logger.exception(e)
-
 
         # If message is valid, perform necessary actions
         if input_msg and input_msg.msg and input_msg.header:
