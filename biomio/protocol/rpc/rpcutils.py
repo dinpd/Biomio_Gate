@@ -2,7 +2,9 @@ from functools import wraps
 import tornado.gen
 import inspect
 import tornado.gen
+import greenado
 
+from biomio.protocol.data_stores.user_data_store import UserDataStore
 from biomio.protocol.rpc import bioauthflow
 
 import logging
@@ -132,3 +134,26 @@ def rpc_call_with_auth(rpc_func):
         _is_biometric_data_valid(callable_func=rpc_func, callable_args=args, callable_kwargs=kwargs)
 
     return wraps(rpc_func)(_decorator)
+
+@greenado.generator
+def get_user_data_helper(user_id, key=None):
+    """
+    Takes user data using UserDataStore class synchronously.
+    :param user_id: User ID.
+    :param key: Data key to retrieve. If this field is None - returns all data in dictionary. This field is None by default.
+    :return: Result of get_data() operation.
+    """
+    value = None
+    try:
+        app_data = yield tornado.gen.Task(UserDataStore.instance().get_data, str(user_id))
+
+        if app_data is None:
+            app_data = {}
+
+        if key is not None:
+            value = app_data.get(key, None)
+
+    except Exception as e:
+        logger.exception(e)
+
+    raise tornado.gen.Return(value)
