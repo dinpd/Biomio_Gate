@@ -1,7 +1,9 @@
 # from datetime import datetime
+import datetime
 import pony.orm as pny
 import abc
-from biomio.constants import REDIS_USER_KEY, REDIS_SESSION_KEY, REDIS_APPLICATION_KEY
+from biomio.constants import REDIS_USER_KEY, REDIS_EMAILS_KEY, REDIS_APPLICATION_KEY
+from biomio.utils.biomio_decorators import inherit_docstring_from
 
 database = pny.Database()
 
@@ -9,12 +11,10 @@ database = pny.Database()
 class BaseEntityClass(object):
     # create_date = pny.Required(datetime, sql_default='CURRENT_TIMESTAMP')
 
-    @staticmethod
     @abc.abstractmethod
-    def get_redis_key(key_value):
+    def get_redis_key(self):
         """
             Returns Redis key for current table type.
-        :param key_value: Value that is used to generate the redis key.
         :return: str redis key.
 
         """
@@ -40,64 +40,87 @@ class BaseEntityClass(object):
 
 
 class UserInformation(BaseEntityClass, database.Entity):
-    user_id = pny.Required(str, unique=True)
-    name = pny.Optional(str, nullable=True)
+    _table_ = "Profiles"
+    id = pny.PrimaryKey(int, auto=True)
+    api_id = pny.Required(int, default=1)
+    name = pny.Required(str, 50, default='test_name')
+    emails = pny.Set('EmailsData')
+    phones = pny.Optional(str, 255, default='[]')
+    password = pny.Required(str, 50, default='test_pass')
+    temp_pass = pny.Optional(str, 50, default='test_temp_pass')
+    type = pny.Required(str, 50, default='USER', sql_type="enum('ADMIN','USER','PROVIDER','PARTNER')")
+    acc_type = pny.Required(bool, default=True)
+    creation_time = pny.Required(datetime.datetime, default=lambda: datetime.datetime.now())
+    last_login_time = pny.Required(datetime.datetime, default=lambda: datetime.datetime.now(), auto=True)
+    last_ip = pny.Required(str, 20, default='127.0.0.1', auto=True)
+    applications = pny.Set('Application')
+
+    @inherit_docstring_from(BaseEntityClass)
+    def get_redis_key(self):
+        return REDIS_USER_KEY % self.id
 
     @staticmethod
-    def get_redis_key(user_id):
-        return REDIS_USER_KEY % user_id
-
-    @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
     def get_unique_search_attribute():
-        return 'user_id'
+        return 'id'
 
     @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
     def create_record(**kwargs):
         UserInformation(**kwargs)
 
 
-class EmailPGPInformation(BaseEntityClass, database.Entity):
+class EmailsData(BaseEntityClass, database.Entity):
+    _table_ = 'EmailsData'
     email = pny.Required(str, unique=True)
     pass_phrase = pny.Required(str)
     public_pgp_key = pny.Required(str)
     private_pgp_key = pny.Optional(str, nullable=True)
+    user = pny.Required(UserInformation)
+
+    @inherit_docstring_from(BaseEntityClass)
+    def get_redis_key(self):
+        return REDIS_EMAILS_KEY % self.email
 
     @staticmethod
-    def get_redis_key(email):
-        return 'user_email:%s' % email
-
-    @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
     def get_unique_search_attribute():
         return 'email'
 
     @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
     def create_record(**kwargs):
         if 'user' in kwargs:
             search_query = {UserInformation.get_unique_search_attribute(): kwargs.get('user')}
             user = UserInformation.get(**search_query)
             kwargs.update({'user': user})
-        EmailPGPInformation(**kwargs)
+        EmailsData(**kwargs)
 
 
-class AppInformation(BaseEntityClass, database.Entity):
-    app_id = pny.Required(str, unique=True)
+class Application(BaseEntityClass, database.Entity):
+    _table_ = 'Applications'
+    app_id = pny.PrimaryKey(str, auto=False)
+    app_type = pny.Required(str, sql_type="enum('extension', 'probe')")
     public_key = pny.Required(str)
+    user = pny.Required(UserInformation)
+
+    @inherit_docstring_from(BaseEntityClass)
+    def get_redis_key(self):
+        return REDIS_APPLICATION_KEY % self.app_id
 
     @staticmethod
-    def get_redis_key(app_id):
-        return REDIS_APPLICATION_KEY % app_id
-
-    @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
     def get_unique_search_attribute():
         return 'app_id'
 
     @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
     def create_record(**kwargs):
-        if 'users' in kwargs:
-            search_query = {UserInformation.get_unique_search_attribute(): kwargs.get('users')}
+        if 'user' in kwargs and isinstance(kwargs.get('user'), (int, long, str)):
+            search_query = {UserInformation.get_unique_search_attribute(): kwargs.get('user')}
             user = UserInformation.get(**search_query)
-            kwargs.update({'users': [user]})
-        AppInformation(**kwargs)
+            kwargs.update({'user': user})
+        Application(**kwargs)
 
 
 class ChangesTable(BaseEntityClass, database.Entity):
@@ -107,33 +130,15 @@ class ChangesTable(BaseEntityClass, database.Entity):
     pny.composite_key(table_name, object_id)
 
     @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
     def create_record(**kwargs):
         ChangesTable(**kwargs)
 
-    @staticmethod
-    def get_redis_key(key_value):
+    @inherit_docstring_from(BaseEntityClass)
+    def get_redis_key(self):
         return ''
 
     @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
     def get_unique_search_attribute():
         return 'redis_key'
-
-
-class SessionData(BaseEntityClass, database.Entity):
-    refresh_token = pny.Required(str)
-    state = pny.Required(str)
-    ttl = pny.Optional(int)
-
-    pny.composite_key(refresh_token, state)
-
-    @staticmethod
-    def get_redis_key(refresh_token):
-        return REDIS_SESSION_KEY % refresh_token
-
-    @staticmethod
-    def get_unique_search_attribute():
-        return 'refresh_token'
-
-    @staticmethod
-    def create_record(**kwargs):
-        SessionData(**kwargs)

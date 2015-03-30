@@ -3,8 +3,8 @@ import tornado.gen
 import inspect
 import tornado.gen
 import greenado
+from biomio.protocol.data_stores.application_data_store import ApplicationDataStore
 
-from biomio.protocol.data_stores.user_data_store import UserDataStore
 from biomio.protocol.rpc import bioauthflow
 
 import logging
@@ -135,23 +135,46 @@ def rpc_call_with_auth(rpc_func):
 
     return wraps(rpc_func)(_decorator)
 
+
 @greenado.generator
-def get_user_data_helper(user_id, key=None):
+def get_data_helper(data_store_instance, object_id, key=None):
     """
-    Takes user data using UserDataStore class synchronously.
-    :param user_id: User ID.
-    :param key: Data key to retrieve. If this field is None - returns all data in dictionary. This field is None by default.
+    Takes data using DataStore class instance synchronously.
+    :param data_store_instance: instance of the required DataStore.
+    :param object_id: Id of the object to get.
+    :param key: Data key to retrieve. If this field is None - returns all data in dictionary.
+    This field is None by default.
     :return: Result of get_data() operation.
     """
     value = None
     try:
-        app_data = yield tornado.gen.Task(UserDataStore.instance().get_data, str(user_id))
+        result = yield tornado.gen.Task(data_store_instance.get_data, str(object_id))
 
-        if app_data is None:
-            app_data = {}
+        if key is not None and result is not None:
+            value = result.get(key, None)
+        else:
+            value = result
 
-        if key is not None:
-            value = app_data.get(key, None)
+    except Exception as e:
+        logger.exception(e)
+
+    raise tornado.gen.Return(value)
+
+
+@greenado.generator
+def get_user_id_by_fingerprint(fingerprint):
+    """
+        Returns user id by application fingerprint.
+    :param fingerprint: APP iD specified as fingerprint.
+    :return: id of the user or None
+    """
+    value = None
+    try:
+        result = yield tornado.gen.Task(ApplicationDataStore.get_data, str(fingerprint))
+
+        if result is None:
+            result = {}
+        value = result.get('user', None)
 
     except Exception as e:
         logger.exception(e)

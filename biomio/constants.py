@@ -2,11 +2,10 @@
 
 TABLES_MODULE = 'mysql_data_entities'
 
-APPS_TABLE_CLASS_NAME = 'AppInformation'
+APPS_TABLE_CLASS_NAME = 'Application'
 USERS_TABLE_CLASS_NAME = 'UserInformation'
-EMAILS_TABLE_CLASS_NAME = 'EmailPGPInformation'
+EMAILS_TABLE_CLASS_NAME = 'EmailsData'
 REDIS_CHANGES_CLASS_NAME = 'ChangesTable'
-SESSION_TABLE_CLASS_NAME = 'SessionData'
 
 # Redis Constants
 

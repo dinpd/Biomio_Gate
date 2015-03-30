@@ -43,8 +43,9 @@ def get_record_job(table_class_name, object_id, callback_code):
         record = MySQLDataStoreInterface.get_object(table_name=table_class_name, object_id=object_id)
         logger.info('Got record for table class - %s, with object_id - %s' % (table_class_name, object_id))
         logger.debug('Data: %s' % record.to_dict())
-        BaseDataStore.instance().store_job_result(record_key=record.get_redis_key(object_id),
-                                                  record_dict=record.to_dict(), callback_code=callback_code)
+        BaseDataStore.instance().store_job_result(record_key=record.get_redis_key(),
+                                                  record_dict=record.to_dict(),
+                                                  callback_code=callback_code)
     except Exception as e:
         logger.exception(msg=str(e))
 
@@ -55,7 +56,7 @@ def update_redis_job():
     logger.debug(result)
     for redis_keys in result:
         logger.debug('Redis Key', redis_keys.get('redis_key'))
-        BaseDataStore.instance().delete_custom_redis_data(redis_keys.get('redis_key'))
+        BaseDataStore.instance().delete_custom_lru_redis_data(redis_keys.get('redis_key'))
     logger.info('REDIS UPDATE done.')
 
 

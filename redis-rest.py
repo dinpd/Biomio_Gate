@@ -2,7 +2,9 @@ import tornado.escape
 import tornado.ioloop
 import tornado.web
 import tornado.gen
+from biomio.protocol.data_stores.application_data_store import ApplicationDataStore
 from biomio.protocol.data_stores.base_data_store import BaseDataStore
+from biomio.protocol.data_stores.email_data_store import EmailDataStore
 
 from biomio.protocol.data_stores.session_data_store import SessionDataStore
 from biomio.protocol.storage.redisstore import RedisStore
@@ -58,13 +60,31 @@ class RQTest(tornado.web.RequestHandler):
         # SessionDataStore.instance().get_data('test_refresh_token', test_get_result)
 
 
-        UserDataStore.instance().store_data(user_id='userid', name='datavalue')
-        BaseDataStore.instance().delete_custom_redis_data(UserDataStore.get_data_key('userid'))
-
-        name = get_name()
-        print " NAME : ", name
+        # UserDataStore.instance().store_data(user_id='userid', name='datavalue')
+        # BaseDataStore.instance().delete_custom_redis_data(UserDataStore.get_data_key('userid'))
+        #
+        # name = get_name()
+        # print " NAME : ", name
 
         # UserDataStore.instance().get_data(user_id='userid', callback=test_get_result)
+
+        UserDataStore.instance().store_data(1)
+        store_keywords = {ApplicationDataStore.APP_TYPE_ATTR: 'extension',
+                          ApplicationDataStore.PUBLIC_KEY_ATTR: 'Test pub key',
+                          ApplicationDataStore.USER_ATTR: 1}
+        ApplicationDataStore.instance().store_data('test_app_id', **store_keywords)
+        store_keywords = {
+            EmailDataStore.PASS_PHRASE_ATTR: 'test_pass_phrase',
+            EmailDataStore.PUBLIC_PGP_KEY_ATTR: 'test_pub_pgp_key',
+            EmailDataStore.PRIVATE_PGP_KEY_ATTR: None,
+            EmailDataStore.USER_ATTR: 1
+        }
+        EmailDataStore.instance().store_data('test@mail.com', **store_keywords)
+        BaseDataStore.instance().delete_custom_lru_redis_data(UserDataStore.get_data_key(1))
+        BaseDataStore.instance().delete_custom_lru_redis_data(ApplicationDataStore.get_data_key('test_app_id'))
+        BaseDataStore.instance().delete_custom_lru_redis_data(EmailDataStore.get_data_key('test@mail.com'))
+        ApplicationDataStore.instance().get_data(app_id='test_app_id', callback=test_get_result)
+        EmailDataStore.instance().get_data(email='test@mail.com', callback=test_get_result)
 
 
 def test_get_result(result=None):

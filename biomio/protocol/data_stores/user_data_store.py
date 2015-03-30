@@ -25,16 +25,15 @@ class UserDataStore(BaseDataStore):
 
     @inherit_docstring_from(BaseDataStore)
     def get_data(self, user_id, callback):
-        self._get_data(key=self.get_data_key(user_id), table_class_name=self._table_class_name, object_id=user_id,
-                       callback=callback)
+        self._get_lru_data(key=self.get_data_key(user_id), table_class_name=self._table_class_name, object_id=user_id,
+                           callback=callback)
 
     @inherit_docstring_from(BaseDataStore)
     def delete_data(self, user_id):
-        self._delete_data(key=self.get_data_key(user_id), table_class_name=self._table_class_name, object_id=user_id)
+        self._delete_lru_data(key=self.get_data_key(user_id), table_class_name=self._table_class_name,
+                              object_id=user_id)
 
     @inherit_docstring_from(BaseDataStore)
     def store_data(self, user_id, **kwargs):
-        if user_id not in kwargs:
-            kwargs.update({'user_id': user_id})
-        self._store_data(key=self.get_data_key(user_id), table_class_name=self._table_class_name,
-                         object_id=user_id, **kwargs)
+        self._store_lru_data(key=self.get_data_key(user_id), table_class_name=self._table_class_name,
+                             object_id=user_id, **kwargs)

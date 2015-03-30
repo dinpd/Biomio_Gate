@@ -128,7 +128,7 @@ class ExtensionSession(QtCore.QThread):
                 break
             else:
                 if self.rpc_req:
-                    message = test_obj.create_next_message(oid='rpcReq', namespace='extension_test_plugin', call='test_func_with_auth',
+                    message = test_obj.create_next_message(oid='rpcReq', namespace='extension_plugin', call='test_func_with_auth',
                         data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
                     print "rpc request"
                     test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False,

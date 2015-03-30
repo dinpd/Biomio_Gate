@@ -19,7 +19,8 @@ class RedisResultsListener():
     def __init__(self):
         self._redis_client = Client(host=settings.redis_host, port=settings.redis_port)
         self._result_callbacks = {}
-        self._redis = RedisStorage.lru_instance()
+        self._lru_redis = RedisStorage.lru_instance()
+        self._persistence_redis = RedisStorage.persistence_instance()
         self._listen()
 
     @classmethod
@@ -68,11 +69,15 @@ class RedisResultsListener():
                 callback_code = re.search('.*:%s' % (REDIS_JOB_RESULT_KEY % ('(.*):.*', '.*')), msg.channel).group(1)
                 redis_result_key = re.search('.*:%s' % (REDIS_JOB_RESULT_KEY % ('.*', '(.*:.*)')), msg.channel).group(1)
 
-                result = self._redis.get_data(job_result_key)
-                result = ast.literal_eval(result) if result is not None else {}
+                result = self._persistence_redis.get_data(job_result_key)
+                try:
+                    result = ast.literal_eval(result) if result is not None else {}
+                except ValueError as e:
+                    logger.exception(msg=str(e))
+                    result = {}
                 logger.debug('Received result from MySQL - %s' % result)
 
-                self._redis.store_data(redis_result_key, **result)
+                self._lru_redis.store_data(redis_result_key, **result)
 
                 callback = self._result_callbacks.get(callback_code)
 
@@ -83,5 +88,5 @@ class RedisResultsListener():
                 except Exception as e:
                     logger.warning(msg=str(e))
                 finally:
-                    self._redis.delete_data(job_result_key)
+                    self._persistence_redis.delete_data(job_result_key)
                     self.unsubscribe_callback(callback_code)
