@@ -110,6 +110,7 @@ class MessageHandler:
 
                 if pub_key:
                     logger.debug("PUBLIC KEY: %s" % pub_key)
+                    logger.debug("FINGERPRINT: %s" % Crypto.get_public_rsa_fingerprint(pub_key))
 
                 if hasattr(e.request.msg, "secret") \
                         and e.request.msg.secret:

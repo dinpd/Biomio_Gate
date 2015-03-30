@@ -4,6 +4,7 @@ from Crypto import Random
 from Crypto.Hash import SHA
 from Crypto.Signature import PKCS1_v1_5
 from binascii import hexlify, unhexlify
+import hashlib
 
 class Crypto:
 
@@ -36,3 +37,19 @@ class Crypto:
             return result
         except:
             return False
+
+    @staticmethod
+    def _insert_char_every_n_chars(string, char='\n', every=64):
+        return char.join(string[i:i + every] for i in xrange(0, len(string), every))
+
+    @staticmethod
+    def get_public_rsa_fingerprint(pub_key):
+        """
+        Returns the fingerprint of the public portion of an RSA key as a
+        47-character string (32 characters separated every 2 characters by a ':').
+        The fingerprint is computed using the MD5 (hex) digest of the DER-encoded
+        RSA public key.
+        """
+        md5digest = hashlib.md5(pub_key).hexdigest()
+        fingerprint = Crypto._insert_char_every_n_chars(md5digest, ':', 2)
+        return fingerprint
