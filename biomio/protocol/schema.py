@@ -125,15 +125,13 @@ BIOMIO_protocol_json_schema = {
         },
         "clientHeader": {
             "type": "object",
-            "required": ["oid", "seq", "protoVer", "osId", "appId"],
+            "required": ["oid", "seq", "protoVer", "osId", "appType"],
             "properties": {
                 "oid": { "enum": ["clientHeader"] },
                 "seq": {"type": "number"},
                 "protoVer": {"type": "string"},
-                #TODO: rename ID -> APP ID
-                "id": {"type": "string"},
-                #TODO: rename APP ID -> APP TYPE
                 "appId": {"type": "string"},
+                "appType": {"type": "string"},
                 "osId": {"type": "string"},
                 "devId": {"type": "string"},
                 "token": {"type": "string"}

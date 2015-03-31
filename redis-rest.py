@@ -32,9 +32,10 @@ class RedisHandler(tornado.web.RequestHandler):
 
 @greenado.generator
 def get_user_data_helper(user_id, key=None):
+    value = None
+
     app_data = yield tornado.gen.Task(UserDataStore.instance().get_data, str(user_id))
 
-    value = None
     if app_data is None:
         app_data = {}
 
@@ -52,12 +53,6 @@ class RQTest(tornado.web.RequestHandler):
 
     @greenado.groutine
     def post(self):
-        # SessionDataStore.instance().store_data(refresh_token='test_refresh_token', ttl=10000,
-        #                                        state='Test Refresh State')
-        # BaseDataStore.instance().delete_custom_redis_data('token:test_refresh_token')
-        # SessionDataStore.instance().get_data('test_refresh_token', test_get_result)
-
-
         UserDataStore.instance().store_data(user_id='userid', name='datavalue')
         BaseDataStore.instance().delete_custom_redis_data(UserDataStore.get_data_key('userid'))
 

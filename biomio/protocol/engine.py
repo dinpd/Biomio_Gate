@@ -75,7 +75,8 @@ def is_message_from_probe_device(input_msg):
 def get_app_data_helper(e, key=None):
     value = None
     try:
-        app_data = yield tornado.gen.Task(ApplicationDataStore.instance().get_data, str('app Id'))
+        app_data = yield tornado.gen.Task(ApplicationDataStore.instance().get_data, str(e.request.header.appId))
+        print app_data
 
         if not app_data:
             app_data = {}
@@ -182,13 +183,13 @@ class MessageHandler:
     @verify_header
     def on_getting_probe(e):
         # TODO: analysis of different probe types
-        user_id = str(e.request.header.id)
+        user_id = str(e.request.header.appId)
         ttl = settings.bioauth_timeout
         result = False
         for sample in e.request.msg.probeData.samples:
             if str(sample).lower() == 'true':
                 result = True
-        e.protocol_instance.bioauth_flow.set_next_auth_result(id=int(e.request.msg.probeId), type=str(e.request.msg.probeData.oid), data=str(e.request.msg.probeData.samples))
+        e.protocol_instance.bioauth_flow.set_next_auth_result(appId=int(e.request.msg.probeId), type=str(e.request.msg.probeData.oid), data=str(e.request.msg.probeData.samples))
         e.protocol_instance.bioauth_flow.set_auth_results(result=result)
         return STATE_READY
 
@@ -241,7 +242,7 @@ def app_registered(e):
     session = e.protocol_instance.get_current_session()
 
     app_id = str(e.request.header.appId)
-    user_id = str(e.request.header.id)
+    user_id = str(e.request.header.appId)
     protocol_connection_established(protocol_instance=e.protocol_instance, user_id=user_id, app_id=app_id)
 
     message = e.protocol_instance.create_next_message(
@@ -256,7 +257,7 @@ def app_registered(e):
 
 def ready(e):
     if e.protocol_instance.bioauth_flow is None:
-        user_id = str(e.request.header.id)
+        user_id = str(e.request.header.appId)
         app_id = str(e.request.header.appId)
         auth_wait_callback = e.protocol_instance.try_probe
         e.protocol_instance.bioauth_flow = BioauthFlow(user_id=user_id, app_id=app_id, auth_wait_callback=auth_wait_callback, auto_initialize=False)

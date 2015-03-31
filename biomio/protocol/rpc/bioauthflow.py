@@ -228,7 +228,7 @@ class BioauthFlow:
         self._store_state()
 
     @tornado.gen.engine
-    def set_next_auth_result(self, id, type, data):
+    def set_next_auth_result(self, appId, type, data):
         if not self._resources_list:
             logger.warning(msg='resource item list for probe is empty')
 
