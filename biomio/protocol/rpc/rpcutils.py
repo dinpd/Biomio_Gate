@@ -123,6 +123,7 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
             callback(result={"error": error_msg}, status='fail')
         bioauth_flow.accept_results()
     except Exception as e:
+        #TODO: handle exception
         logger.exception(msg="RPC call with auth processing error: %s" % str(e))
 
 

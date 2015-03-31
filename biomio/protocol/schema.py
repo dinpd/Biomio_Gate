@@ -59,6 +59,7 @@ BIOMIO_protocol_json_schema = {
                 "oid": { "enum": ["bye"] }
             }
         },
+        #TODO:
         "resource": {
             "type": "object",
             "required": ["rType", "rProperties"],
@@ -124,13 +125,13 @@ BIOMIO_protocol_json_schema = {
         },
         "clientHeader": {
             "type": "object",
-            "required": ["oid", "seq", "protoVer", "osId", "appId"],
+            "required": ["oid", "seq", "protoVer", "osId", "appType"],
             "properties": {
                 "oid": { "enum": ["clientHeader"] },
                 "seq": {"type": "number"},
                 "protoVer": {"type": "string"},
-                "id": {"type": "string"},
                 "appId": {"type": "string"},
+                "appType": {"type": "string"},
                 "osId": {"type": "string"},
                 "devId": {"type": "string"},
                 "token": {"type": "string"}
@@ -230,7 +231,7 @@ BIOMIO_protocol_json_schema = {
                         {"$ref": "#/definitions/touchIdSamples"}
                     ]
                 }
-                #TODO: status field
+                #TODO: status field - true/false
             }
         },
         "verify": {

@@ -88,7 +88,7 @@ class ExtensionSession(QtCore.QThread):
         test_obj = BiomioTest()
         if self.register:
             test_obj.setup_test_for_for_new_id()
-            test_obj._builder.set_header(appId='extension_%s' % self.app_id)
+            test_obj._builder.set_header(appType='extension')
 
             # CLIENT HELLO ->
             # SERVER HELLO <-
@@ -176,7 +176,7 @@ class ProbeSession(QtCore.QThread):
         test_obj = BiomioTest()
         if self.register:
             test_obj.setup_test_for_for_new_id()
-            test_obj._builder.set_header(appId='probe_%s' % self.app_id)
+            test_obj._builder.set_header(appType='probe')
 
             # CLIENT HELLO ->
             message = test_obj.create_next_message(oid='clientHello', secret='secret')

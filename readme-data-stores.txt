@@ -7,7 +7,7 @@ GRANT ALL PRIVILEGES ON * . * TO 'biomio_user'@'localhost';
 FLUSH PRIVILEGES;
 
 to create a database:
-CREATE SCHEMA `biomio_storage` DEFAULT CHARACTER SET utf8 ;
+CREATE SCHEMA `biom_website` DEFAULT CHARACTER SET utf8 ;
 
 use also:  gnome-keyring mysql-workbench
 

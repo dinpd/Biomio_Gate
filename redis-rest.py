@@ -65,6 +65,8 @@ class RQTest(tornado.web.RequestHandler):
         #
         # name = get_name()
         # print " NAME : ", name
+        UserDataStore.instance().store_data(user_id='userid', name='datavalue')
+        BaseDataStore.instance().delete_custom_redis_data(UserDataStore.get_data_key('userid'))
 
         # UserDataStore.instance().get_data(user_id='userid', callback=test_get_result)
 
