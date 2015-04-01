@@ -12,7 +12,7 @@ class ApplicationDataStore(BaseDataStore):
     APP_ID_ATTR = 'app_id'
     APP_TYPE_ATTR = 'app_type'
     PUBLIC_KEY_ATTR = 'public_key'
-    USER_ATTR = 'user'
+    USER_ATTR = 'users'
 
     def __init__(self):
         BaseDataStore.__init__(self)
@@ -44,3 +44,7 @@ class ApplicationDataStore(BaseDataStore):
     @inherit_docstring_from(BaseDataStore)
     def delete_data(self, app_id):
         self._delete_lru_data(key=self.get_data_key(app_id), table_class_name=self._table_class_name, object_id=app_id)
+
+    @inherit_docstring_from(BaseDataStore)
+    def select_data_by_ids(self, app_ids, callback):
+        self._select_data_by_ids(table_class_name=self._table_class_name, object_ids=app_ids, callback=callback)

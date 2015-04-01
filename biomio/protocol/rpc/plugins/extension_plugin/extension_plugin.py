@@ -7,7 +7,7 @@ import gnupg
 from yapsy.IPlugin import IPlugin
 from biomio.protocol.data_stores.email_data_store import EmailDataStore
 
-from biomio.protocol.rpc.rpcutils import rpc_call_with_auth, rpc_call, get_user_id_by_fingerprint, get_data_helper
+from biomio.protocol.rpc.rpcutils import rpc_call_with_auth, rpc_call, get_store_data, select_store_data
 
 
 class ExtensionPlugin(IPlugin):
@@ -20,40 +20,33 @@ class ExtensionPlugin(IPlugin):
         return {"result": "some value"}
 
     @rpc_call_with_auth
-    def get_pass_phrase(self, app_id, email):
+    def get_pass_phrase(self, email):
         email = self.parse_email_data(email)
-        user_id = get_user_id_by_fingerprint(fingerprint=app_id)
-        if user_id is None:
-            raise Exception('User not found for given fingerprint - %s.' % app_id)
         email_store_instance = EmailDataStore.instance()
-        email_data = get_data_helper(email_store_instance, object_id=email)
-        if email_data is not None:
-            result = {'pass_phrase': email_data.get(EmailDataStore.PASS_PHRASE_ATTR)}
-            if email_data.get(EmailDataStore.PRIVATE_PGP_KEY_ATTR) is not None:
-                result.update({'private_pgp_key': email_data.get(EmailDataStore.PRIVATE_PGP_KEY_ATTR)})
-                update_keywords = {EmailDataStore.PRIVATE_PGP_KEY_ATTR: None}
-                email_store_instance.store_data(email, **update_keywords)
-            return result
-        public_pgp_key, private_pgp_key, pass_phrase = self.generate_pgp_key_pair(email)
-        if public_pgp_key is None or private_pgp_key is None:
-            raise Exception('PGP keys where not generated for email - %s' % email)
-        store_keywords = {EmailDataStore.PASS_PHRASE_ATTR: pass_phrase,
-                          EmailDataStore.PUBLIC_PGP_KEY_ATTR: public_pgp_key, EmailDataStore.USER_ATTR: user_id}
-        email_store_instance.store_data(email, **store_keywords)
-        return {'pass_phrase': pass_phrase, 'private_pgp_key': private_pgp_key}
+        email_data = get_store_data(email_store_instance, object_id=email)
+        if email_data is None:
+            raise Exception('Sorry but your email is not activated in your BioMio account.')
+        result = {'pass_phrase': email_data.get(EmailDataStore.PASS_PHRASE_ATTR)}
+        if email_data.get(EmailDataStore.PRIVATE_PGP_KEY_ATTR) is not None:
+            result.update({'private_pgp_key': email_data.get(EmailDataStore.PRIVATE_PGP_KEY_ATTR)})
+            update_keywords = {EmailDataStore.PRIVATE_PGP_KEY_ATTR: None}
+            email_store_instance.store_data(email, **update_keywords)
+        return result
 
     @rpc_call
     def get_users_public_pgp_keys(self, emails):
         emails = self.parse_email_data(emails).split(',')
         emails_store_instance = EmailDataStore.instance()
         public_pgp_keys = []
-        for email in emails:
-            email_data = get_data_helper(emails_store_instance, object_id=email)
-            if email_data is not None:
+        emails_data = select_store_data(emails_store_instance, emails)
+        if emails_data is not None:
+            for key in emails_data.keys():
+                email_data = emails_data.get(key)
+                emails.remove(key)
                 public_pgp_keys.append(email_data.get(EmailDataStore.PUBLIC_PGP_KEY_ATTR))
-            else:
-                # TODO: Implement functionality that will send REST request to adm backend.
-                pass
+        for email in emails:
+            # TODO: Implement functionality that will send REST request to adm backend.
+            pass
         return {'public_pgp_keys': ','.join(public_pgp_keys)}
 
     @staticmethod

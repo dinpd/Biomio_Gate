@@ -19,6 +19,7 @@ class BaseDataStore():
         self._CREATE_JOB = sj.create_record_job
         self._UPDATE_JOB = sj.update_record_job
         self._DELETE_JOB = sj.delete_record_job
+        self._SELECT_JOB = sj.select_records_by_ids_job
 
     @classmethod
     @abc.abstractmethod
@@ -70,6 +71,15 @@ class BaseDataStore():
         :return: str generated redis key.
         """
         return
+
+    @abc.abstractmethod
+    def select_data_by_ids(self, object_ids, callback):
+        """
+            Selects data from MySQL and filters it with given list of object's ids.
+        :param object_ids: list of object ids to get data for.
+        :param callback: callback function that must be executed after data is received.
+        """
+        pass
 
     def _store_lru_data(self, key, table_class_name, object_id, ex=None, **kwargs):
         """
@@ -153,3 +163,14 @@ class BaseDataStore():
         :param key: Generated redis key.
         """
         self._persistence_redis.get_data(key)
+
+    def _select_data_by_ids(self, table_class_name, object_ids, callback):
+        """
+            Internal methods which selects data from MySQL table by given list of ids.
+        :param table_class_name: str Pony MySQL Entity class name.
+        :param object_ids:  list of object ids to get data for.
+        :param callback: function that must be executed after we got data.
+        """
+        callback_code = RedisResultsListener.instance().subscribe_callback(callback)
+        run_storage_job(self._SELECT_JOB, table_class_name=table_class_name, object_ids=object_ids,
+                        callback_code=callback_code)

@@ -92,3 +92,16 @@ class MySQLDataStoreInterface:
 
         """
         return MySQLDataStore.instance().get_object(module_name=module_name, table_name=table_name, object_id=object_id)
+
+    @staticmethod
+    def select_data_by_ids(table_name, object_ids, module_name=TABLES_MODULE):
+        """
+            Selects data from given table with filter:
+            obj.<unique_id> in [object_ids]
+        :param module_name: string name of the module
+        :param object_ids: list of unique object ids to select data for
+        :param table_name: string name of the class (table)
+        :return: dict with unique object id as key and object dict as value
+        """
+        return MySQLDataStore.instance().select_data_by_ids(module_name=module_name, table_name=table_name,
+                                                            object_ids=object_ids)

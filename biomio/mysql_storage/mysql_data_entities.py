@@ -2,7 +2,8 @@
 import datetime
 import pony.orm as pny
 import abc
-from biomio.constants import REDIS_USER_KEY, REDIS_EMAILS_KEY, REDIS_APPLICATION_KEY
+from biomio.constants import REDIS_USER_KEY, REDIS_EMAILS_KEY, REDIS_APPLICATION_KEY, MYSQL_APPS_TABLE_NAME, \
+    MYSQL_EMAILS_TABLE_NAME, MYSQL_USERS_TABLE_NAME
 from biomio.utils.biomio_decorators import inherit_docstring_from
 
 database = pny.Database()
@@ -38,9 +39,19 @@ class BaseEntityClass(object):
         :param kwargs: param/value dictionary.
         """
 
+    @staticmethod
+    @abc.abstractmethod
+    def get_table_name():
+        """
+            Returns MySQL table name of the current entity.
+
+        :return: str MySQL table name
+        """
+        return
+
 
 class UserInformation(BaseEntityClass, database.Entity):
-    _table_ = "Profiles"
+    _table_ = MYSQL_USERS_TABLE_NAME
     id = pny.PrimaryKey(int, auto=True)
     api_id = pny.Required(int, default=1)
     name = pny.Required(str, 50, default='test_name')
@@ -69,10 +80,15 @@ class UserInformation(BaseEntityClass, database.Entity):
     def create_record(**kwargs):
         UserInformation(**kwargs)
 
+    @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
+    def get_table_name():
+        return MYSQL_USERS_TABLE_NAME
+
 
 class EmailsData(BaseEntityClass, database.Entity):
-    _table_ = 'EmailsData'
-    email = pny.Required(str, unique=True)
+    _table_ = MYSQL_EMAILS_TABLE_NAME
+    email = pny.PrimaryKey(str, auto=False)
     pass_phrase = pny.Required(str)
     public_pgp_key = pny.Required(str)
     private_pgp_key = pny.Optional(str, nullable=True)
@@ -96,13 +112,18 @@ class EmailsData(BaseEntityClass, database.Entity):
             kwargs.update({'user': user})
         EmailsData(**kwargs)
 
+    @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
+    def get_table_name():
+        return MYSQL_EMAILS_TABLE_NAME
+
 
 class Application(BaseEntityClass, database.Entity):
-    _table_ = 'Applications'
+    _table_ = MYSQL_APPS_TABLE_NAME
     app_id = pny.PrimaryKey(str, auto=False)
     app_type = pny.Required(str, sql_type="enum('extension', 'probe')")
     public_key = pny.Required(str)
-    user = pny.Required(UserInformation)
+    users = pny.Set(UserInformation)
 
     @inherit_docstring_from(BaseEntityClass)
     def get_redis_key(self):
@@ -116,11 +137,16 @@ class Application(BaseEntityClass, database.Entity):
     @staticmethod
     @inherit_docstring_from(BaseEntityClass)
     def create_record(**kwargs):
-        if 'user' in kwargs and isinstance(kwargs.get('user'), (int, long, str)):
-            search_query = {UserInformation.get_unique_search_attribute(): kwargs.get('user')}
+        if 'users' in kwargs and isinstance(kwargs.get('users'), (int, long, str)):
+            search_query = {UserInformation.get_unique_search_attribute(): kwargs.get('users')}
             user = UserInformation.get(**search_query)
-            kwargs.update({'user': user})
+            kwargs.update({'users': [user]})
         Application(**kwargs)
+
+    @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
+    def get_table_name():
+        return MYSQL_APPS_TABLE_NAME
 
 
 class ChangesTable(BaseEntityClass, database.Entity):
@@ -142,3 +168,8 @@ class ChangesTable(BaseEntityClass, database.Entity):
     @inherit_docstring_from(BaseEntityClass)
     def get_unique_search_attribute():
         return 'redis_key'
+
+    @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
+    def get_table_name():
+        return ''

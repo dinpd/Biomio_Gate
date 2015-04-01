@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 import logging
-from biomio.constants import REDIS_CHANGES_CLASS_NAME
+from biomio.constants import REDIS_CHANGES_CLASS_NAME, REDIS_DO_NOT_STORE_RESULT_KEY
 from biomio.mysql_storage.mysql_data_store_interface import MySQLDataStoreInterface
 from biomio.protocol.data_stores.base_data_store import BaseDataStore
 
@@ -46,6 +46,18 @@ def get_record_job(table_class_name, object_id, callback_code):
         BaseDataStore.instance().store_job_result(record_key=record.get_redis_key(),
                                                   record_dict=record.to_dict(),
                                                   callback_code=callback_code)
+    except Exception as e:
+        logger.exception(msg=str(e))
+
+
+def select_records_by_ids_job(table_class_name, object_ids, callback_code):
+    logger.info('Getting records for table class - %s, with object_ids - %s' % (table_class_name, object_ids))
+    try:
+        records = MySQLDataStoreInterface.select_data_by_ids(table_name=table_class_name, object_ids=object_ids)
+        logger.info('Got records for table class - %s, with object_ids - %s' % (table_class_name, object_ids))
+        logger.debug('Data: %s' % records)
+        BaseDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
+                                                  record_dict=records, callback_code=callback_code)
     except Exception as e:
         logger.exception(msg=str(e))
 
