@@ -25,7 +25,7 @@ ssl_options = {
 }
 
 
-EXTENSION_TEST_ID = 'test_app_id'
+APP_TEST_ID = 'test_app_id'
 USER_TEST_EMAIL = 'test@mail.com'
 TEST_PUB_PGP_KEY = 'test_pub_pgp_key'
 
@@ -39,7 +39,7 @@ class BiomioTest:
         cls._registered_user_id = None
 
     @classmethod
-    def init_db_test_data(cls):
+    def init_db_test_data(cls, app_id=None):
         from biomio.protocol.data_stores.user_data_store import UserDataStore
         from biomio.protocol.data_stores.application_data_store import ApplicationDataStore
         from biomio.protocol.data_stores.email_data_store import EmailDataStore
@@ -51,7 +51,10 @@ class BiomioTest:
         store_keywords = {ApplicationDataStore.APP_TYPE_ATTR: 'extension',
                           ApplicationDataStore.PUBLIC_KEY_ATTR: str(pub_key),
                           ApplicationDataStore.USER_ATTR: 1}
-        ApplicationDataStore.instance().store_data('test_app_id', **store_keywords)
+        if app_id is None:
+            app_id = APP_TEST_ID
+        ApplicationDataStore.instance().store_data(app_id, **store_keywords)
+
         store_keywords = {
             EmailDataStore.PASS_PHRASE_ATTR: 'test_pass_phrase',
             EmailDataStore.PUBLIC_PGP_KEY_ATTR: 'test_pub_pgp_key',
@@ -63,7 +66,7 @@ class BiomioTest:
         # BaseDataStore.instance().delete_custom_lru_redis_data(ApplicationDataStore.get_data_key('test_app_id'))
         # BaseDataStore.instance().delete_custom_lru_redis_data(EmailDataStore.get_data_key(USER_TEST_EMAIL))
         BiomioTest._registered_key = key
-        BiomioTest._registered_app_id = EXTENSION_TEST_ID
+        BiomioTest._registered_app_id = app_id
 
     def __init__(self):
         self._ws = None
@@ -143,7 +146,7 @@ class BiomioTest:
     def setup_test(self):
         """Default setup for test methods."""
         self._builder = BiomioMessageBuilder(oid='clientHeader', seq=0, protoVer='1.0', osId='os id',
-                                             devId='devid', appId=EXTENSION_TEST_ID, appType='extension')
+                                             devId='devid', appId=APP_TEST_ID, appType='extension')
         self.last_server_message = None
         self.session_refresh_token = None
         self.current_session_token = None
@@ -242,9 +245,11 @@ class BiomioTest:
             self.setup_test()
 
     @nottest
-    def setup_test_for_for_new_id(self):
+    def setup_test_for_for_new_id(self, app_id=None):
         self.setup_test()
-        self._builder.set_header(id=sha1(urandom(64)).hexdigest())
+        if app_id is None:
+            app_id = sha1(urandom(64)).hexdigest()
+        self._builder.set_header(appId=app_id)
 
 
 class TestTimeouts(BiomioTest):
@@ -696,23 +701,29 @@ class TestRpcCalls(BiomioTest):
     @nottest
     def probe_job(result=True):
         test_obj = BiomioTest()
-        test_obj.setup_test_for_for_new_id()
-        test_obj._builder.set_header(appId='probe_%s' % (sha1(urandom(64)).hexdigest()))
+        app_id = 'probe_id'
+        test_obj.setup_test_for_for_new_id(app_id=app_id)
+        test_obj.init_db_test_data(app_id=app_id)
+        test_obj._builder.set_header(appType='probe', appId=app_id)
 
         # CLIENT HELLO ->
-        message = test_obj.create_next_message(oid='clientHello', secret='secret')
-        test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False, wait_for_response=False)
-
-        # RESOURCES ->
-        message = test_obj.create_next_message(oid='resources', data=[{"rType": "video", "rProperties": "1500x1000"},
-            {"rType": "fp-scanner", "rProperties": "true"}, {"rType": "mic", "rProperties": "true"}])
-        # SERVER HELLO <-
+        message = test_obj.create_next_message(oid='clientHello')
         response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False, wait_for_response=True)
 
-        # ACK ->
-        message = test_obj.create_next_message(oid='ack')
+        # # RESOURCES ->
+        # message = test_obj.create_next_message(oid='resources', data=[{"rType": "video", "rProperties": "1500x1000"},
+        #     {"rType": "fp-scanner", "rProperties": "true"}, {"rType": "mic", "rProperties": "true"}])
+        # SERVER HELLO <-
+        # response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False, wait_for_response=True)
+
+        # # ACK ->
+        # message = test_obj.create_next_message(oid='ack')
+        # test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False,
+        #                   wait_for_response=False)
+        message = test_obj.create_next_message(oid='auth', key=test_obj.get_digest_for_next_message())
         test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False,
                           wait_for_response=False)
+
 
         message_timeout = settings.connection_timeout / 2  # Send a message every 3 seconds
         max_message_count = 10
@@ -733,9 +744,8 @@ class TestRpcCalls(BiomioTest):
                     probe_msg = test_obj.create_next_message(oid='probe', probeId=0,
                                                              probeData={"oid": "touchIdSamples", "samples": [touchIdSample]})
 
-                    response = test_obj.send_message(websocket=test_obj.get_curr_connection(), message=probe_msg,
+                    test_obj.send_message(websocket=test_obj.get_curr_connection(), message=probe_msg,
                                                  close_connection=False, wait_for_response=False)
-
                     break
             except Exception, e:
                 print e
@@ -779,6 +789,7 @@ class TestRpcCalls(BiomioTest):
                     biomio_test.send_message(websocket=biomio_test.get_curr_connection(), message=message, close_connection=False,
                         wait_for_response=True)
 
+        is_quit = False
         for i in range(max_message_count):
             try:
                 response = biomio_test.read_message(websocket=biomio_test.get_curr_connection())
