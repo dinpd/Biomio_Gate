@@ -159,7 +159,8 @@ class MessageHandler:
         header_str = BiomioMessageBuilder.header_from_message(e.request)
 
         if Crypto.check_digest(key=key, data=header_str, digest=str(e.request.msg.key)):
-            protocol_connection_established(protocol_instance=e.protocol_instance, user_id=user_id, app_id=app_id)
+            # protocol_connection_established(protocol_instance=e.protocol_instance, app_id=app_id)
+            pass
 
             return STATE_READY
 

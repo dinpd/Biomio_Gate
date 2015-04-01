@@ -10,6 +10,7 @@ from biomio.protocol.data_stores.session_data_store import SessionDataStore
 from biomio.protocol.storage.redisstore import RedisStore
 from biomio.protocol.storage.userinfodatastore import UserInfoDataStore
 from biomio.protocol.data_stores.user_data_store import UserDataStore
+from biomio.protocol.crypt import Crypto
 
 import ast
 import greenado
@@ -67,7 +68,6 @@ class RQTest(tornado.web.RequestHandler):
         # print " NAME : ", name
         UserDataStore.instance().store_data(user_id='userid', name='datavalue')
         BaseDataStore.instance().delete_custom_redis_data(UserDataStore.get_data_key('userid'))
-
         # UserDataStore.instance().get_data(user_id='userid', callback=test_get_result)
 
         UserDataStore.instance().store_data(1)
