@@ -59,7 +59,13 @@ BIOMIO_protocol_json_schema = {
                 "oid": { "enum": ["bye"] }
             }
         },
-        #TODO:
+        "getResources": {
+            "type": "object",
+            "required": ["oid"],
+            "properties": {
+                "oid": { "enum": ["getResources"] }
+            }
+        },
         "resource": {
             "type": "object",
             "required": ["rType", "rProperties"],
@@ -230,8 +236,8 @@ BIOMIO_protocol_json_schema = {
                         {"$ref": "#/definitions/soundSamples"},
                         {"$ref": "#/definitions/touchIdSamples"}
                     ]
-                }
-                #TODO: status field - true/false
+                },
+                "success": {"type": "string"}
             }
         },
         "verify": {

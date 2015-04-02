@@ -3,8 +3,9 @@ import os
 
 class PolicyManager:
     @staticmethod
-    def get_policy_for_user(user_id):
+    def get_policy_for_app(app_id):
         # Get policy config
+        user_id = app_id
         config_str = PolicyManager._policy_config_for_user(user_id=user_id)
         return FixedOrderPolicy(config_str=config_str)
 

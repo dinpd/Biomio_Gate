@@ -25,10 +25,10 @@ def on_reset(e):
 def on_request(e):
     flow = e.bioauth_flow
     # Create redis key - that will trigger probe try message
-    ProbeResultsStore.instance().store_probe_data(user_id=flow.user_id, ttl=settings.bioauth_timeout, waiting_auth=True)
+    ProbeResultsStore.instance().store_probe_data(user_id=flow.app_id, ttl=settings.bioauth_timeout, waiting_auth=True)
 
     # Subscribe callback to changes
-    ProbeResultsStore.instance().subscribe_to_data(user_id=flow.user_id, data_key='auth', callback=flow.rpc_callback)
+    ProbeResultsStore.instance().subscribe_to_data(user_id=flow.app_id, data_key='auth', callback=flow.rpc_callback)
 
     return STATE_AUTH_WAIT
 
@@ -58,16 +58,16 @@ def on_got_results(e):
 
 def on_state_changed(e):
     flow = e.bioauth_flow
-    next_state = ProbeResultsStore.instance().get_probe_data(user_id=flow.user_id, key=_PROBESTORE_STATE_KEY)
+    next_state = ProbeResultsStore.instance().get_probe_data(user_id=flow.app_id, key=_PROBESTORE_STATE_KEY)
     if next_state is None:
-        if ProbeResultsStore.instance().has_probe_results(user_id=flow.user_id):
+        if ProbeResultsStore.instance().has_probe_results(user_id=flow.app_id):
             next_state = STATE_AUTH_ERROR
             logger.debug('BIOMETRIC AUTH [%s, %s]: AUTH INTERNAL ERROR - state not set')
         else:
             next_state = STATE_AUTH_TIMEOUT
             logger.debug('BIOMETRIC AUTH [%s, %s]: AUTH TIMEOUT')
 
-    logger.debug('BIOMETRIC AUTH [%s, %s]: STATE CHANGED - %s' % (flow.user_id, flow.app_id, next_state))
+    logger.debug('BIOMETRIC AUTH [%s, %s]: STATE CHANGED - %s' % (flow.app_type, flow.app_id, next_state))
     return next_state
 
 # State callbacks
@@ -143,14 +143,13 @@ _PROBESTORE_STATE_KEY = 'state'
 
 # Helper Methods
 def _store_state(e):
-    # TODO: check if we need to set ttl again
     data = {_PROBESTORE_STATE_KEY: e.fsm.current}
-    ProbeResultsStore.instance().store_probe_data(user_id=e.bioauth_flow.user_id, ttl=settings.bioauth_timeout, **data)
+    ProbeResultsStore.instance().store_probe_data(user_id=e.bioauth_flow.app_id, ttl=settings.bioauth_timeout, **data)
 
 
 class BioauthFlow:
-    def __init__(self, user_id, app_id, auth_wait_callback=None, auto_initialize=True):
-        self.user_id = user_id
+    def __init__(self, app_type, app_id, auth_wait_callback=None, auto_initialize=True):
+        self.app_type = app_type
         self.app_id = app_id
         self.rpc_callback = None
         self.auth_wait_callback = auth_wait_callback
@@ -166,13 +165,13 @@ class BioauthFlow:
             self.initialize()
 
     def initialize(self):
-        logger.debug('BIOMETRIC AUTH OBJECT [%s, %s]: INITIALIZING...' % (self.user_id, self.app_id))
+        logger.debug('BIOMETRIC AUTH OBJECT [%s, %s]: INITIALIZING...' % (self.app_type, self.app_id))
         self._restore_state()
-        ProbeResultsStore.instance().subscribe(user_id=self.user_id, callback=self._change_state_callback)
+        ProbeResultsStore.instance().subscribe(user_id=self.app_id, callback=self._change_state_callback)
 
     def shutdown(self):
-        logger.debug('BIOMETRIC AUTH OBJECT [%s, %s]: UNSUBSCRIBING...' % (self.user_id, self.app_id))
-        ProbeResultsStore.instance().unsubscribe(user_id=self.user_id, callback=self._change_state_callback)
+        logger.debug('BIOMETRIC AUTH OBJECT [%s, %s]: UNSUBSCRIBING...' % (self.app_type, self.app_id))
+        ProbeResultsStore.instance().unsubscribe(user_id=self.app_type, callback=self._change_state_callback)
         if self.is_extension_owner():
             self.reset()
         self._store_state()
@@ -180,7 +179,7 @@ class BioauthFlow:
     def _get_state_machine_logger_callback(self):
         def _state_machine_logger(e):
             flow = self
-            logger.debug('BIOMETRIC AUTH [%s, %s]: %s -> %s' % (flow.user_id, flow.app_id, e.src, e.dst))
+            logger.debug('BIOMETRIC AUTH [%s, %s]: %s -> %s' % (flow.app_type, flow.app_id, e.src, e.dst))
 
         return _state_machine_logger
 
@@ -197,7 +196,7 @@ class BioauthFlow:
         """
         Restores BioauthFlow object state by probe results key by given user id.
         """
-        logger.debug("Restoring state for bioauth flow: %s, %s" % (self.user_id, self.app_id))
+        logger.debug("Restoring state for bioauth flow: %s, %s" % (self.app_type, self.app_id))
         try:
             self._change_state_callback()
             logger.debug("Current state: %s" % self._state_machine_instance.current)
@@ -205,9 +204,8 @@ class BioauthFlow:
             logger.exception("Failed to restore state")
 
     def _store_state(self):
-        # TODO: check if we need to set ttl again
         data = {_PROBESTORE_STATE_KEY: self._state_machine_instance.current}
-        ProbeResultsStore.instance().store_probe_data(user_id=self.user_id, ttl=settings.bioauth_timeout, **data)
+        ProbeResultsStore.instance().store_probe_data(user_id=self.app_id, ttl=settings.bioauth_timeout, **data)
 
     def reset(self):
         self._state_machine_instance.reset(bioauth_flow=self)
@@ -248,8 +246,8 @@ class BioauthFlow:
         return self._state_machine_instance.current == state
 
     def is_probe_owner(self):
-        return self.app_id.startswith('probe')
+        return self.app_type.startswith('probe')
 
     def is_extension_owner(self):
-        return self.app_id.startswith('extension')
+        return self.app_type.startswith('extension')
 
