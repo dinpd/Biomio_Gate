@@ -229,7 +229,8 @@ BIOMIO_protocol_json_schema = {
                         {"$ref": "#/definitions/soundSamples"},
                         {"$ref": "#/definitions/touchIdSamples"}
                     ]
-                }
+                },
+                "status": { "type": "string" }
             }
         },
         "verify": {
