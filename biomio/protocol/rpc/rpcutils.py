@@ -8,6 +8,7 @@ from biomio.protocol.data_stores.application_data_store import ApplicationDataSt
 from biomio.protocol.rpc import bioauthflow
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 # Arguments that are implicitly passed to every RPC routine.
@@ -56,6 +57,7 @@ def rpc_call(rpc_func):
     """
     Every RPC routine (that do not require biometric authentication) should be decorated with @rpc_call decorator.
     """
+
     def _decorator(*args, **kwargs):
         callable_kwargs = _check_rpc_arguments(callable_func=rpc_func, current_kwargs=kwargs)
         result = rpc_func(*args, **callable_kwargs)
@@ -69,6 +71,7 @@ def rpc_call(rpc_func):
             logger.exception(msg="RPC call processing error: %s" % str(e))
 
     return wraps(rpc_func)(_decorator)
+
 
 @tornado.gen.engine
 def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
@@ -96,7 +99,7 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
         yield tornado.gen.Task(bioauth_flow.request_auth)
         # TODO: check for current auth state
         # if bioauth_flow.is_current_state(state=bioauthflow.STATE_AUTH_READY):
-        #     yield tornado.gen.Task(bioauth_flow.request_auth)
+        # yield tornado.gen.Task(bioauth_flow.request_auth)
         # else:
         #     error = "RPC ERROR: authentication already in progress"
         #     logger.error(msg=error)
@@ -123,7 +126,7 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
             callback(result={"error": error_msg}, status='fail')
         bioauth_flow.accept_results()
     except Exception as e:
-        #TODO: handle exception
+        # TODO: handle exception
         logger.exception(msg="RPC call with auth processing error: %s" % str(e))
 
 
@@ -131,6 +134,7 @@ def rpc_call_with_auth(rpc_func):
     """
     Every RPC routine that require biometric authentication should be decorated with @rpc_call_with_auth decorator.
     """
+
     def _decorator(*args, **kwargs):
         _is_biometric_data_valid(callable_func=rpc_func, callable_args=args, callable_kwargs=kwargs)
 
@@ -138,13 +142,13 @@ def rpc_call_with_auth(rpc_func):
 
 
 @greenado.generator
-def get_data_helper(data_store_instance, object_id, key=None):
+def get_store_data(data_store_instance, object_id, key=None):
     """
     Takes data using DataStore class instance synchronously.
     :param data_store_instance: instance of the required DataStore.
     :param object_id: Id of the object to get.
     :param key: Data key to retrieve. If this field is None - returns all data in dictionary.
-    This field is None by default.
+                This field is None by default.
     :return: Result of get_data() operation.
     """
     value = None
@@ -163,21 +167,10 @@ def get_data_helper(data_store_instance, object_id, key=None):
 
 
 @greenado.generator
-def get_user_id_by_fingerprint(fingerprint):
-    """
-        Returns user id by application fingerprint.
-    :param fingerprint: APP iD specified as fingerprint.
-    :return: id of the user or None
-    """
-    value = None
+def select_store_data(data_store_instance, object_ids):
+    result = None
     try:
-        result = yield tornado.gen.Task(ApplicationDataStore.get_data, str(fingerprint))
-
-        if result is None:
-            result = {}
-        value = result.get('user', None)
-
+        result = yield tornado.gen.Task(data_store_instance.select_data_by_ids, object_ids)
     except Exception as e:
         logger.exception(e)
-
-    raise tornado.gen.Return(value)
+    raise tornado.gen.Return(result)

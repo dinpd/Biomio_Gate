@@ -2,7 +2,7 @@ from __future__ import absolute_import
 import ast
 import logging
 from tornadoredis import Client
-from biomio.constants import REDIS_JOB_RESULT_KEY
+from biomio.constants import REDIS_JOB_RESULT_KEY, REDIS_DO_NOT_STORE_RESULT_KEY
 from biomio.protocol.settings import settings
 from biomio.protocol.storage.redis_storage import RedisStorage
 from os import urandom
@@ -77,7 +77,9 @@ class RedisResultsListener():
                     result = {}
                 logger.debug('Received result from MySQL - %s' % result)
 
-                self._lru_redis.store_data(redis_result_key, **result)
+                if redis_result_key != REDIS_DO_NOT_STORE_RESULT_KEY % callback_code:
+                    self._lru_redis.store_data(redis_result_key, **result)
+                    logger.debug('Saved result into LRU Redis instance.')
 
                 callback = self._result_callbacks.get(callback_code)
 
