@@ -1,5 +1,5 @@
 in mysql console:
-mysql -u root
+mysql -u root -p
 
 
 create user 'biomio_user'@'localhost' identified by 'b10m10p@$$';
