@@ -89,7 +89,7 @@ def main():
     '4HDeKR4r6M6mGB+SrwIDAQAB\n'
     '-----END PUBLIC KEY-----'
 
-    mails = ['alex.chmykhalo@vakoms.com.ua', 'alex.chmykhalo@vakoms.com.ua',
+    mails = ['alex.chmykhalo@vakoms.com', 'alex.chmykhalo@vakoms.com.ua',
              'andriy.lobashchuk@vakoms.com', 'andriy.lobashchuk@vakoms.com.ua',
              'boris.itkis@gmail.com', 'ditkis@gmail.com']
 
