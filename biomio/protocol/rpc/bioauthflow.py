@@ -232,9 +232,12 @@ class BioauthFlow:
 
         result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, type, data)
         logger.debug(msg='SET NEXT AUTH RESULT: %s' % str(result))
+        #TODO: count probes and set appropriate result
+        self.set_auth_results(result=result)
         self._store_state()
 
     def set_auth_results(self, result):
+        #TODO: make method private
         self._state_machine_instance.results_available(bioauth_flow=self, result=result)
         self._store_state()
 

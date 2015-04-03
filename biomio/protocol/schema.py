@@ -78,7 +78,7 @@ BIOMIO_protocol_json_schema = {
             "type": "object",
             "required": ["rType", "samples"],
             "properties": {
-                "rType": {"enum": ["video", "fp-scanner", "mic"]},
+                "rType": {"enum": ["fp-scanner", "mic", "face-photo", "palm-photo"]},
                 "samples": {"type": "number"}
             }
         },

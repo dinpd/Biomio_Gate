@@ -22,6 +22,8 @@ def loadSources(path):
             return source
     return dict()
 
+import logging
+logger = logging.getLogger(__name__)
 
 class ProbeAuthBackend:
     """
@@ -44,13 +46,38 @@ class ProbeAuthBackend:
     def __init__(self):
         pass
 
+    def _run_face_recognition(self, data):
+        result = False
+        for sample in data:
+            #TODO: run job instead of direct call
+            #TODO: create temporary folder and store picture
+            settings = dict()
+            settings['algoID'] = "001002"
+            settings['userID'] = "0000000000000"
+            settings['data'] = PICTURE_PATH_GOOD_3
+            settings['database'] = loadSources(FOLDER_DB_PATH_GOOD_3 + "/data" + settings['algoID'] + ".json")
+            sample_result = verification_job(**settings)
+            #TODO: proper handling of sample results
+            result = result or sample_result
+            #TODO: cleanup - remove temporary images
+        return result
+
     @tornado.gen.engine
     def probe(self, type, data, callback):
-        settings = dict()
-        settings['algoID'] = "001002"
-        settings['userID'] = "0000000000000"
-        settings['data'] = PICTURE_PATH_GOOD_3
-        settings['database'] = loadSources(FOLDER_DB_PATH_GOOD_3 + "/data" + settings['algoID'] + ".json")
-        verification_job(**settings)
-        callback(True)
+        logger.debug('Processing probe (%s)...' % type)
+
+        result = False
+        #TODO: use resourceitem types instead
+        # if type == "fp-scanner":
+        if type == "touchIdSamples":
+            for sample in data:
+                touch_id_result = (str(sample).lower() == 'true')
+                result = result or touch_id_result
+        # elif type == "face-photo":
+        elif type == "imageSamples":
+            result = self._run_face_recognition(data=data)
+        else:
+            logger.error('Unknown probe type %s' % type)
+
+        callback(result)
         pass
