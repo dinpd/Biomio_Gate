@@ -11,7 +11,7 @@ FOLDER_DB_PATH_GOOD_3 = "/home/alexchmykhalo/ios_screens/algorithms"
 from biomio.algorithms.algo_jobs import verification_job
 import json
 import os
-
+import binascii
 
 def loadSources(path):
     if len(path):
@@ -51,6 +51,13 @@ class ProbeAuthBackend:
         for sample in data:
             #TODO: run job instead of direct call
             #TODO: create temporary folder and store picture
+
+            # Create temporary file
+            file_path = 'photo.pgm'
+            photo_data = binascii.a2b_base64(str(sample))
+            with open(file_path, 'wb') as f:
+                f.write(photo_data)
+
             settings = dict()
             settings['algoID'] = "001002"
             settings['userID'] = "0000000000000"
@@ -59,7 +66,9 @@ class ProbeAuthBackend:
             sample_result = verification_job(**settings)
             #TODO: proper handling of sample results
             result = result or sample_result
-            #TODO: cleanup - remove temporary images
+
+            # Remove temporary file
+            os.remove(file_path)
         return result
 
     @tornado.gen.engine

@@ -64,10 +64,27 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
     def check_connected(self):
         return bool(self.ws_connection)
 
+
+class InitialProbeRestHandler(tornado.web.RequestHandler):
+    def get(self):
+        status_url = "https://{host}:{port}/learning_status".format(host=settings.host, port=settings.port)
+        self.write('<html><head><title>BIOMIO: Initial Probes</title></head><body>'
+                   'Please, use BIOMIO probe application to input initial probes.'
+                   'See status here:  <a href="{url}">{url}</a>'
+                   '</body></html>'.format(url=status_url))
+
+
+class InitialProbeStatusRestHandler(tornado.web.RequestHandler):
+    def get(self):
+        self.write('Processing...')
+
+
 class Application(tornado.web.Application):
     def __init__(self):
         handlers = [
-            (r'/websocket', WebSocketHandler)
+            (r'/websocket', WebSocketHandler),
+            (r'/learn', InitialProbeRestHandler),
+            (r'/learning_status', InitialProbeStatusRestHandler),
         ]
 
         tornado.web.Application.__init__(self, handlers)

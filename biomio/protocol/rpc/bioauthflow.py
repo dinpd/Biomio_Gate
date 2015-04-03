@@ -249,8 +249,8 @@ class BioauthFlow:
         return self._state_machine_instance.current == state
 
     def is_probe_owner(self):
-        return self.app_type.startswith('probe')
+        return self.app_type.lower().startswith('probe')
 
     def is_extension_owner(self):
-        return self.app_type.startswith('extension')
+        return self.app_type.lower().startswith('extension')
 

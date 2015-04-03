@@ -51,6 +51,7 @@ class BiomioTest:
         store_keywords = {ApplicationDataStore.APP_TYPE_ATTR: 'extension',
                           ApplicationDataStore.PUBLIC_KEY_ATTR: str(pub_key),
                           ApplicationDataStore.USER_ATTR: 1}
+
         if app_id is None:
             app_id = APP_TEST_ID
         ApplicationDataStore.instance().store_data(app_id, **store_keywords)
@@ -699,7 +700,7 @@ class TestRpcCalls(BiomioTest):
 
     @staticmethod
     @nottest
-    def probe_job(result=True):
+    def probe_job(sample, probe_type="touchIdSamples"):
         test_obj = BiomioTest()
         app_id = 'probe_id'
         test_obj.setup_test_for_for_new_id(app_id=app_id)
@@ -735,14 +736,8 @@ class TestRpcCalls(BiomioTest):
                 # TRY <-
                 if message and message.msg and str(message.msg.oid) == 'try':
                     # PROBE ->
-                    touchIdSample = None
-                    if result:
-                        touchIdSample = 'True'
-                    else:
-                        touchIdSample = 'False'
-
                     probe_msg = test_obj.create_next_message(oid='probe', probeId=0,
-                                                             probeData={"oid": "touchIdSamples", "samples": [touchIdSample]})
+                                                             probeData={"oid": probe_type, "samples": [sample]})
 
                     test_obj.send_message(websocket=test_obj.get_curr_connection(), message=probe_msg,
                                                  close_connection=False, wait_for_response=False)
@@ -839,7 +834,47 @@ class TestRpcCalls(BiomioTest):
             wait_for_response=True)
 
         # Separate thread with connection for
-        t = threading.Thread(target=TestRpcCalls.probe_job)
+        t = threading.Thread(target=TestRpcCalls.probe_job, kwargs={'sample': 'True'})
+        t.start()
+
+        time.sleep(1)
+
+        self.keep_connection_and_communicate(biomio_test=self, message_callback=on_message)
+        rpcResp = results['rpcResp']
+        ok_(rpcResp is not None, msg='No RPC response on auth.')
+        eq_(str(rpcResp.msg.rpcStatus), 'complete', msg='RPC authentication failed, but result is positive')
+
+    @nottest
+    def photo_data(self, photo_path):
+        from binascii import b2a_base64
+        data = None
+        with open(photo_path, "rb") as f:
+            data = b2a_base64(f.read())
+        return data
+
+    @attr('slow')
+    def test_rpc_with_photo(self):
+
+        #TODO: refactor test
+        results = {'rpcResp': None }
+
+        def on_message(message, close_connection_callback):
+            if str(message.msg.oid) == 'nop':
+                print "NOP"
+            elif str(message.msg.oid) == 'rpcResp':
+                if TestRpcCalls.is_rpc_response_status(message=message, status='complete') \
+                        or TestRpcCalls.is_rpc_response_status(message=message, status='fail'):
+                    results['rpcResp'] = message
+                    close_connection_callback()
+
+        message = self.create_next_message(oid='rpcReq', namespace='extension_plugin', call='test_func_with_auth',
+            data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+            wait_for_response=True)
+
+        # Separate thread with connection for
+        sample = self.photo_data(photo_path='/home/alexchmykhalo/ios_screens/algorithms/yaleB11_P00A+000E+00.pgm')
+        t = threading.Thread(target=TestRpcCalls.probe_job, kwargs={'sample': sample, 'probe_type': 'imageSamples'})
         t.start()
 
         time.sleep(1)
