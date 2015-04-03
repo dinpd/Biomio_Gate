@@ -71,20 +71,20 @@ class RQTest(tornado.web.RequestHandler):
         store_keywords = {ApplicationDataStore.APP_TYPE_ATTR: 'extension',
                           ApplicationDataStore.PUBLIC_KEY_ATTR: 'Test pub key',
                           ApplicationDataStore.USER_ATTR: 1}
-        ApplicationDataStore.instance().store_data('test_app_id3', **store_keywords)
+        ApplicationDataStore.instance().store_data('test_app_id4', **store_keywords)
         store_keywords = {
             EmailDataStore.PASS_PHRASE_ATTR: 'test_pass_phrase',
             EmailDataStore.PUBLIC_PGP_KEY_ATTR: 'test_pub_pgp_key',
             EmailDataStore.PRIVATE_PGP_KEY_ATTR: None,
             EmailDataStore.USER_ATTR: 1
         }
-        EmailDataStore.instance().store_data('test4@mail.com', **store_keywords)
+        EmailDataStore.instance().store_data('test5@mail.com', **store_keywords)
         BaseDataStore.instance().delete_custom_lru_redis_data(UserDataStore.get_data_key(1))
-        BaseDataStore.instance().delete_custom_lru_redis_data(ApplicationDataStore.get_data_key('test_app_id3'))
-        BaseDataStore.instance().delete_custom_lru_redis_data(EmailDataStore.get_data_key('test4@mail.com'))
-        ApplicationDataStore.instance().get_data(app_id='test_app_id3', callback=test_get_result)
-        EmailDataStore.instance().get_data(email='test4@mail.com', callback=test_get_result)
-        EmailDataStore.instance().select_data_by_ids(['test4@mail.com', 'test3@mail.com'], test_get_result)
+        BaseDataStore.instance().delete_custom_lru_redis_data(ApplicationDataStore.get_data_key('test_app_id4'))
+        BaseDataStore.instance().delete_custom_lru_redis_data(EmailDataStore.get_data_key('test5@mail.com'))
+        ApplicationDataStore.instance().get_data(app_id='test_app_id4', callback=test_get_result)
+        EmailDataStore.instance().get_data(email='test5@mail.com', callback=test_get_result)
+        EmailDataStore.instance().select_data_by_ids(['test5@mail.com', 'test4@mail.com'], test_get_result)
 
 
 def test_get_result(result=None):
