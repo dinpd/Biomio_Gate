@@ -1,9 +1,13 @@
 import abc
+import ast
+import logging
 
 from biomio.constants import REDIS_JOB_RESULT_KEY
 from biomio.protocol.storage.redis_results_listener import RedisResultsListener
 from biomio.protocol.storage.redis_storage import RedisStorage
 from biomio.protocol.data_stores.storage_jobs_processor import run_storage_job
+
+logger = logging.getLogger(__name__)
 
 
 class BaseDataStore():
@@ -107,6 +111,11 @@ class BaseDataStore():
         """
         result = self._lru_redis.get_data(key)
         if result is not None:
+            try:
+                result = ast.literal_eval(result)
+            except ValueError as e:
+                logger.exception(e)
+                result = {}
             callback(result)
         else:
             callback_code = RedisResultsListener.instance().subscribe_callback(callback)

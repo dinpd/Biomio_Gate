@@ -3,7 +3,6 @@ import tornado.gen
 import inspect
 import tornado.gen
 import greenado
-from biomio.protocol.data_stores.application_data_store import ApplicationDataStore
 
 from biomio.protocol.rpc import bioauthflow
 
@@ -154,9 +153,8 @@ def get_store_data(data_store_instance, object_id, key=None):
     value = None
     try:
         result = yield tornado.gen.Task(data_store_instance.get_data, str(object_id))
-
         if key is not None and result is not None:
-            value = result.get(key, None)
+            value = result.get(key)
         else:
             value = result
 

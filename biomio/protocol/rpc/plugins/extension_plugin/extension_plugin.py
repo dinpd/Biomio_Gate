@@ -24,7 +24,7 @@ class ExtensionPlugin(IPlugin):
         email = self.parse_email_data(email)
         email_store_instance = EmailDataStore.instance()
         email_data = get_store_data(email_store_instance, object_id=email)
-        if email_data is None:
+        if email_data is None or len(email_data) == 0:
             raise Exception('Sorry but your email is not activated in your BioMio account.')
         result = {'pass_phrase': email_data.get(EmailDataStore.PASS_PHRASE_ATTR)}
         if email_data.get(EmailDataStore.PRIVATE_PGP_KEY_ATTR) is not None:

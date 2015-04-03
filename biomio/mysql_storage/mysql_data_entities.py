@@ -2,6 +2,7 @@
 import datetime
 import pony.orm as pny
 import abc
+from pony.orm.ormtypes import LongStr
 from biomio.constants import REDIS_USER_KEY, REDIS_EMAILS_KEY, REDIS_APPLICATION_KEY, MYSQL_APPS_TABLE_NAME, \
     MYSQL_EMAILS_TABLE_NAME, MYSQL_USERS_TABLE_NAME
 from biomio.utils.biomio_decorators import inherit_docstring_from
@@ -90,8 +91,8 @@ class EmailsData(BaseEntityClass, database.Entity):
     _table_ = MYSQL_EMAILS_TABLE_NAME
     email = pny.PrimaryKey(str, auto=False)
     pass_phrase = pny.Required(str)
-    public_pgp_key = pny.Required(str)
-    private_pgp_key = pny.Optional(str, nullable=True)
+    public_pgp_key = pny.Required(LongStr, lazy=False)
+    private_pgp_key = pny.Optional(LongStr, lazy=False, nullable=True)
     user = pny.Required(UserInformation)
 
     @inherit_docstring_from(BaseEntityClass)
@@ -122,7 +123,7 @@ class Application(BaseEntityClass, database.Entity):
     _table_ = MYSQL_APPS_TABLE_NAME
     app_id = pny.PrimaryKey(str, auto=False)
     app_type = pny.Required(str, sql_type="enum('extension', 'probe')")
-    public_key = pny.Required(str)
+    public_key = pny.Required(LongStr)
     users = pny.Set(UserInformation)
 
     @inherit_docstring_from(BaseEntityClass)
