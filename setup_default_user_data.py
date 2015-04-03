@@ -1,3 +1,5 @@
+from biomio.protocol.data_stores.base_data_store import BaseDataStore
+
 __author__ = 'alexchmykhalo'
 
 import os
@@ -87,12 +89,22 @@ def main():
     '4HDeKR4r6M6mGB+SrwIDAQAB\n'
     '-----END PUBLIC KEY-----'
 
+    mails = ['alex.chmykhalo@vakoms.com.ua', 'alex.chmykhalo@vakoms.com.ua',
+             'andriy.lobashchuk@vakoms.com', 'andriy.lobashchuk@vakoms.com.ua',
+             'boris.itkis@gmail.com', 'ditkis@gmail.com']
+
+    BaseDataStore.instance().delete_custom_lru_redis_data(ApplicationDataStore.get_data_key(extension_app_id))
+    BaseDataStore.instance().delete_custom_lru_redis_data(ApplicationDataStore.get_data_key(probe_app_id))
+    for mail in mails:
+        BaseDataStore.instance().delete_custom_lru_redis_data(EmailDataStore.get_data_key(mail))
+
     UserDataStore.instance().store_data(1)
     store_keywords = {ApplicationDataStore.APP_TYPE_ATTR: 'extension',
                       ApplicationDataStore.PUBLIC_KEY_ATTR: str(extension_pub_key),
                       ApplicationDataStore.USER_ATTR: 1}
 
     ApplicationDataStore.instance().store_data(extension_app_id, **store_keywords)
+    BaseDataStore.instance().delete_custom_lru_redis_data(ApplicationDataStore.get_data_key(extension_app_id))
 
     # UserDataStore.instance().store_data(1)
     store_keywords = {ApplicationDataStore.APP_TYPE_ATTR: 'probe',
@@ -100,10 +112,8 @@ def main():
                       ApplicationDataStore.USER_ATTR: 1}
 
     ApplicationDataStore.instance().store_data(probe_app_id, **store_keywords)
+    BaseDataStore.instance().delete_custom_lru_redis_data(ApplicationDataStore.get_data_key(probe_app_id))
 
-    mails = ['alex.chmykhalo@vakoms.com.ua', 'alex.chmykhalo@vakoms.com.ua',
-             'andriy.lobashchuk@vakoms.com', 'andriy.lobashchuk@vakoms.com.ua',
-             'boris.itkis@gmail.com', 'ditkis@gmail.com']
     for mail in mails:
         public, private, pass_phrase = generate_pgp_key_pair(mail)
         store_keywords = {
@@ -113,6 +123,6 @@ def main():
             EmailDataStore.USER_ATTR: 1
         }
         EmailDataStore.instance().store_data(mail, **store_keywords)
-
+        BaseDataStore.instance().delete_custom_lru_redis_data(EmailDataStore.get_data_key(mail))
 if __name__=='__main__':
     main()
