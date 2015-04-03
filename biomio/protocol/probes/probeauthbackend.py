@@ -1,3 +1,6 @@
+from biomio.algorithms.algo_job_processor import run_algo_job
+from biomio.protocol.storage.probe_results_listener import ProbeResultsListener
+
 __author__ = 'alexchmykhalo'
 
 import tornado.gen
@@ -12,6 +15,7 @@ from biomio.algorithms.algo_jobs import verification_job
 import json
 import os
 import binascii
+
 
 def loadSources(path):
     if len(path):
@@ -46,33 +50,13 @@ class ProbeAuthBackend:
     def __init__(self):
         pass
 
-    def _run_face_recognition(self, data):
-        result = False
-        for sample in data:
-            #TODO: run job instead of direct call
-            #TODO: create temporary folder and store picture
-
-            # Create temporary file
-            file_path = 'photo.pgm'
-            photo_data = binascii.a2b_base64(str(sample))
-            with open(file_path, 'wb') as f:
-                f.write(photo_data)
-
-            settings = dict()
-            settings['algoID'] = "001002"
-            settings['userID'] = "0000000000000"
-            settings['data'] = PICTURE_PATH_GOOD_3
-            settings['database'] = loadSources(FOLDER_DB_PATH_GOOD_3 + "/data" + settings['algoID'] + ".json")
-            sample_result = verification_job(**settings)
-            #TODO: proper handling of sample results
-            result = result or sample_result
-
-            # Remove temporary file
-            os.remove(file_path)
-        return result
+    def _run_face_recognition(self, data, callback, fingerprint):
+        callback_code = ProbeResultsListener.instance().subscribe_callback(callback=callback)
+        fingerprint = fingerprint.replace(':', '')
+        run_algo_job(verification_job, callback_code=callback_code, data=data, fingerprint=fingerprint)
 
     @tornado.gen.engine
-    def probe(self, type, data, callback):
+    def probe(self, type, data, callback, fingerprint=None):
         logger.debug('Processing probe (%s)...' % type)
 
         result = False
@@ -82,11 +66,10 @@ class ProbeAuthBackend:
             for sample in data:
                 touch_id_result = (str(sample).lower() == 'true')
                 result = result or touch_id_result
+            callback(result)
         # elif type == "face-photo":
         elif type == "imageSamples":
-            result = self._run_face_recognition(data=data)
+            self._run_face_recognition(data=data, callback=callback, fingerprint=fingerprint)
         else:
             logger.error('Unknown probe type %s' % type)
-
-        callback(result)
         pass
