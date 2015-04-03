@@ -98,20 +98,19 @@ def main():
     for mail in mails:
         BaseDataStore.instance().delete_custom_lru_redis_data(EmailDataStore.get_data_key(mail))
 
-    UserDataStore.instance().store_data(1)
+    UserDataStore.instance().store_data(user_id=1)
     store_keywords = {ApplicationDataStore.APP_TYPE_ATTR: 'extension',
                       ApplicationDataStore.PUBLIC_KEY_ATTR: str(extension_pub_key),
                       ApplicationDataStore.USER_ATTR: 1}
 
-    ApplicationDataStore.instance().store_data(extension_app_id, **store_keywords)
+    ApplicationDataStore.instance().store_data(app_id=extension_app_id, **store_keywords)
     BaseDataStore.instance().delete_custom_lru_redis_data(ApplicationDataStore.get_data_key(extension_app_id))
 
-    # UserDataStore.instance().store_data(1)
     store_keywords = {ApplicationDataStore.APP_TYPE_ATTR: 'probe',
                       ApplicationDataStore.PUBLIC_KEY_ATTR: str(probe_pub_key),
                       ApplicationDataStore.USER_ATTR: 1}
 
-    ApplicationDataStore.instance().store_data(probe_app_id, **store_keywords)
+    ApplicationDataStore.instance().store_data(app_id=probe_app_id, **store_keywords)
     BaseDataStore.instance().delete_custom_lru_redis_data(ApplicationDataStore.get_data_key(probe_app_id))
 
     for mail in mails:
@@ -122,7 +121,7 @@ def main():
             EmailDataStore.PRIVATE_PGP_KEY_ATTR: private,
             EmailDataStore.USER_ATTR: 1
         }
-        EmailDataStore.instance().store_data(mail, **store_keywords)
+        EmailDataStore.instance().store_data(email=mail, **store_keywords)
         BaseDataStore.instance().delete_custom_lru_redis_data(EmailDataStore.get_data_key(mail))
 if __name__=='__main__':
     main()
