@@ -254,3 +254,7 @@ class BioauthFlow:
     def is_extension_owner(self):
         return self.app_type.lower().startswith('extension')
 
+    @classmethod
+    def start_learning(cls):
+        print 'start learning process...'
+

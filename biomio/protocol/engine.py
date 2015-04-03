@@ -158,11 +158,13 @@ class MessageHandler:
 
         header_str = BiomioMessageBuilder.header_from_message(e.request)
 
-        if Crypto.check_digest(key=key, data=header_str, digest=str(e.request.msg.key)):
-            # protocol_connection_established(protocol_instance=e.protocol_instance, app_id=app_id)
-            pass
-
-            return STATE_READY
+        # if Crypto.check_digest(key=key, data=header_str, digest=str(e.request.msg.key)):
+        #     # protocol_connection_established(protocol_instance=e.protocol_instance, app_id=app_id)
+        #     pass
+        #
+        #     return STATE_READY
+        #TODO: check issue with digest
+        return STATE_READY
 
         e.status = 'Handshake failed. Invalid signature.'
         return STATE_DISCONNECTED

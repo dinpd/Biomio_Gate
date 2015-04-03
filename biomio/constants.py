@@ -19,6 +19,7 @@ REDIS_EMAILS_KEY = 'email:%s'
 REDIS_SESSION_KEY = 'token:%s'
 REDIS_JOB_RESULT_KEY = 'job_result:%s:%s'
 REDIS_DO_NOT_STORE_RESULT_KEY = 'do_not_store:%s'
+REDIS_PROBE_RESULT_KEY = 'probe_result:%s'
 
 # Other constants
 REDIS_CONFIG_MAX_MEMORY_OPTION_KEY = 'maxmemory'
