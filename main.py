@@ -10,6 +10,7 @@ import traceback
 from biomio.protocol.settings import settings
 from biomio.protocol.engine import BiomioProtocol
 from biomio.protocol.connectionhandler import ConnectionTimeoutHandler
+from biomio.protocol.rpc.bioauthflow import BioauthFlow
 
 import logging
 logger = logging.getLogger(__name__)
@@ -67,7 +68,8 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
 class InitialProbeRestHandler(tornado.web.RequestHandler):
     def get(self):
-        status_url = "https://{host}:{port}/learning_status".format(host=settings.host, port=settings.port)
+        status_url = "https://{host}:{port}/training_status".format(host=settings.host, port=settings.port)
+        BioauthFlow.start_training(app_id='test_app_id')
         self.write('<html><head><title>BIOMIO: Initial Probes</title></head><body>'
                    'Please, use BIOMIO probe application to input initial probes.'
                    'See status here:  <a href="{url}">{url}</a>'
@@ -83,10 +85,9 @@ class Application(tornado.web.Application):
     def __init__(self):
         handlers = [
             (r'/websocket', WebSocketHandler),
-            (r'/learn', InitialProbeRestHandler),
-            (r'/learning_status', InitialProbeStatusRestHandler),
+            (r'/training', InitialProbeRestHandler),
+            (r'/training_status', InitialProbeStatusRestHandler),
         ]
-
         tornado.web.Application.__init__(self, handlers)
 
 def run_tornado():

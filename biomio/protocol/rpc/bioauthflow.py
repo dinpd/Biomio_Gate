@@ -15,7 +15,9 @@ STATE_AUTH_SUCCEED = 'auth_succeed'
 STATE_AUTH_FAILED = 'auth_failed'
 STATE_AUTH_TIMEOUT = 'auth_timeout'
 STATE_AUTH_ERROR = 'auth_error'
-
+STATE_AUTH_TRAINING_STARTED = 'auth_training'
+STATE_AUTH_TRAINING_DONE = 'auth_training_done'
+STATE_AUTH_TRAINING_FAILED = 'auth_training_failed'
 
 # Event callbacks
 def on_reset(e):
@@ -78,6 +80,13 @@ def on_auth_wait(e):
     if flow.is_probe_owner():
         flow.auth_wait_callback()
 
+def on_auth_training(e):
+    print 'auth training'
+    flow = e.bioauth_flow
+    if flow.is_probe_owner():
+        flow.auth_wait_callback()
+
+
 
 def on_auth_finished(e):
     flow = e.bioauth_flow
@@ -123,9 +132,9 @@ auth_states = {
         {
             'name': 'state_changed',
             'src': [STATE_AUTH_READY, STATE_AUTH_WAIT, STATE_AUTH_STARTED,
-                    STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR],
+                    STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR, STATE_AUTH_TRAINING_STARTED],
             'dst': [STATE_AUTH_READY, STATE_AUTH_WAIT, STATE_AUTH_STARTED, STATE_AUTH_SUCCEED,
-                    STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR],
+                    STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR, STATE_AUTH_TRAINING_STARTED, STATE_AUTH_TRAINING_DONE],
             'decision': on_state_changed
         }
     ],
@@ -227,13 +236,16 @@ class BioauthFlow:
 
     @tornado.gen.engine
     def set_next_auth_result(self, appId, type, data):
-        if not self._resources_list:
-            logger.warning(msg='resource item list for probe is empty')
+        if self._state_machine_instance.current == STATE_AUTH_TRAINING_STARTED:
+            pass
+        else:
+            if not self._resources_list:
+                logger.warning(msg='resource item list for probe is empty')
 
-        result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, type, data)
-        logger.debug(msg='SET NEXT AUTH RESULT: %s' % str(result))
-        #TODO: count probes and set appropriate result
-        self.set_auth_results(result=result)
+            result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, type, data)
+            logger.debug(msg='SET NEXT AUTH RESULT: %s' % str(result))
+            #TODO: count probes and set appropriate result
+            self.set_auth_results(result=result)
         self._store_state()
 
     def set_auth_results(self, result):
@@ -255,6 +267,8 @@ class BioauthFlow:
         return self.app_type.lower().startswith('extension')
 
     @classmethod
-    def start_learning(cls):
+    def start_training(cls, app_id):
+        data = {_PROBESTORE_STATE_KEY: STATE_AUTH_TRAINING_STARTED}
+        ProbeResultsStore.instance().store_probe_data(user_id=app_id, ttl=settings.bioauth_timeout, **data)
         print 'start learning process...'
 

@@ -46,10 +46,9 @@ class Crypto:
     def get_public_rsa_fingerprint(pub_key):
         """
         Returns the fingerprint of the public portion of an RSA key as a
-        47-character string (32 characters separated every 2 characters by a ':').
+        32-character string .
         The fingerprint is computed using the MD5 (hex) digest of the DER-encoded
         RSA public key.
         """
         md5digest = hashlib.md5(pub_key).hexdigest()
-        fingerprint = Crypto._insert_char_every_n_chars(md5digest, ':', 2)
-        return fingerprint
+        return md5digest
