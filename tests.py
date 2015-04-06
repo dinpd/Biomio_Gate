@@ -608,8 +608,8 @@ class TestRpcCalls(BiomioTest):
             print images_path + image
             samples.append(TestRpcCalls.photo_data(images_path + image))
 
-        t = threading.Thread(target=TestRpcCalls.probe_job, kwargs={'samples': samples, 'probe_type': 'imageSamples'})
-        t.start()
+        # t = threading.Thread(target=TestRpcCalls.probe_job, kwargs={'samples': samples, 'probe_type': 'imageSamples'})
+        # t.start()
         # t.join()
         ###############
 

@@ -461,7 +461,8 @@ class BiomioProtocol:
 
         # If message is valid, perform necessary actions
         if input_msg and input_msg.msg and input_msg.header:
-            logger.debug('RECEIVED MESSAGE STRING: "%s" ' % msg_string)
+            #TODO: limit putput
+            # logger.debug('RECEIVED MESSAGE STRING: "%s" ' % msg_string)
 
             # Refresh session if necessary
             if self._session and hasattr(input_msg.header,
