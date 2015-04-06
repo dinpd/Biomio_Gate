@@ -32,6 +32,11 @@ class FixedOrderPolicy(IPolicy):
 
         return resource_item_list
 
+    def get_resources_list_for_training(self, available_resources):
+        resource_item_list = []
+        resource_item_list.append(create_resource_item('face-photo', 5))
+        return resource_item_list
+
     def _set_config(self, config_string):
         """
         Reimplemented from IPolicy._set_config().

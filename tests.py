@@ -484,12 +484,17 @@ class TestRpcCalls(BiomioTest):
 
     @staticmethod
     @nottest
-    def probe_job(sample, probe_type="touchIdSamples"):
+    def probe_job(samples, probe_type="touchIdSamples"):
         def on_message(message, close_connection_callback):
             if str(message.msg.oid) == 'nop':
                 print "NOP"
             elif str(message.msg.oid) == 'try':
                 print "TRY"
+                probe_msg = test_obj.create_next_message(oid='probe', probeId=0,
+                                         probeData={"oid": probe_type, "samples": sample})
+
+                test_obj.send_message(websocket=test_obj.get_curr_connection(), message=probe_msg,
+                                             close_connection=False, wait_for_response=False)
 
         test_obj = BiomioTest()
         test_obj.setup_test_with_handshake(app_id=probe_app_id, app_type=probe_app_type, key=probe_key)
@@ -572,7 +577,10 @@ class TestRpcCalls(BiomioTest):
         #     wait_for_response=True)
 
         # Separate thread with connection for
-        t = threading.Thread(target=TestRpcCalls.probe_job, kwargs={'sample': 'True'})
+        # samples = ['True']
+        samples = ['True']
+
+        t = threading.Thread(target=TestRpcCalls.probe_job, kwargs={'samples': samples})
         t.start()
         t.join()
 

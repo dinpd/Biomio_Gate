@@ -12,7 +12,7 @@ from biomio.protocol.crypt import Crypto
 from biomio.protocol.rpc.rpchandler import RpcHandler
 from biomio.protocol.data_stores.application_data_store import ApplicationDataStore
 from biomio.protocol.probes.policymanager import PolicyManager
-from biomio.protocol.rpc.bioauthflow import BioauthFlow
+from biomio.protocol.rpc.bioauthflow import BioauthFlow, STATE_AUTH_TRAINING_STARTED
 
 import tornado.gen
 import greenado
@@ -266,7 +266,8 @@ def ready(e):
         app_type = str(e.request.header.appType)
         app_id = str(e.request.header.appId)
         auth_wait_callback = e.protocol_instance.try_probe
-        e.protocol_instance.bioauth_flow = BioauthFlow(app_type=app_type, app_id=app_id, auth_wait_callback=auth_wait_callback, auto_initialize=False)
+        e.protocol_instance.bioauth_flow = BioauthFlow(app_type=app_type, app_id=app_id, auth_wait_callback=auth_wait_callback,
+                                                       auth_training_callback=auth_wait_callback, auto_initialize=False)
 
         if e.protocol_instance.bioauth_flow.is_probe_owner():
             e.protocol_instance.policy = PolicyManager.get_policy_for_app(app_id=app_id)
@@ -276,16 +277,22 @@ def ready(e):
 
 def probe_trying(e):
     if not e.src == STATE_PROBE_TRYING:
-        resources = e.protocol_instance.policy.get_resources_list_for_try(available_resources=e.protocol_instance.bioauth_flow)
-        e.protocol_instance.bioauth_flow.auth_started(resource_list=e.protocol_instance.available_resources)
+        flow = e.protocol_instance.bioauth_flow
+        resources = None
+        if flow.is_current_state(STATE_AUTH_TRAINING_STARTED):
+            resources = e.protocol_instance.policy.get_resources_list_for_training(available_resources=e.protocol_instance.bioauth_flow)
+        else:
+            resources = e.protocol_instance.policy.get_resources_list_for_try(available_resources=e.protocol_instance.bioauth_flow)
+            flow.auth_started(resource_list=e.protocol_instance.available_resources)
 
-        # Send "try" message to probe
-        message = e.protocol_instance.create_next_message(
-            request_seq=e.request.header.seq,
-            oid='try',
-            resource=resources
-        )
-        e.protocol_instance.send_message(responce=message)
+        if resources:
+            # Send "try" message to probe
+            message = e.protocol_instance.create_next_message(
+                request_seq=e.request.header.seq,
+                oid='try',
+                resource=resources
+            )
+            e.protocol_instance.send_message(responce=message)
 
 
 def getting_probe(e):

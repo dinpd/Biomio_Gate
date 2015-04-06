@@ -12,6 +12,9 @@ class IPolicy:
         """
         raise NotImplementedError
 
+    def get_resources_list_for_training(self, available_resources):
+        raise NotImplementedError
+
     def _set_config(self, config_string):
         """
         Configures policy based on predefined config.

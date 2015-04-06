@@ -57,17 +57,24 @@ def on_probe_available(e):
 def on_got_results(e):
     return STATE_AUTH_READY
 
+def on_training_results_available(e):
+    print 'training results available!'
+    return STATE_AUTH_TRAINING_DONE
 
 def on_state_changed(e):
     flow = e.bioauth_flow
     next_state = ProbeResultsStore.instance().get_probe_data(user_id=flow.app_id, key=_PROBESTORE_STATE_KEY)
+
     if next_state is None:
-        if ProbeResultsStore.instance().has_probe_results(user_id=flow.app_id):
-            next_state = STATE_AUTH_ERROR
-            logger.debug('BIOMETRIC AUTH [%s, %s]: AUTH INTERNAL ERROR - state not set')
+        if e.fsm.current == STATE_AUTH_STARTED or e.fsm.current == STATE_AUTH_WAIT:
+            if ProbeResultsStore.instance().has_probe_results(user_id=flow.app_id):
+                next_state = STATE_AUTH_ERROR
+                logger.debug('BIOMETRIC AUTH [%s, %s]: AUTH INTERNAL ERROR - state not set')
+            else:
+                next_state = STATE_AUTH_TIMEOUT
+                logger.debug('BIOMETRIC AUTH [%s, %s]: AUTH TIMEOUT')
         else:
-            next_state = STATE_AUTH_TIMEOUT
-            logger.debug('BIOMETRIC AUTH [%s, %s]: AUTH TIMEOUT')
+            next_state = STATE_AUTH_READY
 
     logger.debug('BIOMETRIC AUTH [%s, %s]: STATE CHANGED - %s' % (flow.app_type, flow.app_id, next_state))
     return next_state
@@ -84,8 +91,7 @@ def on_auth_training(e):
     print 'auth training'
     flow = e.bioauth_flow
     if flow.is_probe_owner():
-        flow.auth_wait_callback()
-
+        flow.auth_training_callback()
 
 
 def on_auth_finished(e):
@@ -101,7 +107,8 @@ auth_states = {
         {
             'name': 'reset',
             'src': [STATE_AUTH_READY, STATE_AUTH_WAIT, STATE_AUTH_STARTED,
-                    STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR],
+                    STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR,
+                    STATE_AUTH_TRAINING_STARTED, STATE_AUTH_TRAINING_DONE, STATE_AUTH_TRAINING_FAILED],
             'dst': [STATE_AUTH_READY],
             'decision': on_reset
         },
@@ -130,6 +137,12 @@ auth_states = {
             'decision': on_got_results
         },
         {
+            'name': 'training_results_available',
+            'src': [STATE_AUTH_TRAINING_STARTED],
+            'dst': [STATE_AUTH_TRAINING_DONE, STATE_AUTH_TRAINING_FAILED],
+            'decision': on_training_results_available
+        },
+        {
             'name': 'state_changed',
             'src': [STATE_AUTH_READY, STATE_AUTH_WAIT, STATE_AUTH_STARTED,
                     STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR, STATE_AUTH_TRAINING_STARTED],
@@ -143,7 +156,8 @@ auth_states = {
         'onauth_succeed': on_auth_finished,
         'onauth_failed': on_auth_finished,
         'onauth_timeout': on_auth_finished,
-        'onauth_error': on_auth_finished
+        'onauth_error': on_auth_finished,
+        'onauth_training': on_auth_training
     }
 }
 
@@ -157,11 +171,12 @@ def _store_state(e):
 
 
 class BioauthFlow:
-    def __init__(self, app_type, app_id, auth_wait_callback=None, auto_initialize=True):
+    def __init__(self, app_type, app_id, auth_wait_callback=None, auth_training_callback=None, auto_initialize=True):
         self.app_type = app_type
         self.app_id = app_id
         self.rpc_callback = None
         self.auth_wait_callback = auth_wait_callback
+        self.auth_training_callback = auth_training_callback
         self.status = None
 
         self._state_machine_instance = Fysom(auth_states)
@@ -196,7 +211,7 @@ class BioauthFlow:
 
         def _state_changed(*args, **kwargs):
             flow = self
-            if not flow is None:
+            if flow is not None:
                 flow._state_machine_instance.state_changed(bioauth_flow=self)
 
         return _state_changed
@@ -208,7 +223,7 @@ class BioauthFlow:
         logger.debug("Restoring state for bioauth flow: %s, %s" % (self.app_type, self.app_id))
         try:
             self._change_state_callback()
-            logger.debug("Current state: %s" % self._state_machine_instance.current)
+            logger.debug("State to restore: %s" % self._state_machine_instance.current)
         except Exception as e:
             logger.exception("Failed to restore state")
 
@@ -236,16 +251,20 @@ class BioauthFlow:
 
     @tornado.gen.engine
     def set_next_auth_result(self, appId, type, data):
-        if self._state_machine_instance.current == STATE_AUTH_TRAINING_STARTED:
-            pass
-        else:
-            if not self._resources_list:
-                logger.warning(msg='resource item list for probe is empty')
+        if not self._resources_list:
+            logger.warning(msg='resource item list for probe is empty')
+        result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, type, data, self.app_id)
+        logger.debug(msg='SET NEXT AUTH RESULT: %s' % str(result))
+        #TODO: count probes and set appropriate result
+        self.set_auth_results(result=result)
+        self._store_state()
 
+    @tornado.gen.engine
+    def set_auth_training_results(self, appId, type, data):
+        if self._state_machine_instance.current == STATE_AUTH_TRAINING_STARTED:
             result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, type, data)
             logger.debug(msg='SET NEXT AUTH RESULT: %s' % str(result))
-            #TODO: count probes and set appropriate result
-            self.set_auth_results(result=result)
+        self._state_machine_instance.training_results_available()
         self._store_state()
 
     def set_auth_results(self, result):
