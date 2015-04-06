@@ -51,7 +51,7 @@ class ProbeAuthBackend:
         pass
 
     @tornado.gen.engine
-    def probe(self, type, data, callback, fingerprint=None, training=False):
+    def probe(self, type, data, fingerprint=None, training=False, callback=None):
         logger.debug('Processing probe (%s)...' % type)
 
         result = False

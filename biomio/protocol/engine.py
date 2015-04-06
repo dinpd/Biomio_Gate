@@ -189,14 +189,21 @@ class MessageHandler:
     @verify_header
     def on_getting_probe(e):
         # TODO: remove unused comments
-        user_id = str(e.request.header.appId)
-        ttl = settings.bioauth_timeout
+        # user_id = str(e.request.header.appId)
+        # ttl = settings.bioauth_timeout
         # result = False
         # for sample in e.request.msg.probeData.samples:
         #     if str(sample).lower() == 'true':
         #         result = True
-        e.protocol_instance.bioauth_flow.set_next_auth_result(appId=int(e.request.msg.probeId), type=str(e.request.msg.probeData.oid), data=e.request.msg.probeData.samples)
-        # e.protocol_instance.bioauth_flow.set_auth_results(result=result)
+        auth_data = []
+        for sample in e.request.msg.probeData.samples:
+            auth_data.append(str(sample))
+
+        flow = e.protocol_instance.bioauth_flow
+        if flow.is_current_state(state=STATE_AUTH_TRAINING_STARTED):
+            flow.set_auth_training_results(appId=int(e.request.msg.probeId), type=str(e.request.msg.probeData.oid), data=auth_data)
+        else:
+            flow.set_next_auth_result(appId=int(e.request.msg.probeId), type=str(e.request.msg.probeData.oid), data=auth_data)
         return STATE_READY
 
     @staticmethod

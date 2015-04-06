@@ -492,7 +492,7 @@ class TestRpcCalls(BiomioTest):
             elif str(message.msg.oid) == 'try':
                 print "TRY"
                 probe_msg = test_obj.create_next_message(oid='probe', probeId=0,
-                                         probeData={"oid": probe_type, "samples": sample})
+                                         probeData={"oid": probe_type, "samples": samples})
 
                 test_obj.send_message(websocket=test_obj.get_curr_connection(), message=probe_msg,
                                              close_connection=False, wait_for_response=False)
@@ -588,9 +588,20 @@ class TestRpcCalls(BiomioTest):
 
         # Separate thread with connection for
         # samples = ['True']
-        samples = ['True']
+        samples = []
 
-        t = threading.Thread(target=TestRpcCalls.probe_job, kwargs={'samples': samples})
+        # images_path = '/home/alexchmykhalo/ios_screens/algorithms_learning/'
+        for image in [
+            'yaleB11_P00A+000E+00.pgm',
+            # 'yaleB11_P00A+000E+20.pgm', 'yaleB11_P00A+000E+45.pgm',
+            # 'yaleB11_P00A+000E-20.pgm', 'yaleB11_P00A+000E-35.pgm', 'yaleB11_P00A+005E+10.pgm',
+            # 'yaleB11_P00A+005E-10.pgm', 'yaleB11_P00A+010E-20.pgm', 'yaleB11_P00A+015E+20.pgm',
+            # 'yaleB11_P00A+020E+10.pgm'
+        ]:
+            print images_path + image
+            samples.append(TestRpcCalls.photo_data(images_path + image))
+
+        t = threading.Thread(target=TestRpcCalls.probe_job, kwargs={'samples': samples, 'probe_type': 'imageSamples'})
         t.start()
         t.join()
 

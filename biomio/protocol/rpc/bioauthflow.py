@@ -253,7 +253,7 @@ class BioauthFlow:
     def set_next_auth_result(self, appId, type, data):
         if not self._resources_list:
             logger.warning(msg='resource item list for probe is empty')
-        result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, type, data, self.app_id)
+        result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, type, data, self.app_id, False)
         logger.debug(msg='SET NEXT AUTH RESULT: %s' % str(result))
         #TODO: count probes and set appropriate result
         self.set_auth_results(result=result)
@@ -262,7 +262,7 @@ class BioauthFlow:
     @tornado.gen.engine
     def set_auth_training_results(self, appId, type, data):
         if self._state_machine_instance.current == STATE_AUTH_TRAINING_STARTED:
-            result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, type, data)
+            result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, type, data, self.app_id, True)
             logger.debug(msg='SET NEXT AUTH RESULT: %s' % str(result))
         self._state_machine_instance.training_results_available()
         self._store_state()
