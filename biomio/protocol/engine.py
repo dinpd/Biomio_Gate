@@ -287,9 +287,9 @@ def probe_trying(e):
         flow = e.protocol_instance.bioauth_flow
         resources = None
         if flow.is_current_state(STATE_AUTH_TRAINING_STARTED):
-            resources = e.protocol_instance.policy.get_resources_list_for_training(available_resources=e.protocol_instance.bioauth_flow)
+            resources = e.protocol_instance.policy.get_resources_list_for_training(available_resources=e.protocol_instance.available_resources)
         else:
-            resources = e.protocol_instance.policy.get_resources_list_for_try(available_resources=e.protocol_instance.bioauth_flow)
+            resources = e.protocol_instance.policy.get_resources_list_for_try(available_resources=e.protocol_instance.available_resources)
             flow.auth_started(resource_list=e.protocol_instance.available_resources)
 
         if resources:

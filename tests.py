@@ -488,14 +488,15 @@ class TestRpcCalls(BiomioTest):
     def probe_job(samples, probe_type="touchIdSamples"):
         def on_message(message, close_connection_callback):
             if str(message.msg.oid) == 'nop':
-                print "NOP"
+                print "probe: NOP"
             elif str(message.msg.oid) == 'try':
-                print "TRY"
+                print "probe: TRY"
                 probe_msg = test_obj.create_next_message(oid='probe', probeId=0,
                                          probeData={"oid": probe_type, "samples": samples})
 
                 test_obj.send_message(websocket=test_obj.get_curr_connection(), message=probe_msg,
                                              close_connection=False, wait_for_response=False)
+                close_connection_callback()
 
         test_obj = BiomioTest()
         test_obj.setup_test_with_handshake(app_id=probe_app_id, app_type=probe_app_type, key=probe_key)
@@ -570,24 +571,30 @@ class TestRpcCalls(BiomioTest):
     @attr('slow')
     def test_rpc_with_auth(self):
 
-        # results = {'rpcResp': None }
-        #
-        # def on_message(message, close_connection_callback):
-        #     if str(message.msg.oid) == 'nop':
-        #         print "NOP"
-        #     elif str(message.msg.oid) == 'rpcResp':
-        #         if TestRpcCalls.is_rpc_response_status(message=message, status='complete') \
-        #                 or TestRpcCalls.is_rpc_response_status(message=message, status='fail'):
-        #             results['rpcResp'] = message
-        #             close_connection_callback()
-        #
-        # message = self.create_next_message(oid='rpcReq', namespace='extension_plugin', call='test_func_with_auth',
-        #     data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
-        # self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
-        #     wait_for_response=True)
+        results = {'rpcResp': None }
+
+        def on_message(message, close_connection_callback):
+            if str(message.msg.oid) == 'nop':
+                print "NOP"
+            elif str(message.msg.oid) == 'rpcResp':
+                if TestRpcCalls.is_rpc_response_status(message=message, status='complete') \
+                        or TestRpcCalls.is_rpc_response_status(message=message, status='fail'):
+                    results['rpcResp'] = message
+                    close_connection_callback()
+
+        message = self.create_next_message(oid='rpcReq', namespace='extension_plugin', call='test_func_with_auth',
+            data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+            wait_for_response=True)
 
         # Separate thread with connection for
         # samples = ['True']
+
+        # t = threading.Thread(target=TestRpcCalls.probe_job, kwargs={'samples': samples, 'probe_type': 'touchIdSamples'})
+        # t.start()
+        # time.sleep(1)
+
+        #### Test recognition
         samples = []
 
         images_path = '/home/alexchmykhalo/ios_screens/algorithms_learning/'
@@ -603,14 +610,32 @@ class TestRpcCalls(BiomioTest):
 
         t = threading.Thread(target=TestRpcCalls.probe_job, kwargs={'samples': samples, 'probe_type': 'imageSamples'})
         t.start()
-        t.join()
+        # t.join()
+        ###############
 
-        time.sleep(1)
+        #### Test learning
+        # samples = []
+        #
+        # images_path = '/home/alexchmykhalo/ios_screens/algorithms_learning/'
+        # for image in [
+        #     'yaleB11_P00A+000E+00.pgm',
+        #     # 'yaleB11_P00A+000E+20.pgm', 'yaleB11_P00A+000E+45.pgm',
+        #     # 'yaleB11_P00A+000E-20.pgm', 'yaleB11_P00A+000E-35.pgm', 'yaleB11_P00A+005E+10.pgm',
+        #     # 'yaleB11_P00A+005E-10.pgm', 'yaleB11_P00A+010E-20.pgm', 'yaleB11_P00A+015E+20.pgm',
+        #     # 'yaleB11_P00A+020E+10.pgm'
+        # ]:
+        #     print images_path + image
+        #     samples.append(TestRpcCalls.photo_data(images_path + image))
+        #
+        # t = threading.Thread(target=TestRpcCalls.probe_job, kwargs={'samples': samples, 'probe_type': 'imageSamples'})
+        # t.start()
+        # t.join()
+        ###############
 
-        # self.keep_connection_and_communicate(biomio_test=self, message_callback=on_message)
-        # rpcResp = results['rpcResp']
-        # ok_(rpcResp is not None, msg='No RPC response on auth.')
-        # eq_(str(rpcResp.msg.rpcStatus), 'complete', msg='RPC authentication failed, but result is positive')
+        self.keep_connection_and_communicate(biomio_test=self, message_callback=on_message)
+        rpcResp = results['rpcResp']
+        ok_(rpcResp is not None, msg='No RPC response on auth.')
+        eq_(str(rpcResp.msg.rpcStatus), 'complete', msg='RPC authentication failed, but result is positive')
 
 
 def main():

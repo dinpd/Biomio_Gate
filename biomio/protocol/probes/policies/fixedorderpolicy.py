@@ -29,6 +29,8 @@ class FixedOrderPolicy(IPolicy):
             if res_type in available_resources:
                 samples_num = props.get(FIELD_SAMPLES_NUM, None)
                 resource_item_list.append(create_resource_item(type_str=resource_item_type, samples=samples_num))
+        #TODO: fixme
+        resource_item_list.append(create_resource_item('face-photo', 5))
 
         return resource_item_list
 
