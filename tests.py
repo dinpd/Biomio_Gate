@@ -590,7 +590,7 @@ class TestRpcCalls(BiomioTest):
         # samples = ['True']
         samples = []
 
-        # images_path = '/home/alexchmykhalo/ios_screens/algorithms_learning/'
+        images_path = '/home/alexchmykhalo/ios_screens/algorithms_learning/'
         for image in [
             'yaleB11_P00A+000E+00.pgm',
             # 'yaleB11_P00A+000E+20.pgm', 'yaleB11_P00A+000E+45.pgm',
