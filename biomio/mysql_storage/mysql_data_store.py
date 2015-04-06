@@ -1,9 +1,5 @@
-import logging
-
 from biomio.mysql_storage.mysql_data_entities import pny, database
 from biomio.protocol.settings import settings
-
-logger = logging.getLogger(__name__)
 
 if settings.logging == 'DEBUG':
     pny.sql_debug(True)
@@ -17,10 +13,8 @@ class MySQLDataStore():
         self.database.bind('mysql', host=settings.mysql_host, user=settings.mysql_user, passwd=settings.mysql_pass,
                            db=settings.mysql_db_name)
         self.database.generate_mapping(create_tables=True)
-        logger.debug('Connection opened.')
 
     def __del__(self):
-        logger.debug('Connection closed.')
         self.database.disconnect()
 
     @classmethod
@@ -33,8 +27,6 @@ class MySQLDataStore():
     def insert_data(self, module_name, table_name, **kwargs):
         table_class_ = self.get_table_class(module_name, table_name)
         table_class_.create_record(**kwargs)
-        logger.debug('Data saved.')
-        logger.debug(kwargs)
 
     @pny.db_session
     def select_data(self, module_name, table_name):

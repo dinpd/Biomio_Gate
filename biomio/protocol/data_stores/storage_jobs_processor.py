@@ -1,10 +1,10 @@
-import logging
+
 from datetime import datetime
 from rq import Queue, use_connection
 from redis import Redis
 from rq_scheduler import Scheduler
+from logger import worker_logger
 
-logger = logging.getLogger(__name__)
 
 use_connection()
 q = Queue(connection=Redis())
@@ -18,8 +18,8 @@ def run_storage_job(job_to_run, **kwargs):
     :param job_to_run:
     :param kwargs:
     """
-    logger.info('Running job - %s' % str(job_to_run))
-    logger.info(kwargs)
+    worker_logger.info('Running job - %s' % str(job_to_run))
+    worker_logger.info(kwargs)
     q.enqueue(job_to_run, **kwargs)
 
 
