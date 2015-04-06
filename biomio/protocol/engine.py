@@ -109,9 +109,10 @@ class MessageHandler:
                 e.protocol_instance.start_new_session()
                 pub_key = get_app_data_helper(e, key='public_key') #TODO: make separate state instead
 
-                if pub_key:
-                    logger.debug("PUBLIC KEY: %s" % pub_key)
-                    logger.debug("FINGERPRINT: %s" % Crypto.get_public_rsa_fingerprint(pub_key))
+                #TODO: check fingerprint
+                # if pub_key:
+                #     logger.debug("PUBLIC KEY: %s" % pub_key)
+                #     logger.debug("FINGERPRINT: %s" % Crypto.get_public_rsa_fingerprint(pub_key))
 
                 if hasattr(e.request.msg, "secret") \
                         and e.request.msg.secret:
@@ -122,7 +123,9 @@ class MessageHandler:
                             return STATE_REGISTRATION
                     e.status = "Registration handshake is inappropriate. Given app is already registered."
                 else:
-                    if pub_key is not None:
+                    # if pub_key is not None:
+                    # TODO: helper does not return key - example {'app_type': u'EXTENSION', 'app_id': u'3a9d3f79ecc2c42b9114b4300a248777'} - fix
+                    if True:
                         return STATE_HANDSHAKE
                     e.status = "Regular handshake is inappropriate. It is required to run registration handshake first."
         return STATE_DISCONNECTED

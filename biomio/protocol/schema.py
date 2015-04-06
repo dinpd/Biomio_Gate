@@ -155,9 +155,9 @@ BIOMIO_protocol_json_schema = {
             "type": "object",
             "required": ["oid", "key"],
             "properties": {
-            "oid": { "enum": ["auth"] },
-            "key": { "type": "string" }
-        }
+                "oid": { "enum": ["auth"] },
+                "key": { "type": "string" }
+            }
         },
         "again": {
             "type": "object",
