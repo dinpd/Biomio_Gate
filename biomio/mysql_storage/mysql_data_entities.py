@@ -123,7 +123,7 @@ class Application(BaseEntityClass, database.Entity):
     _table_ = MYSQL_APPS_TABLE_NAME
     app_id = pny.PrimaryKey(str, auto=False)
     app_type = pny.Required(str, sql_type="enum('extension', 'probe')")
-    public_key = pny.Required(LongStr)
+    public_key = pny.Required(LongStr, lazy=False)
     users = pny.Set(UserInformation)
 
     @inherit_docstring_from(BaseEntityClass)
