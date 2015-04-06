@@ -8,6 +8,7 @@ from ssl import SSLError
 import time
 from itertools import izip
 import threading
+from binascii import b2a_base64
 
 from biomio.protocol.message import BiomioMessageBuilder
 from biomio.protocol.settings import settings
@@ -556,6 +557,15 @@ class TestRpcCalls(BiomioTest):
                     print e
 
         return is_quit
+
+    @staticmethod
+    @nottest
+    def photo_data(photo_path):
+        data = None
+        with open(photo_path, "rb") as f:
+            data = b2a_base64(f.read())
+        return data
+
 
     @attr('slow')
     def test_rpc_with_auth(self):

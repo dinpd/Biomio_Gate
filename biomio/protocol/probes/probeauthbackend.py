@@ -50,27 +50,20 @@ class ProbeAuthBackend:
     def __init__(self):
         pass
 
-    def _run_face_recognition(self, data, callback, fingerprint):
-        callback_code = ProbeResultsListener.instance().subscribe_callback(callback=callback)
-        fingerprint = fingerprint.replace(':', '')
-        run_algo_job(verification_job, callback_code=callback_code, data=data, fingerprint=fingerprint)
-
     @tornado.gen.engine
-    def probe(self, type, data, callback, fingerprint=None):
+    def probe(self, type, data, callback, fingerprint=None, training=False):
         logger.debug('Processing probe (%s)...' % type)
 
         result = False
         #TODO: use resourceitem types instead
-        # if type == "fp-scanner":
         if type == "touchIdSamples":
             for sample in data:
                 touch_id_result = (str(sample).lower() == 'true')
                 result = result or touch_id_result
             callback(result)
-        # elif type == "face-photo":
         elif type == "imageSamples":
-            # result = True )
-            self._run_face_recognition(data=data, callback=callback, fingerprint=fingerprint)
+            callback_code = ProbeResultsListener.instance().subscribe_callback(callback=callback)
+            run_algo_job(verification_job, callback_code=callback_code, data=data, fingerprint=fingerprint, education=training)
         else:
             logger.error('Unknown probe type %s' % type)
         pass
