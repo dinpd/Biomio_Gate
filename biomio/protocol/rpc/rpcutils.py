@@ -3,6 +3,7 @@ import tornado.gen
 import inspect
 import tornado.gen
 import greenado
+import traceback
 
 from biomio.protocol.rpc import bioauthflow
 
@@ -113,8 +114,8 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
     try:
         if bioauth_flow.is_current_state(bioauthflow.STATE_AUTH_SUCCEED):
             kwargs = _check_rpc_arguments(callable_func=callable_func, current_kwargs=callable_kwargs)
-            result = callable_func(*callable_args, **kwargs)
-            callback(result=result, status='complete')
+            tornado.ioloop.IOLoop.current().add_future(run_callback(callable_func, callable_args, kwargs),
+                                                       callback=create_rpc_final_callback(rpc_result_callback=callback))
         else:
             if bioauth_flow.is_current_state(bioauthflow.STATE_AUTH_FAILED):
                 error_msg = 'Biometric authentication failed.'
@@ -123,10 +124,30 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
             else:
                 error_msg = 'Biometric auth internal error'
             callback(result={"error": error_msg}, status='fail')
-        bioauth_flow.accept_results()
+
+            bioauth_flow.accept_results()
     except Exception as e:
         # TODO: handle exception
         logger.exception(msg="RPC call with auth processing error: %s" % str(e))
+
+
+def create_rpc_final_callback(rpc_result_callback):
+    def message_processed(future):
+        callback = rpc_result_callback
+        if future.exception():
+            info = future.exc_info()
+            logger.exception(msg='Error during next message processing: %s' % ''.join(traceback.format_exception(*info)))
+            error_msg = 'Exception raised from RPC method'
+            callback(result={"error": error_msg}, status='fail')
+        else:
+            result = future.result()
+            callback(result=result, status='complete')
+            logger.debug(msg='--- RPC call processed successfully')
+    return message_processed
+
+@greenado.groutine
+def run_callback(callback, callable_args, kwargs):
+    return callback(callable_args, **kwargs)
 
 
 def rpc_call_with_auth(rpc_func):

@@ -66,11 +66,6 @@ def verify_header(verify_func):
 
     return wraps(verify_func)(_decorator)
 
-
-def is_message_from_probe_device(input_msg):
-    app_id = str(input_msg.header.appId)
-    return app_id.startswith('probe')
-
 @greenado.generator
 def get_app_data_helper(e, key=None):
     value = None
@@ -217,7 +212,7 @@ class MessageHandler:
 
 
 def handshake(e):
-    if is_message_from_probe_device(input_msg=e.request):
+    if e.request.header.appType == 'probe':
         logger.info(" ------- APP HANDSHAKE: probe")
     else:
         logger.info(" ------- APP HANDSHAKE: extension")
@@ -236,7 +231,7 @@ def handshake(e):
 
 
 def registration(e):
-    if is_message_from_probe_device(input_msg=e.request):
+    if e.request.header.appType == 'probe':
         logger.info(" -------- APP REGISTRATION: probe")
     else:
         logger.info(" -------- APP REGISTRATION: extension")
@@ -461,8 +456,8 @@ class BiomioProtocol:
 
         # If message is valid, perform necessary actions
         if input_msg and input_msg.msg and input_msg.header:
-            #TODO: limit putput
-            # logger.debug('RECEIVED MESSAGE STRING: "%s" ' % msg_string)
+            output_str = (msg_string[:256] + '...') if len(msg_string) > 256 else msg_string
+            logger.debug('RECEIVED MESSAGE STRING: "%s" ' % output_str)
 
             # Refresh session if necessary
             if self._session and hasattr(input_msg.header,
