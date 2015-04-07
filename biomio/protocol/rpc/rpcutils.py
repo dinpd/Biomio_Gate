@@ -147,7 +147,7 @@ def create_rpc_final_callback(rpc_result_callback):
 
 @greenado.groutine
 def run_callback(callback, callable_args, kwargs):
-    return callback(callable_args, **kwargs)
+    return callback(*callable_args, **kwargs)
 
 
 def rpc_call_with_auth(rpc_func):
