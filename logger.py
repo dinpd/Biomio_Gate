@@ -13,7 +13,7 @@ logging.basicConfig(
     level=settings.logging
 )
 
-log_formatter = logging.Formatter('[%(asctime)s - %(name)s - %(levelname)s] - %(message)s')
+log_formatter = logging.Formatter('[%(asctime)s - %(name)s - %(levelname)s] - %(message).250s')
 
 worker_file_handler = logging.FileHandler(os.path.join(BIOMIO_LOGS_PATH, WORKER_LOG_NAME))
 worker_file_handler.setFormatter(log_formatter)
