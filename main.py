@@ -68,25 +68,17 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
 class InitialProbeRestHandler(tornado.web.RequestHandler):
     def get(self):
-        status_url = "https://{host}:{port}/training_status".format(host=settings.host, port=settings.port)
         BioauthFlow.start_training(app_id='test_app_id')
         self.write('<html><head><title>BIOMIO: Initial Probes</title></head><body>'
                    'Please, use BIOMIO probe application to input initial probes.'
-                   'See status here:  <a href="{url}">{url}</a>'
-                   '</body></html>'.format(url=status_url))
-
-
-class InitialProbeStatusRestHandler(tornado.web.RequestHandler):
-    def get(self):
-        self.write('Processing...')
+                   '</body></html>')
 
 
 class Application(tornado.web.Application):
     def __init__(self):
         handlers = [
             (r'/websocket', WebSocketHandler),
-            (r'/training', InitialProbeRestHandler),
-            (r'/training_status', InitialProbeStatusRestHandler),
+            (r'/training', InitialProbeRestHandler)
         ]
         tornado.web.Application.__init__(self, handlers)
 
