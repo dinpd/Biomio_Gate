@@ -10,6 +10,10 @@ from itertools import izip
 import threading
 from binascii import b2a_base64
 
+
+import ssl
+import urllib2
+
 from biomio.protocol.message import BiomioMessageBuilder
 from biomio.protocol.settings import settings
 from biomio.protocol.crypt import Crypto
@@ -24,6 +28,13 @@ DEFAULT_SOCKET_TIMEOUT = 5  # seconds
 SSL_OPTIONS = {
     "ca_certs": "server.pem"
 }
+FR_TRAINING_IMG_FOLDER_PATH = '/home/alexchmykhalo/ios_screens/algorithms_learning/'
+FR_TRAINING_IMG_NAMES = [
+    'yaleB11_P00A+000E+00.pgm', 'yaleB11_P00A+000E+20.pgm', 'yaleB11_P00A+000E+45.pgm',
+    'yaleB11_P00A+000E-20.pgm', 'yaleB11_P00A+000E-35.pgm',
+    'yaleB11_P00A+005E+10.pgm', 'yaleB11_P00A+005E-10.pgm', 'yaleB11_P00A+010E-20.pgm',
+    'yaleB11_P00A+015E+20.pgm', 'yaleB11_P00A+020E+10.pgm'
+    ]
 
 
 @nottest
@@ -466,8 +477,7 @@ class TestReadyState(BiomioTest):
 
 class TestRpcCalls(BiomioTest):
     def setup(self):
-        # self.setup_test_with_handshake(app_id=extension_app_id, app_type=extension_app_type, key=extension_key)
-        pass
+        self.setup_test_with_handshake(app_id=extension_app_id, app_type=extension_app_type, key=extension_key)
 
     def teardown(self):
         self.teardown_test()
@@ -492,8 +502,10 @@ class TestRpcCalls(BiomioTest):
                 print "probe: NOP"
             elif str(message.msg.oid) == 'try':
                 print "probe: TRY"
+                sample_num = int(message.msg.resource[0].samples)
+                samples_to_sent = samples[:sample_num]
                 probe_msg = test_obj.create_next_message(oid='probe', probeId=0,
-                                         probeData={"oid": probe_type, "samples": samples})
+                                         probeData={"oid": probe_type, "samples": samples_to_sent})
 
                 test_obj.send_message(websocket=test_obj.get_curr_connection(), message=probe_msg,
                                              close_connection=False, wait_for_response=False)
@@ -607,9 +619,9 @@ class TestRpcCalls(BiomioTest):
         # self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
         #     wait_for_response=True)
 
-        # Separate thread with connection for
+        # # Separate thread with connection for
         # samples = ['True']
-
+        #
         # t = threading.Thread(target=TestRpcCalls.probe_job, kwargs={'samples': samples, 'probe_type': 'touchIdSamples'})
         # t.start()
         # time.sleep(1)
@@ -639,6 +651,31 @@ class TestRpcCalls(BiomioTest):
         # ok_(rpcResp is not None, msg='No RPC response on auth.')
         # eq_(str(rpcResp.msg.rpcStatus), 'complete', msg='RPC authentication failed, but result is positive')
 
+
+class TestFaceRecognition(BiomioTest):
+    def setup(self):
+        pass
+        # self.setup_test_with_handshake(app_id=extension_app_id, app_type=extension_app_type, key=extension_key)
+
+    def teardown(self):
+        self.teardown_test()
+
+    @attr('slow')
+    def test_face_recognition_training_process(self):
+
+        # Use REST request to server to start training process
+        ssl._create_default_https_context = ssl._create_unverified_context
+        print "https://{host}:{port}/learning".format(host=settings.host, port=settings.port)
+        urllib2.urlopen("https://{host}:{port}/training".format(host=settings.host, port=settings.port)).read()
+
+        # Prerare list of samples for training
+        samples = []
+        images_path = FR_TRAINING_IMG_FOLDER_PATH
+        for image in FR_TRAINING_IMG_NAMES:
+            samples.append(TestRpcCalls.photo_data(images_path + image))
+
+        # Communicate as a probe app
+        TestRpcCalls.probe_job(samples=samples, probe_type='imageSamples')
 
 def main():
     pass

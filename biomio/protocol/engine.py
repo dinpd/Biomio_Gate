@@ -112,9 +112,6 @@ class MessageHandler:
                 if hasattr(e.request.msg, "secret") \
                         and e.request.msg.secret:
                     if pub_key is None:
-                        if is_message_from_probe_device(input_msg=e.request):
-                            return STATE_GETTING_RESOURCES
-                        else:
                             return STATE_REGISTRATION
                     e.status = "Registration handshake is inappropriate. Given app is already registered."
                 else:
