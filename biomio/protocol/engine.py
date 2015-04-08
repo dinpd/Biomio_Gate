@@ -101,14 +101,13 @@ class MessageHandler:
                 pub_key = get_app_data_helper(app_id=fingerprint, key='public_key')
 
                 real_fingerprint = Crypto.get_public_rsa_fingerprint(pub_key)
+                logger.debug("PUBLIC KEY: %s" % pub_key)
+                logger.debug("FINGERPRINT: %s" % real_fingerprint)
                 if pub_key and real_fingerprint == fingerprint:
-                    logger.debug("PUBLIC KEY: %s" % pub_key)
-                    logger.debug("FINGERPRINT: %s" % Crypto.get_public_rsa_fingerprint(pub_key))
-
                     if hasattr(e.request.msg, "secret") \
                             and e.request.msg.secret:
                         if pub_key is None:
-                                return STATE_REGISTRATION
+                            return STATE_REGISTRATION
                         e.status = "Registration handshake is inappropriate. Given app is already registered."
                     else:
                         if pub_key is not None:
