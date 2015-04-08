@@ -103,18 +103,19 @@ class MessageHandler:
                 real_fingerprint = Crypto.get_public_rsa_fingerprint(pub_key)
                 logger.debug("PUBLIC KEY: %s" % pub_key)
                 logger.debug("FINGERPRINT: %s" % real_fingerprint)
-                if pub_key and real_fingerprint == fingerprint:
-                    if hasattr(e.request.msg, "secret") \
-                            and e.request.msg.secret:
-                        if pub_key is None:
-                            return STATE_REGISTRATION
-                        e.status = "Registration handshake is inappropriate. Given app is already registered."
-                    else:
-                        if pub_key is not None:
-                            return STATE_HANDSHAKE
-                        e.status = "Regular handshake is inappropriate. It is required to run registration handshake first."
+                # if pub_key and real_fingerprint == fingerprint:
+                #TODO: fingerprint checking
+                if hasattr(e.request.msg, "secret") \
+                        and e.request.msg.secret:
+                    if pub_key is None:
+                        return STATE_REGISTRATION
+                    e.status = "Registration handshake is inappropriate. Given app is already registered."
                 else:
-                    e.status = "Regular handshake failed. Invalid fingerprint."
+                    if pub_key is not None:
+                        return STATE_HANDSHAKE
+                    e.status = "Regular handshake is inappropriate. It is required to run registration handshake first."
+                # else:
+                #     e.status = "Regular handshake failed. Invalid fingerprint."
 
         return STATE_DISCONNECTED
 
