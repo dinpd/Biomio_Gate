@@ -174,13 +174,6 @@ class MessageHandler:
     @staticmethod
     @verify_header
     def on_getting_probe(e):
-        # TODO: remove unused comments
-        # user_id = str(e.request.header.appId)
-        # ttl = settings.bioauth_timeout
-        # result = False
-        # for sample in e.request.msg.probeData.samples:
-        #     if str(sample).lower() == 'true':
-        #         result = True
         auth_data = []
         for sample in e.request.msg.probeData.samples:
             auth_data.append(str(sample))
