@@ -851,7 +851,6 @@ class TestRpcCalls(BiomioTest):
     @attr('slow')
     def test_rpc_with_photo(self):
 
-        #TODO: refactor test
         results = {'rpcResp': None }
 
         def on_message(message, close_connection_callback):

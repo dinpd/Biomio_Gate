@@ -67,19 +67,13 @@ def verify_header(verify_func):
     return wraps(verify_func)(_decorator)
 
 @greenado.generator
-def get_app_data_helper(e, key=None):
+def get_app_data_helper(app_id, key=None):
     value = None
     try:
-        app_data = yield tornado.gen.Task(ApplicationDataStore.instance().get_data, str(e.request.header.appId))
-        print app_data
+        app_data = yield tornado.gen.Task(ApplicationDataStore.instance().get_data, app_id)
 
         if not app_data:
             app_data = {}
-        else:
-            try:
-                app_data = ast.literal_eval(app_data)
-            except (ValueError, SyntaxError):
-                app_data = {}
 
         if key is not None:
             value = app_data.get(key, None)
@@ -102,24 +96,27 @@ class MessageHandler:
                 # Create new session
                 # TODO: move to some state handling callback
                 e.protocol_instance.start_new_session()
-                pub_key = get_app_data_helper(e, key='public_key') #TODO: make separate state instead
 
-                #TODO: check fingerprint
-                # if pub_key:
-                #     logger.debug("PUBLIC KEY: %s" % pub_key)
-                #     logger.debug("FINGERPRINT: %s" % Crypto.get_public_rsa_fingerprint(pub_key))
+                fingerprint = str(e.request.header.appId)
+                pub_key = get_app_data_helper(app_id=fingerprint, key='public_key')
 
-                if hasattr(e.request.msg, "secret") \
-                        and e.request.msg.secret:
-                    if pub_key is None:
-                            return STATE_REGISTRATION
-                    e.status = "Registration handshake is inappropriate. Given app is already registered."
+                real_fingerprint = Crypto.get_public_rsa_fingerprint(pub_key)
+                if pub_key and real_fingerprint == fingerprint:
+                    logger.debug("PUBLIC KEY: %s" % pub_key)
+                    logger.debug("FINGERPRINT: %s" % Crypto.get_public_rsa_fingerprint(pub_key))
+
+                    if hasattr(e.request.msg, "secret") \
+                            and e.request.msg.secret:
+                        if pub_key is None:
+                                return STATE_REGISTRATION
+                        e.status = "Registration handshake is inappropriate. Given app is already registered."
+                    else:
+                        if pub_key is not None:
+                            return STATE_HANDSHAKE
+                        e.status = "Regular handshake is inappropriate. It is required to run registration handshake first."
                 else:
-                    # if pub_key is not None:
-                    # TODO: helper does not return key - example {'app_type': u'EXTENSION', 'app_id': u'3a9d3f79ecc2c42b9114b4300a248777'} - fix
-                    if True:
-                        return STATE_HANDSHAKE
-                    e.status = "Regular handshake is inappropriate. It is required to run registration handshake first."
+                    e.status = "Regular handshake failed. Invalid fingerprint."
+
         return STATE_DISCONNECTED
 
     @staticmethod
@@ -149,17 +146,14 @@ class MessageHandler:
     @staticmethod
     @verify_header
     def on_auth_message(e):
-        key = get_app_data_helper(e, key='public_key') #TODO: use separate state instead
+        app_id = str(e.request.header.appId)
+        key = get_app_data_helper(app_id=app_id, key='public_key')
 
         header_str = BiomioMessageBuilder.header_from_message(e.request)
 
-        # if Crypto.check_digest(key=key, data=header_str, digest=str(e.request.msg.key)):
-        #     # protocol_connection_established(protocol_instance=e.protocol_instance, app_id=app_id)
-        #     pass
-        #
-        #     return STATE_READY
-        #TODO: check issue with digest
-        return STATE_READY
+        if Crypto.check_digest(key=key, data=header_str, digest=str(e.request.msg.key)):
+            # protocol_connection_established(protocol_instance=e.protocol_instance, app_id=app_id)
+            return STATE_READY
 
         e.status = 'Handshake failed. Invalid signature.'
         return STATE_DISCONNECTED
