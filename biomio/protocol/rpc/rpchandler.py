@@ -14,7 +14,7 @@ class RpcHandler:
         pass
 
 
-    def process_rpc_call(self, user_id, call, namespace, data, wait_callback, bioauth_flow):
+    def process_rpc_call(self, user_id, call, namespace, data, wait_callback, bioauth_flow, callback):
         """
         Processes RPC call with the given parameters.
         :param user_id: User ID string
@@ -26,10 +26,6 @@ class RpcHandler:
         dictionary containing result of RPC method call. status - Status for RPC responce (inprogress, completed, fail)
         :param bioauth_flow: BioauthFlow instance that handles biometric authentication for caller.
         """
-
-        args = {}
-        def callback(**kwargs):
-            args.update(kwargs)
 
         logger.info('Processing RPC call %s/%s, with parameters: %s' % (namespace, call, data))
         rpc_obj = RpcPluginManager.instance().get_rpc_object(namespace=namespace)
@@ -44,7 +40,6 @@ class RpcHandler:
                 call_params[BIOAUTH_FLOW_INSTANCE_ARG] = bioauth_flow
 
                 rpc_call(**call_params)
-        return args
 
     def get_available_calls(self, namespace):
         return []
