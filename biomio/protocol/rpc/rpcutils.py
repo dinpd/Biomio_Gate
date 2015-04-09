@@ -73,7 +73,6 @@ def rpc_call(rpc_func):
     return wraps(rpc_func)(_decorator)
 
 
-@tornado.gen.engine
 def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
     """
     Provides biometric authentication to support @rpc_call_with_auth
@@ -96,7 +95,8 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
     try:
         if not bioauth_flow.is_current_state(state=bioauthflow.STATE_AUTH_READY):
             bioauth_flow.reset()
-        yield tornado.gen.Task(bioauth_flow.request_auth)
+        fut = tornado.gen.Task(bioauth_flow.request_auth)
+        greenado.gyield(fut)
         # TODO: check for current auth state
         # if bioauth_flow.is_current_state(state=bioauthflow.STATE_AUTH_READY):
         # yield tornado.gen.Task(bioauth_flow.request_auth)

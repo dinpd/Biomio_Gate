@@ -614,7 +614,6 @@ class BiomioProtocol:
         else:
             self._state_machine_instance.bye(protocol_instance=self, status='Invalid token')
 
-    @tornado.gen.engine
     def process_rpc_request(self, input_msg):
         message_id = str(input_msg.msg.oid)
         self._last_received_message = input_msg
@@ -631,7 +630,7 @@ class BiomioProtocol:
 
             wait_callback = self.send_in_progress_responce
 
-            args = yield tornado.gen.Task(self._rpc_handler.process_rpc_call,
+            args = self._rpc_handler.process_rpc_call(
                 str(user_id),
                 str(input_msg.msg.call),
                 str(input_msg.msg.namespace),
@@ -639,8 +638,9 @@ class BiomioProtocol:
                 wait_callback,
                 self.bioauth_flow
             )
-            status = args.kwargs.get('status', None)
-            result = args.kwargs.get('result', None)
+
+            status = args.get('status', None)
+            result = args.get('result', None)
 
             res_keys = []
             res_values = []
