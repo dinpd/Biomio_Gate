@@ -625,7 +625,6 @@ class TestFaceRecognition(BiomioTest):
     def test_face_recognition_training_process(self):
         # Use REST request to server to start training process
         ssl._create_default_https_context = ssl._create_unverified_context
-        print "https://{host}:{port}/learning".format(host=settings.host, port=settings.port)
         urllib2.urlopen("https://{host}:{port}/training".format(host=settings.host, port=settings.port)).read()
 
         # Prerare list of samples for training
