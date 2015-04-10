@@ -11,9 +11,11 @@ DATA_PATH_BAD_2 = "/home/alexchmykhalo/ios_screens/algorithms/data.json"
 PICTURE_PATH_GOOD_3 = "/home/alexchmykhalo/ios_screens/algorithms/yaleB11_P00A+000E+00.pgm"
 FOLDER_DB_PATH_GOOD_3 = "/home/alexchmykhalo/ios_screens/algorithms"
 
-from biomio.algorithms.algo_jobs import verification_job
+from biomio.algorithms.algo_jobs import verification_job, training_job
 import json
 import os
+from os import urandom
+from hashlib import sha1
 import binascii
 
 
@@ -26,8 +28,11 @@ def loadSources(path):
             return source
     return dict()
 
+
 import logging
+
 logger = logging.getLogger(__name__)
+
 
 class ProbeAuthBackend:
     """
@@ -55,15 +60,30 @@ class ProbeAuthBackend:
         logger.debug('Processing probe (%s)...' % type)
 
         result = False
-        #TODO: use resourceitem types instead
+        # TODO: use resourceitem types instead
         if type == "touchIdSamples":
             for sample in data:
                 touch_id_result = (str(sample).lower() == 'true')
                 result = result or touch_id_result
             callback(result)
         elif type == "imageSamples":
-            callback_code = ProbeResultsListener.instance().subscribe_callback(callback=callback)
-            run_algo_job(verification_job, callback_code=callback_code, data=data, fingerprint=fingerprint, education=training)
+            self._run_verification_job(data=data, fingerprint=fingerprint, training=training, callback=callback)
         else:
             logger.error('Unknown probe type %s' % type)
         pass
+
+    @staticmethod
+    def _run_verification_job(data, fingerprint, training, callback):
+        callback_code = ProbeResultsListener.instance().subscribe_callback(callback=callback)
+        settings = dict(
+            algoID="001002",
+            userID="0000000000000"
+        )
+        if training:
+            run_algo_job(training_job, images=data, fingerprint=fingerprint,
+                         settings=settings, callback_code=callback_code)
+        else:
+            result_code = ProbeResultsListener.instance().activate_results_gatherer(len(data))
+            for image in data:
+                run_algo_job(verification_job, image=image, fingerprint=fingerprint, settings=settings,
+                             callback_code=callback_code, result_code=result_code)

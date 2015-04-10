@@ -614,7 +614,6 @@ class BiomioProtocol:
         else:
             self._state_machine_instance.bye(protocol_instance=self, status='Invalid token')
 
-    @tornado.gen.engine
     def process_rpc_request(self, input_msg):
         message_id = str(input_msg.msg.oid)
         self._last_received_message = input_msg
@@ -631,16 +630,26 @@ class BiomioProtocol:
 
             wait_callback = self.send_in_progress_responce
 
-            args = yield tornado.gen.Task(self._rpc_handler.process_rpc_call,
+            self._rpc_handler.process_rpc_call(
                 str(user_id),
                 str(input_msg.msg.call),
                 str(input_msg.msg.namespace),
                 data,
                 wait_callback,
-                self.bioauth_flow
+                self.bioauth_flow,
+                self.get_process_callback_for_rpc_result(input_msg=input_msg)
             )
-            status = args.kwargs.get('status', None)
-            result = args.kwargs.get('result', None)
+        elif message_id == 'rpcEnumNsReq':
+            namespaces = self._rpc_handler.get_available_namespaces()
+            message = self.create_next_message(request_seq=input_msg.header.seq, oid='rpcEnumNsReq', namespaces=namespaces)
+            self.send_message(responce=message)
+        elif message_id == 'rpcEnumCallsReq':
+            self._rpc_handler.get_available_calls(namespace=input_msg.msg.namespace)
+
+    def get_process_callback_for_rpc_result(self, input_msg):
+        def process_rpc_result(**kwargs):
+            status = kwargs.get('status', None)
+            result = kwargs.get('result', None)
 
             res_keys = []
             res_values = []
@@ -664,12 +673,9 @@ class BiomioProtocol:
                 **res_params
             )
             self.send_message(responce=message)
-        elif message_id == 'rpcEnumNsReq':
-            namespaces = self._rpc_handler.get_available_namespaces()
-            message = self.create_next_message(request_seq=input_msg.header.seq, oid='rpcEnumNsReq', namespaces=namespaces)
-            self.send_message(responce=message)
-        elif message_id == 'rpcEnumCallsReq':
-            self._rpc_handler.get_available_calls(namespace=input_msg.msg.namespace)
+
+        return process_rpc_result
+
 
     def send_in_progress_responce(self):
         # Should be last RPC request
