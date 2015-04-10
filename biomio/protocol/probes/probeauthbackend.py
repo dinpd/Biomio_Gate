@@ -67,7 +67,7 @@ class ProbeAuthBackend:
                 result = result or touch_id_result
             callback(result)
         elif type == "imageSamples":
-            self._run_verification_job()
+            self._run_verification_job(data=data, fingerprint=fingerprint, training=training, callback=callback)
         else:
             logger.error('Unknown probe type %s' % type)
         pass

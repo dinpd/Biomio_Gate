@@ -649,8 +649,6 @@ class BiomioProtocol:
     def get_process_callback_for_rpc_result(self, input_msg):
         def process_rpc_result(**kwargs):
             status = kwargs.get('status', None)
-            print " >>>>>>>>> ", kwargs
-            print " >>>>>>>>> ", status
             result = kwargs.get('result', None)
 
             res_keys = []
@@ -670,7 +668,6 @@ class BiomioProtocol:
 
             res_params['data'] = {'keys': res_keys, 'values': res_values}
 
-            print " >>>>>>>> ", res_params
             message = self.create_next_message(
                 request_seq=input_msg.header.seq,
                 **res_params
