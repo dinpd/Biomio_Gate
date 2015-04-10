@@ -60,6 +60,14 @@ class RedisStorage():
             existing_data = ast.literal_eval(existing_data)
 
         for (k, v) in kwargs.iteritems():
+            temp_value = existing_data.get(k)
+            if temp_value is not None:
+                if isinstance(temp_value, list):
+                    if isinstance(v, list):
+                        v.extend(temp_value)
+                    else:
+                        temp_value.append(v)
+                        v = temp_value
             existing_data[k] = v
 
         self._redis.set(name=key, value=existing_data, ex=ex)
@@ -79,3 +87,37 @@ class RedisStorage():
         :param key: To delete data for.
         """
         self._redis.delete(key)
+
+    def decrement_int_value(self, key):
+        """
+            Decrements counter value under given key.
+        :param key: counter key.
+        :return: int decremented counter value.
+        """
+        return self._redis.decr(name=key)
+
+    def store_counter_value(self, key, counter):
+        """
+            Stores int counter value into redis under given key.
+        :param key: string counter key
+        :param counter: int counter value
+        """
+        self._redis.set(name=key, value=counter)
+
+    def append_value_to_list(self, key, value):
+        """
+            Appends value to the tail of the list which is under specified key.
+            If list doesn't exists it should create new one.
+        :param key: str key to store value.
+        :param value: value that should be appended to the list.
+        :return: int length of the list.
+        """
+        return self._redis.rpush(key, value)
+
+    def get_stored_list(self, key):
+        """
+            Returns list which is placed under specified key.
+        :param key: str key to get list for.
+        :return: list of elements
+        """
+        return self._redis.lrange(name=key, start=0, end=-1)

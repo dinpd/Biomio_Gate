@@ -2,6 +2,8 @@ import tornado.escape
 import tornado.ioloop
 import tornado.web
 import tornado.gen
+from biomio.algorithms.algo_job_processor import run_algo_job
+from biomio.algorithms.algo_jobs import verification_job
 from biomio.constants import EMAILS_TABLE_CLASS_NAME
 from biomio.mysql_storage.mysql_data_store import MySQLDataStore
 from biomio.protocol.data_stores.application_data_store import ApplicationDataStore
@@ -9,6 +11,7 @@ from biomio.protocol.data_stores.base_data_store import BaseDataStore
 from biomio.protocol.data_stores.email_data_store import EmailDataStore
 
 from biomio.protocol.data_stores.session_data_store import SessionDataStore
+from biomio.protocol.storage.probe_results_listener import ProbeResultsListener
 from biomio.protocol.storage.redisstore import RedisStore
 from biomio.protocol.storage.userinfodatastore import UserInfoDataStore
 from biomio.protocol.data_stores.user_data_store import UserDataStore
@@ -67,23 +70,33 @@ class RQTest(tornado.web.RequestHandler):
         #
         # name = get_name()
         # print " NAME : ", name
-        UserDataStore.instance().store_data(1)
-        store_keywords = {ApplicationDataStore.APP_TYPE_ATTR: 'extension',
-                          ApplicationDataStore.PUBLIC_KEY_ATTR: 'Test pub key',
-                          ApplicationDataStore.USER_ATTR: 1}
-        ApplicationDataStore.instance().store_data('test_app_id6', **store_keywords)
-        store_keywords = {
-            EmailDataStore.PASS_PHRASE_ATTR: 'test_pass_phrase',
-            EmailDataStore.PUBLIC_PGP_KEY_ATTR: 'test_pub_pgp_key',
-            EmailDataStore.PRIVATE_PGP_KEY_ATTR: None,
-            EmailDataStore.USER_ATTR: 1
-        }
-        EmailDataStore.instance().store_data('test6@mail.com', **store_keywords)
-        BaseDataStore.instance().delete_custom_lru_redis_data(ApplicationDataStore.get_data_key('test_app_id6'))
-        BaseDataStore.instance().delete_custom_lru_redis_data(EmailDataStore.get_data_key('test6@mail.com'))
-        ApplicationDataStore.instance().get_data(app_id='test_app_id6', callback=test_get_result)
-        EmailDataStore.instance().get_data(email='test6@mail.com', callback=test_get_result)
-        EmailDataStore.instance().select_data_by_ids(['test6@mail.com', 'test4@mail.com'], test_get_result)
+        # UserDataStore.instance().store_data(1)
+        # store_keywords = {ApplicationDataStore.APP_TYPE_ATTR: 'extension',
+        #                   ApplicationDataStore.PUBLIC_KEY_ATTR: 'Test pub key',
+        #                   ApplicationDataStore.USER_ATTR: 1}
+        # ApplicationDataStore.instance().store_data('test_app_id6', **store_keywords)
+        # store_keywords = {
+        #     EmailDataStore.PASS_PHRASE_ATTR: 'test_pass_phrase',
+        #     EmailDataStore.PUBLIC_PGP_KEY_ATTR: 'test_pub_pgp_key',
+        #     EmailDataStore.PRIVATE_PGP_KEY_ATTR: None,
+        #     EmailDataStore.USER_ATTR: 1
+        # }
+        # EmailDataStore.instance().store_data('test6@mail.com', **store_keywords)
+        # BaseDataStore.instance().delete_custom_lru_redis_data(ApplicationDataStore.get_data_key('test_app_id6'))
+        # BaseDataStore.instance().delete_custom_lru_redis_data(EmailDataStore.get_data_key('test6@mail.com'))
+        # ApplicationDataStore.instance().get_data(app_id='test_app_id6', callback=test_get_result)
+        # EmailDataStore.instance().get_data(email='test6@mail.com', callback=test_get_result)
+        # EmailDataStore.instance().select_data_by_ids(['test6@mail.com', 'test4@mail.com'], test_get_result)
+
+        callback_code = ProbeResultsListener.instance().subscribe_callback(callback=test_get_result)
+        result_code = ProbeResultsListener.instance().activate_results_gatherer(results_count=5)
+        settings = dict(
+            algoID="001002",
+            userID="0000000000000"
+        )
+        for x in range(0, 5):
+            run_algo_job(verification_job, image='', fingerprint='tetetet', settings=settings,
+                         callback_code=callback_code, result_code=result_code)
 
 
 def test_get_result(result=None):
