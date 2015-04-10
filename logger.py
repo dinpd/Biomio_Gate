@@ -7,6 +7,7 @@ BIOMIO_LOGS_PATH = os.path.join(APP_ROOT, 'biomio', 'logs')
 
 WORKER_LOG_NAME = 'worker.log'
 PONY_LOG_NAME = 'mysql_queries.log'
+ALGO_LOG_NAME = 'algo.log'
 
 logging.basicConfig(
     format='[%(asctime)s - %(name)s - %(levelname)s] - %(message)s',
@@ -38,3 +39,10 @@ pony_sql_logger = logging.getLogger('pony.orm.sql')
 pony_sql_logger.setLevel(logging.INFO)
 pony_sql_logger.addHandler(pony_orm_file_handler)
 pony_sql_logger.addHandler(console_handler)
+
+algo_file_handler = logging.FileHandler(os.path.join(BIOMIO_LOGS_PATH, ALGO_LOG_NAME))
+algo_file_handler.setFormatter(log_formatter)
+
+algo_logger = logging.getLogger('algorithms')
+algo_logger.setLevel(settings.logging)
+algo_logger.addHandler(algo_file_handler)
