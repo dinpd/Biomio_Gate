@@ -60,14 +60,6 @@ class RedisStorage():
             existing_data = ast.literal_eval(existing_data)
 
         for (k, v) in kwargs.iteritems():
-            temp_value = existing_data.get(k)
-            if temp_value is not None:
-                if isinstance(temp_value, list):
-                    if isinstance(v, list):
-                        v.extend(temp_value)
-                    else:
-                        temp_value.append(v)
-                        v = temp_value
             existing_data[k] = v
 
         self._redis.set(name=key, value=existing_data, ex=ex)
