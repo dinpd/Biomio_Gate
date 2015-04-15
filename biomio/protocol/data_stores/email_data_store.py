@@ -1,5 +1,6 @@
 from biomio.constants import EMAILS_TABLE_CLASS_NAME, REDIS_EMAILS_KEY
 from biomio.protocol.data_stores.base_data_store import BaseDataStore
+from biomio.protocol.data_stores.storage_jobs import generate_pgp_keys_job
 from biomio.utils.biomio_decorators import inherit_docstring_from
 
 
@@ -55,3 +56,17 @@ class EmailDataStore(BaseDataStore):
     @inherit_docstring_from(BaseDataStore)
     def select_data_by_ids(self, emails, callback):
         self._select_data_by_ids(table_class_name=self._table_class_name, object_ids=emails, callback=callback)
+
+    def update_emails_pgp_keys(self, emails, callback):
+        """
+            Runs job to create new user with given email and generate pgp keys for him.
+        :param emails: list of emails to create users for.
+        :param callback: function that must be executed after all jobs are completed.
+        """
+        callback_code = self._subscribe_redis_callback(callback=callback)
+        result_code = self._activate_results_gatherer(len(emails))
+        for email in emails:
+            self._run_storage_job(generate_pgp_keys_job, table_class_name=self._table_class_name, email=email,
+                                  callback_code=callback_code, result_code=result_code)
+
+
