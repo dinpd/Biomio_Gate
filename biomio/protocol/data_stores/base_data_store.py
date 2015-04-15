@@ -118,9 +118,9 @@ class BaseDataStore():
                 result = {}
             callback(result)
         else:
-            callback_code = RedisResultsListener.instance().subscribe_callback(callback)
-            run_storage_job(self._GET_JOB, table_class_name=table_class_name, object_id=object_id,
-                            callback_code=callback_code)
+            callback_code = self._subscribe_redis_callback(callback=callback)
+            self._run_storage_job(self._GET_JOB, table_class_name=table_class_name, object_id=object_id,
+                                  callback_code=callback_code)
 
     def _delete_lru_data(self, key, table_class_name, object_id):
         """
@@ -183,3 +183,30 @@ class BaseDataStore():
         callback_code = RedisResultsListener.instance().subscribe_callback(callback)
         run_storage_job(self._SELECT_JOB, table_class_name=table_class_name, object_ids=object_ids,
                         callback_code=callback_code)
+
+    @staticmethod
+    def _subscribe_redis_callback(callback):
+        """
+            Subscribes callback for redis results listener.
+        :param callback: callback function for subscription.
+        :return: str callback code.
+        """
+        return RedisResultsListener.instance().subscribe_callback(callback)
+
+    @staticmethod
+    def _activate_results_gatherer(results_count):
+        """
+            Activates results gatherer which will gather all jobs results and only after that will execute the callback.
+        :param results_count: Number of results that must be gathered.
+        :return: str results_code.
+        """
+        return RedisResultsListener.instance().activate_results_gatherer(results_count=results_count)
+
+    @staticmethod
+    def _run_storage_job(job_to_run, **kwargs):
+        """
+            Runs given job with specified kwargs.
+        :param job_to_run: storage job that we will run using worker.
+        :param kwargs: iput parameters for job.
+        """
+        run_storage_job(job_to_run, **kwargs)
