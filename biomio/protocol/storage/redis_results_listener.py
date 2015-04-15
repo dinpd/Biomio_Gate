@@ -2,7 +2,7 @@ from __future__ import absolute_import
 import ast
 import logging
 from tornadoredis import Client
-from biomio.constants import REDIS_JOB_RESULT_KEY, REDIS_DO_NOT_STORE_RESULT_KEY
+from biomio.constants import REDIS_JOB_RESULT_KEY, REDIS_DO_NOT_STORE_RESULT_KEY, REDIS_RESULTS_COUNTER_KEY
 from biomio.protocol.settings import settings
 from biomio.protocol.storage.redis_storage import RedisStorage
 from os import urandom
@@ -46,6 +46,16 @@ class RedisResultsListener():
         :param callback_code:
         """
         del self._result_callbacks[callback_code]
+
+    def activate_results_gatherer(self, results_count):
+        """
+            Stores int results count into redis
+        :param results_count: int number of results that must be received before running callback.
+        :returns results_code: randomly generated string.
+        """
+        results_code = sha1(urandom(32)).hexdigest()
+        self._persistence_redis.store_counter_value(REDIS_RESULTS_COUNTER_KEY % results_code, results_count)
+        return results_code
 
     @tornado.gen.engine
     def _listen(self):
