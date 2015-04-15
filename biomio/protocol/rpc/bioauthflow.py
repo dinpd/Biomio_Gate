@@ -27,7 +27,7 @@ def on_reset(e):
 def on_request(e):
     flow = e.bioauth_flow
     # Create redis key - that will trigger probe try message
-    ProbeResultsStore.instance().store_probe_data(user_id=flow.app_id, ttl=settings.bioauth_timeout, waiting_auth=True)
+    ProbeResultsStore.instance().store_data(user_id=flow.app_id, ttl=settings.bioauth_timeout, waiting_auth=True)
 
     # Subscribe callback to changes
     ProbeResultsStore.instance().subscribe_to_data(user_id=flow.app_id, data_key='auth', callback=flow.rpc_callback)

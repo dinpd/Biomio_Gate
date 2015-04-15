@@ -12,7 +12,7 @@ MYSQL_EMAILS_TABLE_NAME = 'EmailsData'
 MYSQL_USERS_TABLE_NAME = 'Profiles'
 
 # Redis Constants
-
+REDIS_APP_AUTH_KEY = 'auth:%s'
 REDIS_APP_CONNECTION_KEY = 'connection:%s'
 REDIS_APPLICATION_KEY = 'application:%s'
 REDIS_USER_KEY = 'user:%s'

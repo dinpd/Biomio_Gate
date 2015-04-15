@@ -1,4 +1,4 @@
-from biomio.protocol.storage.redisstore import RedisStore
+from biomio.protocol.storage.redis_storage import RedisStorage
 from biomio.protocol.settings import settings
 
 import ast
@@ -9,12 +9,13 @@ import tornado.gen
 import logging
 logger = logging.getLogger(__name__)
 
-class ProbeResultsStore(RedisStore):
+class ProbeResultsStore():
     _instance = None
 
     def __init__(self):
-        RedisStore.__init__(self)
+        #TODO: listen to right instance of redis
         self.redis = Client(host=settings.redis_host, port=settings.redis_port)
+        self._persistence_redis = RedisStorage.persistence_instance()
         self.callback_by_key = {}
         self.data_key_by_callback = {}
         self.listen()
@@ -40,12 +41,12 @@ class ProbeResultsStore(RedisStore):
         probe_key = 'probe:id'
         return probe_key
 
-    def has_probe_results(self, user_id):
-        return self._redis.exists(name=self.redis_probe_key(user_id=user_id))
+    # def has_probe_results(self, user_id):
+    #     return self._redis.exists(name=self.redis_probe_key(user_id=user_id))
 
 
     def get_probe_data(self, user_id, key):
-        data = self._redis.get(name=self.redis_probe_key(user_id=user_id))
+        data = self._persistence_redis.get_data(key=self.redis_probe_key(user_id=user_id))
         if not data:
             data = {}
         else:
@@ -54,10 +55,11 @@ class ProbeResultsStore(RedisStore):
 
     def store_probe_data(self, user_id, ttl=None, **kwargs):
         key = self.redis_probe_key(user_id=user_id)
-        self._store_data_dict(key=key, ex=ttl, **kwargs)
+        self._persistence_redis.store_data(key=key, ex=ttl, **kwargs)
 
     def remove_probe_data(self, user_id):
-        self._redis.delete(self.redis_probe_key(user_id=user_id))
+        key = self.redis_probe_key(user_id=user_id)
+        self._persistence_redis.delete_data(key)
 
     def subscribe_to_data(self, user_id, data_key, callback):
         self.data_key_by_callback[callback] = data_key
@@ -93,16 +95,17 @@ class ProbeResultsStore(RedisStore):
         if msg.kind == 'pmessage':
             if msg.body == 'set' or msg.body == 'expired' or msg.body == 'del':
                 probe_key = re.search('.*:(probe:.*)', msg.channel).group(1)
-                user_id = re.search('.*:probe:(.*)', msg.channel).group(1)
+                # user_id = re.search('.*:probe:(.*)', msg.channel).group(1)
                 subscribers = self.callback_by_key.get(probe_key, [])
 
-                if msg.body == 'expired' and self.has_probe_results(user_id):
+                data = self._persistence_redis.get_data(probe_key)
+                if msg.body == 'expired' and data:
                     return
 
                 logger.debug("GOT SUBSCRIBED MESSAGE: %s" % (str(msg)))
                 for callback in subscribers:
                     data_key = self.data_key_by_callback.get(callback, None)
-                    if not data_key or (data_key and ProbeResultsStore.instance().get_probe_data(user_id=user_id, key=data_key)):
+                    if not data_key or (data_key and data.get(data_key, None)):
                         try:
                             logger.debug("CALLED: %s" % str(callback))
                             callback()
