@@ -1,6 +1,6 @@
 
 from biomio.third_party.fysom import Fysom, FysomError
-from biomio.protocol.storage.proberesultsstore import ProbeResultsStore
+from biomio.protocol.storage.probe_results_storage import ProbeResultsStorage
 from biomio.protocol.settings import settings
 from biomio.protocol.probes.probeauthbackend import ProbeAuthBackend
 import tornado.gen
@@ -27,10 +27,10 @@ def on_reset(e):
 def on_request(e):
     flow = e.bioauth_flow
     # Create redis key - that will trigger probe try message
-    ProbeResultsStore.instance().store_data(user_id=flow.app_id, ttl=settings.bioauth_timeout, waiting_auth=True)
+    ProbeResultsStorage.instance().store_data(user_id=flow.app_id, ttl=settings.bioauth_timeout, waiting_auth=True)
 
     # Subscribe callback to changes
-    ProbeResultsStore.instance().subscribe_to_data(user_id=flow.app_id, data_key='auth', callback=flow.rpc_callback)
+    ProbeResultsStorage.instance().subscribe_to_data(user_id=flow.app_id, data_key='auth', callback=flow.rpc_callback)
 
     return STATE_AUTH_WAIT
 
@@ -63,11 +63,11 @@ def on_training_results_available(e):
 
 def on_state_changed(e):
     flow = e.bioauth_flow
-    next_state = ProbeResultsStore.instance().get_probe_data(user_id=flow.app_id, key=_PROBESTORE_STATE_KEY)
+    next_state = ProbeResultsStorage.instance().get_probe_data(user_id=flow.app_id, key=_PROBESTORE_STATE_KEY)
 
     if next_state is None:
         if e.fsm.current == STATE_AUTH_STARTED or e.fsm.current == STATE_AUTH_WAIT:
-            if ProbeResultsStore.instance().has_probe_results(user_id=flow.app_id):
+            if ProbeResultsStorage.instance().has_probe_results(user_id=flow.app_id):
                 next_state = STATE_AUTH_ERROR
                 logger.debug('BIOMETRIC AUTH [%s, %s]: AUTH INTERNAL ERROR - state not set')
             else:
@@ -169,7 +169,7 @@ _PROBESTORE_STATE_KEY = 'state'
 # Helper Methods
 def _store_state(e):
     data = {_PROBESTORE_STATE_KEY: e.fsm.current}
-    ProbeResultsStore.instance().store_probe_data(user_id=e.bioauth_flow.app_id, ttl=settings.bioauth_timeout, **data)
+    ProbeResultsStorage.instance().store_probe_data(user_id=e.bioauth_flow.app_id, ttl=settings.bioauth_timeout, **data)
 
 
 class BioauthFlow:
@@ -193,11 +193,11 @@ class BioauthFlow:
     def initialize(self):
         logger.debug('BIOMETRIC AUTH OBJECT [%s, %s]: INITIALIZING...' % (self.app_type, self.app_id))
         self._restore_state()
-        ProbeResultsStore.instance().subscribe(user_id=self.app_id, callback=self._change_state_callback)
+        ProbeResultsStorage.instance().subscribe(user_id=self.app_id, callback=self._change_state_callback)
 
     def shutdown(self):
         logger.debug('BIOMETRIC AUTH OBJECT [%s, %s]: UNSUBSCRIBING...' % (self.app_type, self.app_id))
-        ProbeResultsStore.instance().unsubscribe(user_id=self.app_type, callback=self._change_state_callback)
+        ProbeResultsStorage.instance().unsubscribe(user_id=self.app_type, callback=self._change_state_callback)
         if self.is_extension_owner():
             self.reset()
         self._store_state()
@@ -231,7 +231,7 @@ class BioauthFlow:
 
     def _store_state(self):
         data = {_PROBESTORE_STATE_KEY: self._state_machine_instance.current}
-        ProbeResultsStore.instance().store_probe_data(user_id=self.app_id, ttl=settings.bioauth_timeout, **data)
+        ProbeResultsStorage.instance().store_probe_data(user_id=self.app_id, ttl=settings.bioauth_timeout, **data)
 
     def reset(self):
         self._state_machine_instance.reset(bioauth_flow=self)
@@ -290,6 +290,6 @@ class BioauthFlow:
     @classmethod
     def start_training(cls, app_id):
         data = {_PROBESTORE_STATE_KEY: STATE_AUTH_TRAINING_STARTED}
-        ProbeResultsStore.instance().store_probe_data(user_id=app_id, ttl=settings.bioauth_timeout, **data)
+        ProbeResultsStorage.instance().store_probe_data(user_id=app_id, ttl=settings.bioauth_timeout, **data)
         print 'start learning process...'
 

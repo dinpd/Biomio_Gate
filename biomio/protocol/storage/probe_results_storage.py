@@ -9,7 +9,8 @@ import tornado.gen
 import logging
 logger = logging.getLogger(__name__)
 
-class ProbeResultsStore():
+
+class ProbeResultsStorage():
     _instance = None
 
     def __init__(self):
@@ -29,7 +30,7 @@ class ProbeResultsStore():
     @classmethod
     def instance(cls):
         if not cls._instance:
-            cls._instance = ProbeResultsStore()
+            cls._instance = ProbeResultsStorage()
 
         return cls._instance
 
