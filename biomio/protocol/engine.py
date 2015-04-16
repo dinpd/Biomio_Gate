@@ -253,8 +253,7 @@ def ready(e):
         app_type = str(e.request.header.appType)
         app_id = str(e.request.header.appId)
         auth_wait_callback = e.protocol_instance.try_probe
-        e.protocol_instance.bioauth_flow = BioauthFlow(app_type=app_type, app_id=app_id, auth_wait_callback=auth_wait_callback,
-                                                       auth_training_callback=auth_wait_callback, auto_initialize=False)
+        e.protocol_instance.bioauth_flow = BioauthFlow(app_type=app_type, app_id=app_id, try_probe_callback=auth_wait_callback, auto_initialize=False)
 
         if e.protocol_instance.bioauth_flow.is_probe_owner():
             e.protocol_instance.policy = PolicyManager.get_policy_for_app(app_id=app_id)
