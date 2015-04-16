@@ -111,7 +111,8 @@ BIOMIO_protocol_json_schema = {
                 "resource": {
                     "type": "array",
                     "items": {"$ref": "#/definitions/resourceItem"}
-                }
+                },
+                "message": {"type": "string"}
             }
         },
         "data": {

@@ -85,13 +85,13 @@ def on_auth_wait(e):
     flow = e.bioauth_flow
 
     if flow.is_probe_owner():
-        flow.auth_wait_callback()
+        flow.try_probe_callback()
 
 def on_auth_training(e):
     print 'auth training'
     flow = e.bioauth_flow
     if flow.is_probe_owner():
-        flow.auth_training_callback()
+        flow.try_probe_callback()
 
 
 def on_auth_finished(e):
@@ -173,12 +173,11 @@ def _store_state(e):
 
 
 class BioauthFlow:
-    def __init__(self, app_type, app_id, auth_wait_callback=None, auth_training_callback=None, auto_initialize=True):
+    def __init__(self, app_type, app_id, try_probe_callback, auto_initialize=True):
         self.app_type = app_type
         self.app_id = app_id
         self.rpc_callback = None
-        self.auth_wait_callback = auth_wait_callback
-        self.auth_training_callback = auth_training_callback
+        self.try_probe_callback = try_probe_callback
         self.status = None
 
         self._state_machine_instance = Fysom(auth_states)
