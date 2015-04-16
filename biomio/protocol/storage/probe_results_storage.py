@@ -42,49 +42,45 @@ class ProbeResultsStorage():
         probe_key = 'probe:id'
         return probe_key
 
-    # def has_probe_results(self, user_id):
-    #     return self._redis.exists(name=self.redis_probe_key(user_id=user_id))
-
-
-    def get_probe_data(self, user_id, key):
-        data = self._persistence_redis.get_data(key=self.redis_probe_key(user_id=user_id))
+    def get_probe_data(self, id, key):
+        data = self._persistence_redis.get_data(key=self.redis_probe_key(user_id=id))
         if not data:
             data = {}
         else:
             data = ast.literal_eval(data)
         return data.get(key, None)
 
-    def store_probe_data(self, user_id, ttl=None, **kwargs):
-        key = self.redis_probe_key(user_id=user_id)
+    def store_probe_data(self, id, ttl=None, **kwargs):
+        key = self.redis_probe_key(user_id=id)
         self._persistence_redis.store_data(key=key, ex=ttl, **kwargs)
 
-    def remove_probe_data(self, user_id):
-        key = self.redis_probe_key(user_id=user_id)
+    def remove_probe_data(self, id):
+        key = self.redis_probe_key(user_id=id)
         self._persistence_redis.delete_data(key)
 
-    def subscribe_to_data(self, user_id, data_key, callback):
+    def subscribe_to_data(self, id, data_key, callback):
         self.data_key_by_callback[callback] = data_key
-        self.subscribe(user_id, callback)
+        self.subscribe(id, callback)
 
-    def subscribe(self, user_id, callback):
+    def subscribe(self, id, callback):
         #TODO: added for test purposes - remove later
-        user_id = 'id'
-        key = self.redis_probe_key(user_id=user_id)
+        id = 'id'
+        key = self.redis_probe_key(user_id=id)
         subscribers = self.callback_by_key.get(key, [])
         if not subscribers or callback not in subscribers:
             subscribers.append(callback)
             self.callback_by_key[key] = subscribers
 
-    def unsubscribe_all(self, user_id):
-        user_id = 'id'
-        probe_key = self.redis_probe_key(user_id)
+    def unsubscribe_all(self, id):
+        id = 'id'
+        probe_key = self.redis_probe_key(id)
         subscribers = self.callback_by_key.get(probe_key, [])
         for callback in subscribers:
-            self.unsubscribe(user_id=user_id, callback=callback)
+            self.unsubscribe(user_id=id, callback=callback)
 
-    def unsubscribe(self, user_id, callback):
-        user_id = 'id'
-        key = self.redis_probe_key(user_id=user_id)
+    def unsubscribe(self, id, callback):
+        id = 'id'
+        key = self.redis_probe_key(user_id=id)
         subscribers = self.callback_by_key.get(key, [])
         if subscribers and callback in subscribers:
             subscribers.remove(callback)
