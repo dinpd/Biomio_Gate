@@ -273,10 +273,15 @@ def probe_trying(e):
 
         if resources:
             # Send "try" message to probe
+            try_message_str = None
+            if hasattr(e, 'message'):
+                try_message_str = e.message
+
             message = e.protocol_instance.create_next_message(
                 request_seq=e.request.header.seq,
                 oid='try',
-                resource=resources
+                resource=resources,
+                message=try_message_str
             )
             e.protocol_instance.send_message(responce=message)
 
@@ -706,5 +711,6 @@ class BiomioProtocol:
         )
         self.send_message(responce=message)
 
-    def try_probe(self):
-        self._state_machine_instance.probetry(request=self._last_received_message, protocol_instance=self)
+    def try_probe(self, **kwargs):
+        message = kwargs.get('message', None)
+        self._state_machine_instance.probetry(request=self._last_received_message, protocol_instance=self, message=message)

@@ -85,13 +85,13 @@ def on_auth_wait(e):
     flow = e.bioauth_flow
 
     if flow.is_probe_owner():
-        flow.try_probe_callback()
+        flow.try_probe_callback(message="Authentication")
 
 def on_auth_training(e):
     print 'auth training'
     flow = e.bioauth_flow
     if flow.is_probe_owner():
-        flow.try_probe_callback()
+        flow.try_probe_callback(message="Training")
 
 
 def on_auth_finished(e):
