@@ -3,7 +3,7 @@ from biomio.third_party.fysom import Fysom, FysomError
 from biomio.protocol.storage.probe_results_storage import ProbeResultsStorage
 from biomio.protocol.settings import settings
 from biomio.protocol.probes.probeauthbackend import ProbeAuthBackend
-from biomio.protocol.rpc.app_connection_manager import AppConnectionManager
+from biomio.protocol.rpc.app_auth_connection import AppAuthConnection
 
 import tornado.gen
 
@@ -189,17 +189,21 @@ class BioauthFlow:
 
         self._resources_list = []
 
+        self._auth_connection = AppAuthConnection(app_id=app_id, app_type=app_type)
+
         if auto_initialize:
             self.initialize()
 
     def initialize(self):
         logger.debug('BIOMETRIC AUTH OBJECT [%s, %s]: INITIALIZING...' % (self.app_type, self.app_id))
         self._restore_state()
-        ProbeResultsStorage.instance().subscribe(id=self.app_id, callback=self._change_state_callback)
+        # ProbeResultsStorage.instance().subscribe(id=self.app_id, callback=self._change_state_callback)
+        self._auth_connection.link_app(app_auth_data_callback=self.rpc_callback)
 
     def shutdown(self):
-        logger.debug('BIOMETRIC AUTH OBJECT [%s, %s]: UNSUBSCRIBING...' % (self.app_type, self.app_id))
-        ProbeResultsStorage.instance().unsubscribe(id=self.app_type, callback=self._change_state_callback)
+        logger.debug('BIOMETRIC AUTH OBJECT [%s, %s]: SHUTTING DOWN...' % (self.app_type, self.app_id))
+        # ProbeResultsStorage.instance().unsubscribe(id=self.app_type, callback=self._change_state_callback)
+        self._auth_connection.unlink_app()
         if self.is_extension_owner():
             self.reset()
         self._store_state()
