@@ -90,13 +90,21 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
         wait_callback()
     except Exception as e:
         logger.exception(msg="RPC call with auth error - could not send rpc inprogress status: %s" % str(e))
-        callback(result={"error": str(e)}, status='fail')
+        callback(result={"error": "Internal server error"}, status='fail')
 
     try:
         if not bioauth_flow.is_current_state(state=bioauthflow.STATE_AUTH_READY):
-            bioauth_flow.reset()
-        fut = tornado.gen.Task(bioauth_flow.request_auth)
-        greenado.gyield(fut)
+            if not bioauth_flow.is_current_state(state=bioauthflow.STATE_AUTH_TRAINING_STARTED):
+                bioauth_flow.reset()
+            else:
+                error_msg = 'Training is in progress. Please, wait one minute and try again.'
+                logger.exception(msg="RPC call with auth processing canceled: %s" % error_msg)
+                callback(result={"error": error_msg}, status='fail')
+                return
+
+        future = tornado.gen.Task(bioauth_flow.request_auth)
+        greenado.gyield(future)
+
         # TODO: check for current auth state
         # if bioauth_flow.is_current_state(state=bioauthflow.STATE_AUTH_READY):
         # yield tornado.gen.Task(bioauth_flow.request_auth)
@@ -108,7 +116,7 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
 
     except Exception as e:
         logger.exception(msg="Bioauth flow error: %s" % str(e))
-        callback(result={"error": str(e)}, status='fail')
+        callback(result={"error": 'Server internal error'}, status='fail')
         return
 
     try:
@@ -128,6 +136,7 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
             bioauth_flow.accept_results()
     except Exception as e:
         # TODO: handle exception
+        callback(result={"error": 'Server internal error'}, status='fail')
         logger.exception(msg="RPC call with auth processing error: %s" % str(e))
 
 
