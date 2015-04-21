@@ -88,7 +88,6 @@ def on_auth_wait(e):
         flow.try_probe_callback(message="Authentication")
 
 def on_auth_training(e):
-    print 'auth training'
     flow = e.bioauth_flow
     if flow.is_probe_owner():
         flow.try_probe_callback(message="Training")
@@ -264,7 +263,7 @@ class BioauthFlow:
     def set_auth_training_results(self, appId, type, data):
         if self._state_machine_instance.current == STATE_AUTH_TRAINING_STARTED:
             result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, type, data, self.app_id, True)
-            logger.debug(msg='SET NEXT AUTH RESULT: %s' % str(result))
+            logger.debug(msg='TRAINING RESULT: %s' % str(result))
         self._state_machine_instance.training_results_available()
         self._store_state()
 
