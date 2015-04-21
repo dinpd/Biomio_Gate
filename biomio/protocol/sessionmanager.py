@@ -91,7 +91,7 @@ class SessionManager:
         """
         session = self._sessions_by_token.get(token, None)
 
-        if not session and self._session_store.get_data(refresh_token=token):
+        if not session and self._session_store.get_data(app_id=token):
             session = Session()
             session.refresh_token = token
             self._enqueue_session(session=session)
@@ -105,7 +105,7 @@ class SessionManager:
         :param token: Session refresj token string.
         :return: Protocol state name string if session is alive and state stored; None otherwise.
         """
-        data = self._session_store.get_data(refresh_token=token)
+        data = self._session_store.get_data(app_id=token)
         return data.get('state', None)
 
     def set_protocol_state(self, token, current_state):

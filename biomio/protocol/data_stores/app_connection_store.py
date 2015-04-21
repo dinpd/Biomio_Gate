@@ -23,19 +23,13 @@ class AppConnectionStore(BaseDataStore):
         return REDIS_APP_CONNECTION_KEY % app_id
 
     @inherit_docstring_from(BaseDataStore)
-    def get_data(self, refresh_token, callback=None):
-        self._get_persistence_data(self.get_data_key(refresh_token))
+    def get_data(self, app_id, callback=None):
+        self._get_persistence_data(self.get_data_key(app_id))
 
     @inherit_docstring_from(BaseDataStore)
-    def store_data(self, refresh_token, ttl=None, **kwargs):
-        self._store_persistence_data(self.get_data_key(refresh_token), ex=ttl, **kwargs)
+    def store_data(self, app_id, ttl=None, **kwargs):
+        self._store_persistence_data(self.get_data_key(app_id), ex=ttl, **kwargs)
 
     @inherit_docstring_from(BaseDataStore)
-    def delete_data(self, refresh_token):
-        self.delete_custom_persistence_redis_data(self.get_data_key(refresh_token))
-
-    def get_application_connections(self, app_id):
-        return []
-
-    def check_for_connections(self, app_id):
-        return True
+    def delete_data(self, app_id):
+        self.delete_custom_persistence_redis_data(self.get_data_key(app_id))

@@ -14,14 +14,6 @@ PROBE_SUBSCRIBE_PATTERN = '*:{probe_id}'
 
 
 class AppConnectionListener():
-    # _instance = None
-
-    # @classmethod
-    # def instance(cls):
-    #     if not cls._instance:
-    #         cls._instance = AppConnectionListener()
-    #
-    #     return cls._instance
 
     def __init__(self, app_id, app_type):
         self._redis_channel = AppConnectionListener._subscribe_channel(app_id=app_id, app_type=app_type)
@@ -31,23 +23,14 @@ class AppConnectionListener():
         self._redis = Client(host=settings.redis_host, port=settings.redis_port)
         self._redis.connect()
 
-        # self._listen()
-
-    # @tornado.gen.engine
-    # def _listen(self, key):
-    #     self._redis.connect()
-    #     redis_key_pattern = '{redis_auth_key}:*'.format(redis_auth_key=REDIS_APP_AUTH_KEY)
-    #     yield tornado.gen.Task(self._redis.psubscribe,
-    #                            GENERAL_SUBSCRIBE_PATTERN.format(redis_key_pattern=redis_key_pattern))
-
     @staticmethod
     def _subscribe_channel(app_id, app_type):
         redis_key_pattern = ''
 
         if app_type == 'extension':
-            redis_key_pattern = AppConnectionListener._auth_key(app_id, '*')
+            redis_key_pattern = AppConnectionListener.auth_key(app_id, '*')
         elif app_type == 'probe':
-            redis_key_pattern = AppConnectionListener._auth_key('*', app_id)
+            redis_key_pattern = AppConnectionListener.auth_key('*', app_id)
         else:
             logger.error(msg='Unknown app type')
 
@@ -55,7 +38,16 @@ class AppConnectionListener():
         return GENERAL_SUBSCRIBE_PATTERN.format(redis_key_pattern=redis_key_pattern) if redis_key_pattern else ''
 
     @staticmethod
-    def _auth_key(extension_id, probe_id=None):
+    def auth_key(extension_id, probe_id=None):
+        """
+        Return key that used for storing auth data for application. Requires both connected extension and probe ids
+        for probe.
+        If probe_id is None - temporary key for extension is generated, and should be generated again (with connected
+        probe id) when probe will be available.
+        :param extension_id: Extension app id string.
+        :param probe_id: Probe app id string.
+        :return: Auth data key.
+        """
         redis_key = '%s:%s' % (extension_id, probe_id) if probe_id is not None else extension_id
         return REDIS_APP_AUTH_KEY % redis_key if redis_key else ''
 
@@ -81,22 +73,15 @@ class AppConnectionListener():
     def _on_redis_message(self, msg):
         if msg.kind == 'pmessage':
             if msg.body == 'set' or msg.body == 'expired' or msg.body == 'del':
-                probe_key = re.search('.*:(%s:.*)' % REDIS_APP_AUTH_KEY, msg.channel).group(1)
-                # user_id = re.search('.*:probe:(.*)', msg.channel).group(1)
-                # subscribers = self.callback_by_key.get(probe_key, [])
+                redis_key = re.search('.*:(%s)' % (REDIS_APP_AUTH_KEY % '.*'), msg.channel).group(1)
+
+                extension_id = re.search(REDIS_APP_AUTH_KEY % '(.*):(.*)', msg.channel).group(1)
+                probe_id = re.search(REDIS_APP_AUTH_KEY % '(.*):(.*)', msg.channel).group(2)
 
                 # data = self._persistence_redis.get_data(probe_key)
                 # if msg.body == 'expired' and data:
                 #     return
 
-                logger.debug("GOT AUTH MESSAGE FROM SUBSCRIBED APP (%s) : %s" % (self._app_id, str(msg)))
+                logger.debug("######## GOT AUTH MESSAGE FROM SUBSCRIBED APP : %s" % str(msg))
+                self._callback(extension_id, probe_id)
 
-                # for callback in subscribers:
-                #     data_key = self.data_key_by_callback.get(callback, None)
-                #     if not data_key or (data_key and data.get(data_key, None)):
-                #         try:
-                #             logger.debug("CALLED: %s" % str(callback))
-                #             self._callback()
-                #             logger.debug("DONE")
-                #         except Exception as e:
-                #             logger.exception(msg=str(e))
