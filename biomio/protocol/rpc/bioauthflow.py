@@ -1,6 +1,6 @@
 
 from biomio.third_party.fysom import Fysom, FysomError
-from biomio.protocol.storage.probe_results_storage import ProbeResultsStorage
+from biomio.protocol.storage.auth_state_storage import AuthStateStorage
 from biomio.protocol.settings import settings
 from biomio.protocol.probes.probeauthbackend import ProbeAuthBackend
 from biomio.protocol.rpc.app_auth_connection import AppAuthConnection
@@ -72,7 +72,7 @@ def on_state_changed(e):
 
     if next_state is None:
         if e.fsm.current == STATE_AUTH_STARTED or e.fsm.current == STATE_AUTH_WAIT:
-            if ProbeResultsStorage.instance().flow._auth_connection.get_data():
+            if AuthStateStorage.instance().flow._auth_connection.get_data():
                 next_state = STATE_AUTH_ERROR
                 logger.debug('BIOMETRIC AUTH [%s, %s]: AUTH INTERNAL ERROR - state not set')
             else:
@@ -300,6 +300,6 @@ class BioauthFlow:
     @classmethod
     def start_training(cls, app_id):
         data = {_PROBESTORE_STATE_KEY: STATE_AUTH_TRAINING_STARTED}
-        ProbeResultsStorage.instance().store_data(**data)
+        AuthStateStorage.instance().store_data(**data)
         print 'start learning process...'
 
