@@ -66,6 +66,7 @@ class AppConnectionListener():
     def unsubscribe(self):
         if self._redis_channel is not None:
             logger.debug("Unsubscribing from %s" % self._redis_channel)
+            self._callback = None
             yield tornado.gen.Task(self._redis.punsubscribe, self._redis_channel)
         else:
             logger.error(msg='Could not unsubscribe applicaiton')
@@ -82,6 +83,10 @@ class AppConnectionListener():
                 # if msg.body == 'expired' and data:
                 #     return
 
-                logger.debug("######## GOT AUTH MESSAGE FROM SUBSCRIBED APP : %s" % str(msg))
-                self._callback(extension_id, probe_id)
+                if self._callback:
+                    logger.debug("######## GOT AUTH MESSAGE FROM SUBSCRIBED APP : %s" % str(msg))
+                    try:
+                        self._callback(extension_id, probe_id)
+                    except Exception as e:
+                        pass
 

@@ -55,7 +55,7 @@ class AppAuthConnection():
 
     def link_app(self, app_auth_data_callback):
         """
-        Links application.
+        Links application to auth status key.
         :param app_auth_data_callback: Callback will be called when auth data is available.
         """
         # Start listen to auth data changes
@@ -64,7 +64,17 @@ class AppAuthConnection():
 
         # Create temporary key - includes only extension app id
         if self.is_extension_owner():
-            self._app_key = self._listener.auth_key(extension_id=self._app_id)
+            connected_apps = AppConnectionManager.instance().get_connected_apps(app_id=self._app_id)
+            if connected_apps:
+                for probe_app in connected_apps:
+                    auth_key = self._listener.auth_key(extension_id=self._app_key, probe_id=probe_app)
+                    if not AuthStateStorage.instance().probe_data_exists(id=auth_key):
+                        self._app_key = auth_key
+                        self._sync_buffered_data()
+                        break
+
+            if self._app_key is None:
+                self._app_key = self._listener.auth_key(extension_id=self._app_id)
 
         # In a case of probe - move extension key if any
         if self.is_probe_owner():
@@ -77,14 +87,20 @@ class AppAuthConnection():
         self._sync_buffered_data()
 
     def unlink_app(self):
+        """
+        Unsubscribes app from auth status key changes.
+        """
         self._listener.unsubscribe()
 
     def _initialize_auth_key(self):
         if self.is_probe_owner():
             self._app_key = self._listener.auth_key(extension_id=self._app_id)
-            # ProbeResultsStorage.instance().get_probe_data(id=)
 
     def store_data(self, **kwargs):
+        """
+        Stores custom auth status data.
+        :param kwargs: Auth data keys/values.
+        """
         if self._app_key is not None:
             AuthStateStorage.instance().store_probe_data(id=self._app_key, ttl=settings.bioauth_timeout, **kwargs)
         else:
@@ -95,6 +111,11 @@ class AppAuthConnection():
             self.store_data(**self._buffered_data)
 
     def get_data(self, key=None):
+        """
+        Gets custom auth status data.
+        :param key: Data key that should be retrieved. If None - dictionary containing all data will be retrieved.
+        :return: Auth state data.
+        """
         result = None
 
         if self._app_key is not None:
@@ -119,7 +140,8 @@ class AppAuthConnection():
         :param connected_extension_id: Connected extension id.
         :param connected_probe_id: Connected probe id.
         """
-        if connected_probe_id not in self._app_key and self.is_extension_owner():
+        if (connected_probe_id not in self._app_key and self.is_extension_owner()) \
+                or (connected_extension_id not in self._app_key and self.is_probe_owner()):
             self._app_key = self._listener.auth_key(extension_id=connected_extension_id, probe_id=connected_probe_id)
 
         data = AuthStateStorage.instance().get_probe_data(id=self._app_key)

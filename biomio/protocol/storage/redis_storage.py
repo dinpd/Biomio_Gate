@@ -132,3 +132,12 @@ class RedisStorage():
         """
         self.move_script(keys=[src_key, dst_key])
 
+    def exists(self, key):
+        """
+        Checks if existing Redis key exists.
+        :param key: Redis data key.
+        :return: True if key exists; False otherwise.
+        """
+        return self._redis.exists(key)
+
+

@@ -60,6 +60,14 @@ class AuthStateStorage:
         """
         self._persistence_redis.delete_data(id)
 
+    def probe_data_exists(self, id):
+        """
+        Checks if existing Redis key exists.
+        :param id: Auth state key id.
+        :return: True if key exists; False otherwise.
+        """
+        return self._persistence_redis.exists(key=id)
+
     def move_connected_app_data(self, src_key, dst_key, ttl=None):
         """
         Moves auth data from source key to destination. Source ky will be removed after moving.
