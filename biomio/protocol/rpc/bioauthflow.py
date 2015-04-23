@@ -1,7 +1,6 @@
 
 from biomio.third_party.fysom import Fysom, FysomError
 from biomio.protocol.storage.auth_state_storage import AuthStateStorage
-from biomio.protocol.settings import settings
 from biomio.protocol.probes.probeauthbackend import ProbeAuthBackend
 from biomio.protocol.rpc.app_auth_connection import AppAuthConnection
 
@@ -27,13 +26,9 @@ def on_reset(e):
 
 
 def on_request(e):
-    flow = e.bioauth_flow
+    # flow = e.bioauth_flow
     # Create redis key - that will trigger probe try message
-    flow._auth_connection.store_data(waiting_auth=True)
-
-    # TODO:
-    # Subscribe callback to changes
-    # ProbeResultsStorage.instance().subscribe_to_data(user_id=flow.app_id, data_key='auth', callback=flow.rpc_callback)
+    # flow.auth_connection.store_data(waiting_auth=True)
 
     return STATE_AUTH_WAIT
 
@@ -68,11 +63,11 @@ def on_training_results_available(e):
 
 def on_state_changed(e):
     flow = e.bioauth_flow
-    next_state = flow._auth_connection.get_data(key=_PROBESTORE_STATE_KEY)
+    next_state = flow.auth_connection.get_data(key=_PROBESTORE_STATE_KEY)
 
     if next_state is None:
         if e.fsm.current == STATE_AUTH_STARTED or e.fsm.current == STATE_AUTH_WAIT:
-            if AuthStateStorage.instance().flow._auth_connection.get_data():
+            if flow.auth_connection.get_data():
                 next_state = STATE_AUTH_ERROR
                 logger.debug('BIOMETRIC AUTH [%s, %s]: AUTH INTERNAL ERROR - state not set')
             else:
@@ -121,26 +116,26 @@ auth_states = {
         },
         {
             'name': 'request',
-            'src': STATE_AUTH_READY,
-            'dst': STATE_AUTH_WAIT,
+            'src': [STATE_AUTH_READY],
+            'dst': [STATE_AUTH_WAIT],
             'decision': on_request
         },
         {
             'name': 'start',
-            'src': STATE_AUTH_WAIT,
-            'dst': STATE_AUTH_STARTED,
+            'src': [STATE_AUTH_WAIT],
+            'dst': [STATE_AUTH_STARTED],
             'decision': on_start
         },
         {
             'name': 'results_available',
-            'src': STATE_AUTH_STARTED,
+            'src': [STATE_AUTH_STARTED],
             'dst': [STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR],
             'decision': on_probe_available
         },
         {
             'name': 'results_accepted',
             'src': [STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR],
-            'dst': STATE_AUTH_READY,
+            'dst': [STATE_AUTH_READY],
             'decision': on_got_results
         },
         {
@@ -177,7 +172,7 @@ _PROBESTORE_STATE_KEY = 'state'
 def _store_state(e):
     data = {_PROBESTORE_STATE_KEY: e.fsm.current}
     flow = e.bioauth_flow
-    flow._auth_connection.store_data(**data)
+    flow.auth_connection.store_data(**data)
 
 
 class BioauthFlow:
@@ -195,19 +190,19 @@ class BioauthFlow:
 
         self._resources_list = []
 
-        self._auth_connection = AppAuthConnection(app_id=app_id, app_type=app_type)
+        self.auth_connection = AppAuthConnection(app_id=app_id, app_type=app_type)
 
         if auto_initialize:
             self.initialize()
 
     def initialize(self):
         logger.debug('BIOMETRIC AUTH OBJECT [%s, %s]: INITIALIZING...' % (self.app_type, self.app_id))
+        self.auth_connection.link_app(app_auth_data_callback=self._change_state_callback)
         self._restore_state()
-        self._auth_connection.link_app(app_auth_data_callback=self._change_state_callback)
 
     def shutdown(self):
         logger.debug('BIOMETRIC AUTH OBJECT [%s, %s]: SHUTTING DOWN...' % (self.app_type, self.app_id))
-        self._auth_connection.unlink_app()
+        self.auth_connection.unlink_app()
         if self.is_extension_owner():
             self.reset()
         self._store_state()
@@ -241,7 +236,7 @@ class BioauthFlow:
 
     def _store_state(self):
         data = {_PROBESTORE_STATE_KEY: self._state_machine_instance.current}
-        self._auth_connection.store_data(**data)
+        self.auth_connection.store_data(**data)
 
     def reset(self):
         self._state_machine_instance.reset(bioauth_flow=self)
@@ -292,10 +287,10 @@ class BioauthFlow:
         return self._state_machine_instance.current == state
 
     def is_probe_owner(self):
-        return self._auth_connection.is_probe_owner()
+        return self.auth_connection.is_probe_owner()
 
     def is_extension_owner(self):
-        return self._auth_connection.is_extension_owner()
+        return self.auth_connection.is_extension_owner()
 
     @classmethod
     def start_training(cls, app_id):
