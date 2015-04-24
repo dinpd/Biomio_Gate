@@ -86,6 +86,7 @@ def on_auth_wait(e):
     flow = e.bioauth_flow
 
     if flow.is_probe_owner():
+        flow.auth_connection.start_auth()
         flow.auth_wait_callback()
 
 
@@ -197,12 +198,12 @@ class BioauthFlow:
 
     def initialize(self):
         logger.debug('BIOMETRIC AUTH OBJECT [%s, %s]: INITIALIZING...' % (self.app_type, self.app_id))
-        self.auth_connection.link_app(app_auth_data_callback=self._change_state_callback)
+        self.auth_connection.set_app_connected(app_auth_data_callback=self._change_state_callback)
         self._restore_state()
 
     def shutdown(self):
         logger.debug('BIOMETRIC AUTH OBJECT [%s, %s]: SHUTTING DOWN...' % (self.app_type, self.app_id))
-        self.auth_connection.unlink_app()
+        self.auth_connection.set_app_disconnected()
         if self.is_extension_owner():
             self.reset()
         self._store_state()

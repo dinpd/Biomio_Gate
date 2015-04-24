@@ -46,7 +46,6 @@ class AppAuthConnection():
             connected_apps = AppConnectionManager.instance().get_connected_apps(self._app_id)
             for app_id in connected_apps:
                 data = AuthStateStorage.instance().get_probe_data(id=self._listener.auth_key(extension_id=app_id))
-                print data
                 if data:
                     extension_id = app_id
                     break
@@ -62,18 +61,40 @@ class AppAuthConnection():
                 if not AuthStateStorage.instance().probe_data_exists(id=auth_key):
                     return auth_key
 
-    def link_app(self, app_auth_data_callback):
+    def set_app_connected(self, app_auth_data_callback):
         """
         Links application to auth status key.
         :param app_auth_data_callback: Callback will be called when auth data is available.
         """
-
-        AppConnectionManager.instance().add_connections_for_app(self._app_id)
-
         # Start listen to auth data changes
         self._app_auth_data_callback = app_auth_data_callback
         self._listener.subscribe(callback=self._on_connection_data)
 
+        AppConnectionManager.instance().add_connections_for_app(self._app_id)
+
+        if self.is_probe_owner():
+            # In a case of probe - move extension key if any
+            extension_id = self._find_connected_extension()
+            if extension_id:
+                # Extension connected and auth started
+                self._app_key = self._listener.auth_key(extension_id=extension_id, probe_id=self._app_id)
+                extension_tmp_key = self._listener.auth_key(extension_id=extension_id)
+                logger.debug(msg='Found temporary auth key created by extension: %s' % extension_tmp_key)
+                AuthStateStorage.instance().move_connected_app_data(src_key=extension_tmp_key, dst_key=self._app_key)
+                logger.debug(msg='Key moved: %s -> %s' % (extension_tmp_key, self._app_key))
+
+        # Sync data if necessary
+        if self._app_key is not None:
+            self._sync_buffered_data()
+
+    def set_app_disconnected(self):
+        """
+        Unsubscribes app from auth status key changes.
+        """
+        AppConnectionManager.instance().remove_connection_for_app(self._app_id)
+        self._listener.unsubscribe()
+
+    def start_auth(self, on_behalf_of=None):
         # Check if other app connected
         self._app_key = self._find_connected_app()
 
@@ -82,24 +103,10 @@ class AppAuthConnection():
                 # Create temporary key - includes only extension app id
                 self._app_key = self._listener.auth_key(extension_id=self._app_id)
 
-        if self.is_probe_owner():
-            # In a case of probe - move extension key if any
-            extension_id = self._find_connected_extension()
-            if extension_id:
-                self._app_key = self._listener.auth_key(extension_id=extension_id, probe_id=self._app_id)
-                extension_tmp_key = self._listener.auth_key(extension_id=extension_id)
-                AuthStateStorage.instance().move_connected_app_data(src_key=extension_tmp_key, dst_key=self._app_key)
+    def end_auth(self):
+        AuthStateStorage.instance().remove_probe_data(self._app_key)
+        self._app_key = None
 
-        # Sync data if necessary
-        if self._app_key is not None:
-            self._sync_buffered_data()
-
-    def unlink_app(self):
-        """
-        Unsubscribes app from auth status key changes.
-        """
-        AppConnectionManager.instance().remove_connection_for_app(self._app_id)
-        self._listener.unsubscribe()
 
     def _initialize_auth_key(self):
         if self.is_probe_owner():
