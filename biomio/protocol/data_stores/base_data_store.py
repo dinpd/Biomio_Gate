@@ -171,7 +171,7 @@ class BaseDataStore():
             Internal method which gets data from persistence redis instance by given key.
         :param key: Generated redis key.
         """
-        self._persistence_redis.get_data(key)
+        return self._persistence_redis.get_data(key)
 
     def _select_data_by_ids(self, table_class_name, object_ids, callback):
         """

@@ -16,6 +16,13 @@ class RedisStorage():
         else:
             self._redis = StrictRedis(host=settings.redis_host, port=settings.redis_port)
 
+        move_script = """
+            local value = redis.call('GET', KEYS[1])
+            redis.call('SET', KEYS[2], value)
+            redis.call('DEL', KEYS[1])
+        """
+        self.move_script = self._redis.register_script(move_script)
+
     def _configure_redis_instance(self):
         self._redis.config_set(REDIS_CONFIG_MAX_MEMORY_OPTION_KEY, settings.redis_max_memory)
         self._redis.config_set(REDIS_CONFIG_EVICTION_POLICY_OPTION_KEY, settings.redis_eviction_policy)
@@ -113,3 +120,33 @@ class RedisStorage():
         :return: list of elements
         """
         return self._redis.lrange(name=key, start=0, end=-1)
+
+    def move_data(self, src_key, dst_key, ex=None):
+        """
+        Moves data from source to destination key.
+        :param src_key:
+        :param dst_key:
+        :param ex:
+        :return:
+        """
+        self.move_script(keys=[src_key, dst_key])
+
+    def exists(self, key):
+        """
+        Checks if existing Redis key exists.
+        :param key: Redis data key.
+        :return: True if key exists; False otherwise.
+        """
+        return self._redis.exists(key)
+
+    def remove_keys(self, keys):
+        """
+        :param keys:
+        :return:
+        """
+        pipeline = self._redis.pipeline()
+
+        for key in keys:
+            pipeline.delete()
+
+        pipeline.execute()

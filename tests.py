@@ -564,7 +564,8 @@ class TestReadyState(BiomioTest):
 
 class TestRpcCalls(BiomioTest):
     def setup(self):
-        self.setup_test_with_handshake(app_id=extension_app_id, app_type=extension_app_type, key=extension_key)
+        # self.setup_test_with_handshake(app_id=extension_app_id, app_type=extension_app_type, key=extension_key)
+        pass
 
     def teardown(self):
         self.teardown_test()
@@ -594,6 +595,8 @@ class TestRpcCalls(BiomioTest):
                     results['rpcResp'] = message
                     close_connection_callback()
 
+        self.setup_test_with_handshake(app_id=extension_app_id, app_type=extension_app_type, key=extension_key)
+
         message = self.create_next_message(oid='rpcReq', namespace='extension_plugin', call='test_func_with_auth',
             data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
@@ -601,7 +604,6 @@ class TestRpcCalls(BiomioTest):
 
         # Separate thread with connection for
         samples = ['True']
-
         t = threading.Thread(target=TestRpcCalls.probe_job, kwargs={'samples': samples, 'probe_type': 'touchIdSamples'})
         t.start()
         time.sleep(1)
