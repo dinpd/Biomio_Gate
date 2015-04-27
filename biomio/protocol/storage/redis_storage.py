@@ -139,3 +139,14 @@ class RedisStorage():
         """
         return self._redis.exists(key)
 
+    def remove_keys(self, keys):
+        """
+        :param keys:
+        :return:
+        """
+        pipeline = self._redis.pipeline()
+
+        for key in keys:
+            pipeline.delete()
+
+        pipeline.execute()

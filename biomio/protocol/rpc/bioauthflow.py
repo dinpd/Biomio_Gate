@@ -296,6 +296,7 @@ class BioauthFlow:
     @classmethod
     def start_training(cls, app_id):
         data = {_PROBESTORE_STATE_KEY: STATE_AUTH_TRAINING_STARTED}
-        AuthStateStorage.instance().store_data(**data)
+        app_id = '88b960b1c9805fb586810f270def7378'
+        AuthStateStorage.instance().store_probe_data(app_id, **data)
         print 'start learning process...'
 

@@ -78,4 +78,6 @@ class AuthStateStorage:
         """
         self._persistence_redis.move_data(src_key=src_key, dst_key=dst_key, ex=ttl)
 
+    def remove_keys(self, keys):
+        self._persistence_redis.remove_keys(keys=keys)
 

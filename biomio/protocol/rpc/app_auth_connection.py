@@ -55,13 +55,15 @@ class AppAuthConnection():
 
     def _connect_to_extension(self, extension_id):
         probes_list = AppConnectionManager.instance().get_connected_apps(app_id=extension_id)
+        keys_to_remove = []
         for probe_id in probes_list:
             key = self._listener.auth_key(extension_id=extension_id, probe_id=probe_id)
             if probe_id == self._app_id:
                 self._app_key = key
             else:
-                # TODO: remove key
-                pass
+                keys_to_remove.append(key)
+
+        AuthStateStorage.instance().remove_keys(keys=keys_to_remove)
 
     def _set_keys_for_connected_probes(self, extension_id):
         probes_list = AppConnectionManager.instance().get_connected_apps(app_id=extension_id)
