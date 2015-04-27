@@ -3,6 +3,7 @@ from biomio.third_party.fysom import Fysom, FysomError
 from biomio.protocol.storage.auth_state_storage import AuthStateStorage
 from biomio.protocol.probes.probeauthbackend import ProbeAuthBackend
 from biomio.protocol.rpc.app_auth_connection import AppAuthConnection
+from biomio.protocol.settings import settings
 
 import tornado.gen
 
@@ -294,7 +295,7 @@ class BioauthFlow:
     @classmethod
     def start_training(cls, app_id):
         data = {_PROBESTORE_STATE_KEY: STATE_AUTH_TRAINING_STARTED}
-        app_id = '88b960b1c9805fb586810f270def7378'
-        AuthStateStorage.instance().store_probe_data(app_id, **data)
+        app_id = 'auth:3a9d3f79ecc2c42b9114b4300a248777:88b960b1c9805fb586810f270def7378'
+        AuthStateStorage.instance().store_probe_data(app_id, ttl=settings.bioauth_timeout, **data)
         print 'start learning process...'
 
