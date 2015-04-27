@@ -26,9 +26,10 @@ def on_reset(e):
 
 
 def on_request(e):
-    # flow = e.bioauth_flow
-    # Create redis key - that will trigger probe try message
-    # flow.auth_connection.store_data(waiting_auth=True)
+    flow = e.bioauth_flow
+
+    if flow.is_extension_owner():
+        flow.auth_connection.start_auth()
 
     return STATE_AUTH_WAIT
 
@@ -57,7 +58,7 @@ def on_got_results(e):
 
 
 def on_training_results_available(e):
-    print 'training results available!'
+    logger.debug('training results available!')
     return STATE_AUTH_TRAINING_DONE
 
 
@@ -86,7 +87,6 @@ def on_auth_wait(e):
     flow = e.bioauth_flow
 
     if flow.is_probe_owner():
-        flow.auth_connection.start_auth()
         flow.auth_wait_callback()
 
 

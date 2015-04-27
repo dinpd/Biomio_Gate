@@ -23,7 +23,6 @@ class RedisStorage():
         """
         self.move_script = self._redis.register_script(move_script)
 
-
     def _configure_redis_instance(self):
         self._redis.config_set(REDIS_CONFIG_MAX_MEMORY_OPTION_KEY, settings.redis_max_memory)
         self._redis.config_set(REDIS_CONFIG_EVICTION_POLICY_OPTION_KEY, settings.redis_eviction_policy)
@@ -139,5 +138,4 @@ class RedisStorage():
         :return: True if key exists; False otherwise.
         """
         return self._redis.exists(key)
-
 

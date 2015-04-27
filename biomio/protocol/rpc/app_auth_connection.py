@@ -16,7 +16,7 @@ class AppAuthConnection():
         self._app_id = app_id
         self._app_type = app_type
         self._listener = AppConnectionListener(app_id=app_id, app_type=app_type)
-        self._buffered_data = {}
+        self.extension_keys = []
         self._app_auth_data_callback = None
 
         self._initialize_auth_key()
@@ -44,22 +44,30 @@ class AppAuthConnection():
 
         if self._app_id and self.is_probe_owner():
             connected_apps = AppConnectionManager.instance().get_connected_apps(self._app_id)
-            for app_id in connected_apps:
-                data = AuthStateStorage.instance().get_probe_data(id=self._listener.auth_key(extension_id=app_id))
-                if data:
-                    extension_id = app_id
-                    break
+            if connected_apps is not None:
+                for app_id in connected_apps:
+                    data = AuthStateStorage.instance().get_probe_data(id=self._redis_key(other_id=app_id))
+                    if data:
+                        extension_id = app_id
+                        break
 
         return extension_id
 
-    def _find_connected_app(self):
-        # Create temporary key - includes only extension app id
-        connected_apps = AppConnectionManager.instance().get_connected_apps(app_id=self._app_id)
-        if connected_apps:
-            for app in connected_apps:
-                auth_key = self._redis_key(other_id=app)
-                if not AuthStateStorage.instance().probe_data_exists(id=auth_key):
-                    return auth_key
+    def _connect_to_extension(self, extension_id):
+        probes_list = AppConnectionManager.instance().get_connected_apps(app_id=extension_id)
+        for probe_id in probes_list:
+            key = self._listener.auth_key(extension_id=extension_id, probe_id=probe_id)
+            if probe_id == self._app_id:
+                self._app_key = key
+            else:
+                # TODO: remove key
+                pass
+
+    def _set_keys_for_connected_probes(self, extension_id):
+        probes_list = AppConnectionManager.instance().get_connected_apps(app_id=extension_id)
+        for probe_id in probes_list:
+            key = self._listener.auth_key(extension_id=extension_id, probe_id=probe_id)
+            self.extension_keys.append(key)
 
     def set_app_connected(self, app_auth_data_callback):
         """
@@ -70,43 +78,27 @@ class AppAuthConnection():
         self._app_auth_data_callback = app_auth_data_callback
         self._listener.subscribe(callback=self._on_connection_data)
 
-        AppConnectionManager.instance().add_connections_for_app(self._app_id)
-
         if self.is_probe_owner():
-            # In a case of probe - move extension key if any
+            # In a case of probe - find connected extension
             extension_id = self._find_connected_extension()
             if extension_id:
                 # Extension connected and auth started
-                self._app_key = self._listener.auth_key(extension_id=extension_id, probe_id=self._app_id)
-                extension_tmp_key = self._listener.auth_key(extension_id=extension_id)
-                logger.debug(msg='Found temporary auth key created by extension: %s' % extension_tmp_key)
-                AuthStateStorage.instance().move_connected_app_data(src_key=extension_tmp_key, dst_key=self._app_key)
-                logger.debug(msg='Key moved: %s -> %s' % (extension_tmp_key, self._app_key))
-
-        # Sync data if necessary
-        if self._app_key is not None:
-            self._sync_buffered_data()
+                # TODO: remove all other extension keys using Lua script
+                self._connect_to_extension(extension_id=extension_id)
 
     def set_app_disconnected(self):
         """
         Unsubscribes app from auth status key changes.
         """
-        AppConnectionManager.instance().remove_connection_for_app(self._app_id)
         self._listener.unsubscribe()
 
     def start_auth(self, on_behalf_of=None):
-        # Check if other app connected
-        self._app_key = self._find_connected_app()
-
-        if self._app_key is None:
-            if self.is_extension_owner():
-                # Create temporary key - includes only extension app id
-                self._app_key = self._listener.auth_key(extension_id=self._app_id)
+        if self.is_extension_owner():
+            self._set_keys_for_connected_probes(extension_id=self._app_id)
 
     def end_auth(self):
         AuthStateStorage.instance().remove_probe_data(self._app_key)
         self._app_key = None
-
 
     def _initialize_auth_key(self):
         if self.is_probe_owner():
@@ -117,14 +109,18 @@ class AppAuthConnection():
         Stores custom auth status data.
         :param kwargs: Auth data keys/values.
         """
-        if self._app_key is not None:
-            AuthStateStorage.instance().store_probe_data(id=self._app_key, ttl=settings.bioauth_timeout, **kwargs)
-        else:
-            self._buffered_data.update(**kwargs)
+        keys_to_set = []
 
-    def _sync_buffered_data(self):
-        if self._app_id and self._buffered_data:
-            self.store_data(**self._buffered_data)
+        if self._app_key is None and self.is_extension_owner():
+            keys_to_set = self.extension_keys
+        elif self._app_key is not None:
+            keys_to_set.append(self._app_key)
+
+        if keys_to_set:
+            for app_key in keys_to_set:
+                AuthStateStorage.instance().store_probe_data(id=app_key, ttl=settings.bioauth_timeout, **kwargs)
+        else:
+            logger.error(msg='No keys to store data for app %s' % self._app_id)
 
     def get_data(self, key=None):
         """
@@ -135,12 +131,7 @@ class AppAuthConnection():
         result = None
 
         if self._app_key is not None:
-            return AuthStateStorage.instance().get_probe_data(id=self._app_key, key=key)
-        else:
-            result = self._buffered_data
-
-            if key is not None:
-                result = result.get(key, None)
+            result = AuthStateStorage.instance().get_probe_data(id=self._app_key, key=key)
 
         return result
 
@@ -156,9 +147,15 @@ class AppAuthConnection():
         :param connected_extension_id: Connected extension id.
         :param connected_probe_id: Connected probe id.
         """
-        if (connected_probe_id not in self._app_key and self.is_extension_owner()) \
-                or (connected_extension_id not in self._app_key and self.is_probe_owner()):
-            self._app_key = self._listener.auth_key(extension_id=connected_extension_id, probe_id=connected_probe_id)
+        if self._app_key is None:
+            key = self._listener.auth_key(extension_id=connected_extension_id, probe_id=connected_probe_id)
+
+            if AuthStateStorage.instance().probe_data_exists(id=key):
+                if self.is_probe_owner():
+                    self._connect_to_extension(extension_id=connected_extension_id)
+                else:
+                    self._app_key = key
+                    self.extension_keys = []
 
         data = AuthStateStorage.instance().get_probe_data(id=self._app_key)
         if data:
