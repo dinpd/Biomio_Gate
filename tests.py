@@ -565,6 +565,7 @@ class TestReadyState(BiomioTest):
 class TestRpcCalls(BiomioTest):
     def setup(self):
         self.setup_test_with_handshake(app_id=extension_app_id, app_type=extension_app_type, key=extension_key)
+        pass
 
     def teardown(self):
         self.teardown_test()
@@ -601,7 +602,6 @@ class TestRpcCalls(BiomioTest):
 
         # Separate thread with connection for
         samples = ['True']
-
         t = threading.Thread(target=TestRpcCalls.probe_job, kwargs={'samples': samples, 'probe_type': 'touchIdSamples'})
         t.start()
         time.sleep(1)
@@ -615,7 +615,6 @@ class TestRpcCalls(BiomioTest):
 class TestFaceRecognition(BiomioTest):
     def setup(self):
         pass
-        # self.setup_test_with_handshake(app_id=extension_app_id, app_type=extension_app_type, key=extension_key)
 
     def teardown(self):
         self.teardown_test()

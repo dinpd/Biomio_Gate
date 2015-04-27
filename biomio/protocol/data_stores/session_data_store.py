@@ -24,7 +24,7 @@ class SessionDataStore(BaseDataStore):
 
     @inherit_docstring_from(BaseDataStore)
     def get_data(self, refresh_token, callback=None):
-        self._get_persistence_data(self.get_data_key(refresh_token))
+        return self._get_persistence_data(self.get_data_key(refresh_token))
 
     @inherit_docstring_from(BaseDataStore)
     def store_data(self, refresh_token, ttl=None, **kwargs):
