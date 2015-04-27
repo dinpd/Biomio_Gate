@@ -3,11 +3,9 @@ from apns import APNs, Payload
 
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 
-PRODUCTION_CERT_FILE = ''
-PRODUCTION_KEY_FILE = ''
+PRODUCTION_CERT_FILE = os.path.join(APP_ROOT, '..', '..', 'push_prod.pem')
 
-SANDBOX_CERT_FILE = ''
-SANDBOX_KEY_FILE = ''
+SANDBOX_CERT_FILE = os.path.join(APP_ROOT, '..', '..', 'push_dev.pem')
 
 
 def send_push_notification(device_token, message, use_sandbox=False):
@@ -19,12 +17,10 @@ def send_push_notification(device_token, message, use_sandbox=False):
     """
     if use_sandbox:
         cert_file = SANDBOX_CERT_FILE
-        key_file = SANDBOX_KEY_FILE
     else:
         cert_file = PRODUCTION_CERT_FILE
-        key_file = PRODUCTION_KEY_FILE
 
-    apns = APNs(use_sandbox=use_sandbox, cert_file=cert_file, key_file=key_file)
+    apns = APNs(use_sandbox=use_sandbox, cert_file=cert_file)
     payload = Payload(alert=message, sound='default', badge=1)
 
     apns.gateway_server.send_notification(token_hex=device_token, payload=payload)
