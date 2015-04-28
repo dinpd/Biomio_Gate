@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 STATE_AUTH_READY = 'auth_ready'
 STATE_AUTH_WAIT = 'auth_wait'
 STATE_AUTH_STARTED = 'auth_started'
+STATE_AUTH_VERIFICATION_STARTED = 'auth_verification_started'
 STATE_AUTH_SUCCEED = 'auth_succeed'
 STATE_AUTH_FAILED = 'auth_failed'
 STATE_AUTH_TIMEOUT = 'auth_timeout'
@@ -68,7 +69,7 @@ def on_state_changed(e):
     next_state = flow.auth_connection.get_data(key=_PROBESTORE_STATE_KEY)
 
     if next_state is None:
-        if e.fsm.current == STATE_AUTH_STARTED or e.fsm.current == STATE_AUTH_WAIT:
+        if e.fsm.current == STATE_AUTH_STARTED or e.fsm.current == STATE_AUTH_WAIT or e.fsm.current == STATE_AUTH_VERIFICATION_STARTED:
             if flow.auth_connection.get_data():
                 next_state = STATE_AUTH_ERROR
                 logger.debug('BIOMETRIC AUTH [%s, %s]: AUTH INTERNAL ERROR - state not set')
@@ -102,6 +103,11 @@ def on_auth_finished(e):
     if flow.is_extension_owner():
         flow.rpc_callback()
 
+def on_auth_verification_started(e):
+    flow = e.bioauth_flow
+
+    if flow.is_extension_owner():
+        flow._verification_started_callback()
 
 auth_states = {
     'initial': STATE_AUTH_READY,
@@ -127,8 +133,13 @@ auth_states = {
             'decision': on_start
         },
         {
-            'name': 'results_available',
+            'name': 'verification_started',
             'src': [STATE_AUTH_STARTED],
+            'dst': STATE_AUTH_VERIFICATION_STARTED
+        },
+        {
+            'name': 'results_available',
+            'src': [STATE_AUTH_VERIFICATION_STARTED],
             'dst': [STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR],
             'decision': on_probe_available
         },
@@ -146,11 +157,11 @@ auth_states = {
         },
         {
             'name': 'state_changed',
-            'src': [STATE_AUTH_READY, STATE_AUTH_WAIT, STATE_AUTH_STARTED,
+            'src': [STATE_AUTH_READY, STATE_AUTH_WAIT, STATE_AUTH_STARTED, STATE_AUTH_VERIFICATION_STARTED,
                     STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR,
                     STATE_AUTH_TRAINING_STARTED, STATE_AUTH_TRAINING_DONE, STATE_AUTH_TRAINING_FAILED],
-            'dst': [STATE_AUTH_READY, STATE_AUTH_WAIT, STATE_AUTH_STARTED, STATE_AUTH_SUCCEED,
-                    STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR,
+            'dst': [STATE_AUTH_READY, STATE_AUTH_WAIT, STATE_AUTH_STARTED, STATE_AUTH_VERIFICATION_STARTED,
+                    STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR,
                     STATE_AUTH_TRAINING_STARTED, STATE_AUTH_TRAINING_DONE, STATE_AUTH_TRAINING_FAILED],
             'decision': on_state_changed
         }
@@ -161,7 +172,8 @@ auth_states = {
         'onauth_failed': on_auth_finished,
         'onauth_timeout': on_auth_finished,
         'onauth_error': on_auth_finished,
-        'onauth_training': on_auth_training
+        'onauth_training': on_auth_training,
+        'onauth_verification_started': on_auth_verification_started
     }
 }
 
@@ -186,6 +198,7 @@ class BioauthFlow:
         self._state_machine_instance = Fysom(auth_states)
         self._state_machine_instance.onchangestate = self._get_state_machine_logger_callback()
         self._change_state_callback = self._get_change_state_callback()
+        self._verification_started_callback = None
 
         self._resources_list = []
 
@@ -242,10 +255,11 @@ class BioauthFlow:
         self._store_state()
 
     @tornado.gen.engine
-    def request_auth(self, callback):
+    def request_auth(self, verification_started_callback, callback):
         """
         Should be called for extension to request biometric authentication from probe.
         """
+        self._verification_started_callback = verification_started_callback # Store callback to call later before verification started
         self.rpc_callback = callback # Store callback to call later in STATE_AUTH_FINISHED state
         self._state_machine_instance.request(bioauth_flow=self)
         self._store_state()
@@ -259,6 +273,10 @@ class BioauthFlow:
     def set_next_auth_result(self, appId, type, data):
         if not self._resources_list:
             logger.warning(msg='resource item list for probe is empty')
+        self._state_machine_instance.verification_started(bioauth_flow=self)
+        if self._verification_started_callback is not None:
+            self._verification_started_callback()
+        logger.debug(msg='SET NEXT AUTH RESULT -----------------')
         result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, type, data, self.app_id, False)
         logger.debug(msg='SET NEXT AUTH RESULT: %s' % str(result))
         #TODO: count probes and set appropriate result

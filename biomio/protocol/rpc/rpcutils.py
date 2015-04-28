@@ -73,6 +73,11 @@ def rpc_call(rpc_func):
     return wraps(rpc_func)(_decorator)
 
 
+def get_verification_started_callback(callback):
+    def verification_started_callback_func():
+        callback(result={"msg": 'Verification is in a progress.'}, status='inprogress')
+    return verification_started_callback_func
+
 def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
     """
     Provides biometric authentication to support @rpc_call_with_auth
@@ -102,7 +107,7 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
                 callback(result={"error": error_msg}, status='fail')
                 return
 
-        future = tornado.gen.Task(bioauth_flow.request_auth)
+        future = tornado.gen.Task(bioauth_flow.request_auth, get_verification_started_callback(callback=callback))
         greenado.gyield(future)
 
         # TODO: check for current auth state
