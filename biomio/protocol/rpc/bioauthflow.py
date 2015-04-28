@@ -274,9 +274,6 @@ class BioauthFlow:
         if not self._resources_list:
             logger.warning(msg='resource item list for probe is empty')
         self._state_machine_instance.verification_started(bioauth_flow=self)
-        if self._verification_started_callback is not None:
-            self._verification_started_callback()
-        logger.debug(msg='SET NEXT AUTH RESULT -----------------')
         result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, type, data, self.app_id, False)
         logger.debug(msg='SET NEXT AUTH RESULT: %s' % str(result))
         #TODO: count probes and set appropriate result
