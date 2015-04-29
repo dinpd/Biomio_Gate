@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 from biomio.constants import REDIS_CHANGES_CLASS_NAME, REDIS_DO_NOT_STORE_RESULT_KEY, REDIS_PARTIAL_RESULTS_KEY, \
-    REDIS_RESULTS_COUNTER_KEY
+    REDIS_RESULTS_COUNTER_KEY, EMAILS_TABLE_CLASS_NAME, USERS_TABLE_CLASS_NAME
 from biomio.mysql_storage.mysql_data_store_interface import MySQLDataStoreInterface
 from biomio.protocol.data_stores.base_data_store import BaseDataStore
 from biomio.protocol.storage.redis_storage import RedisStorage
@@ -29,11 +29,13 @@ def delete_record_job(table_class_name, object_id):
 
 def update_record_job(table_class_name, object_id, **kwargs):
     worker_logger.info('Updating record for table class - %s, with object_id - %s, with data - %s' % (table_class_name,
-                                                                                               object_id, kwargs))
+                                                                                                      object_id,
+                                                                                                      kwargs))
     try:
         MySQLDataStoreInterface.update_data(table_name=table_class_name, object_id=object_id, **kwargs)
-        worker_logger.info('Updated record for table class - %s, with object_id - %s, with data - %s' % (table_class_name,
-                                                                                                  object_id, kwargs))
+        worker_logger.info(
+            'Updated record for table class - %s, with object_id - %s, with data - %s' % (table_class_name,
+                                                                                          object_id, kwargs))
     except Exception as e:
         worker_logger.exception(msg=str(e))
 
@@ -97,6 +99,36 @@ def generate_pgp_keys_job(table_class_name, email, callback_code, result_code):
             BaseDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
                                                       record_dict=result, callback_code=callback_code)
         worker_logger.info('Finished email pgp keys generation, for email - %s' % email)
+
+
+def get_probe_ids_by_user_email(table_class_name, email, callback_code):
+    worker_logger.info('Getting probe ids by user email - %s' % email)
+    email_data = MySQLDataStoreInterface.get_object(table_name=EMAILS_TABLE_CLASS_NAME, object_id=email)
+    worker_logger.debug('Email Data - %s' % email_data.to_dict())
+    worker_logger.debug(email_data.user)
+    probe_ids = MySQLDataStoreInterface.get_applications_by_user_id_and_type(table_name=table_class_name,
+                                                                             user_id=email_data.user, app_type='probe')
+    worker_logger.debug('probe IDS - %s' % probe_ids)
+    result = dict(result=probe_ids)
+    BaseDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
+                                              record_dict=result, callback_code=callback_code)
+    worker_logger.info('Got probe ids by user email - %s' % email)
+
+
+def get_extension_ids_by_probe_id(table_class_name, probe_id, callback_code):
+    worker_logger.info('Getting extension ids by probe ID - %s' % probe_id)
+    probe_data = MySQLDataStoreInterface.get_object(table_name=table_class_name, object_id=probe_id, return_dict=True)
+    worker_logger.debug('Probe data - %s' % probe_data)
+    user = MySQLDataStoreInterface.get_object(table_name=USERS_TABLE_CLASS_NAME, object_id=probe_data.get('users')[0])
+    worker_logger.debug('USer data - %s' % user.to_dict())
+    extension_ids = MySQLDataStoreInterface.get_applications_by_user_id_and_type(table_name=table_class_name,
+                                                                                 user_id=user,
+                                                                                 app_type='extension')
+    worker_logger.debug('Extension IDS - %s' % extension_ids)
+    result = dict(result=extension_ids)
+    BaseDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
+                                              record_dict=result, callback_code=callback_code)
+    worker_logger.info('Got extension ids by probe ID - %s' % probe_id)
 
 
 def update_redis_job():

@@ -82,16 +82,18 @@ class MySQLDataStoreInterface:
                                                   add_object_pk=add_object_id, set_attr=set_attr)
 
     @staticmethod
-    def get_object(table_name, object_id, module_name=TABLES_MODULE):
+    def get_object(table_name, object_id, return_dict=False, module_name=TABLES_MODULE):
         """
             Returns single object for given table_name
         :param module_name: string name of the module
         :param table_name: string name of the class (table)
         :param object_id: unique ID to get the object
+        :param return_dict: indicates whether to dictionary
         :return: Specified table_name class instance.
 
         """
-        return MySQLDataStore.instance().get_object(module_name=module_name, table_name=table_name, object_id=object_id)
+        return MySQLDataStore.instance().get_object(module_name=module_name, table_name=table_name, object_id=object_id,
+                                                    return_dict=return_dict)
 
     @staticmethod
     def select_data_by_ids(table_name, object_ids, module_name=TABLES_MODULE):
@@ -105,3 +107,17 @@ class MySQLDataStoreInterface:
         """
         return MySQLDataStore.instance().select_data_by_ids(module_name=module_name, table_name=table_name,
                                                             object_ids=object_ids)
+
+    @staticmethod
+    def get_applications_by_user_id_and_type(table_name, user_id, app_type, module_name=TABLES_MODULE):
+        """
+            Gets Applications ids by given user_id and application type
+        :param table_name: string name of the class (table)
+        :param user_id: user_id to get applications for.
+        :param app_type: Type of the applications to get.
+        :param module_name: string name of the module
+        :return:
+        """
+        return MySQLDataStore.instance().get_applications_by_user_id_and_type(module_name=module_name,
+                                                                              table_name=table_name, user_id=user_id,
+                                                                              app_type=app_type)

@@ -35,10 +35,13 @@ class MySQLDataStore():
         return [res.to_dict() for res in result]
 
     @pny.db_session
-    def get_object(self, module_name, table_name, object_id):
+    def get_object(self, module_name, table_name, object_id, return_dict):
         table_class = self.get_table_class(module_name, table_name)
         search_query = {table_class.get_unique_search_attribute(): object_id}
-        return table_class.get(**search_query)
+        result = table_class.get(**search_query)
+        if return_dict:
+            return result.to_dict(with_collections=True)
+        return result
 
     @pny.db_session
     def update_data(self, module_name, table_name, update_object_pk, **kwargs):
@@ -83,6 +86,17 @@ class MySQLDataStore():
         for obj in objects:
             result.update({getattr(obj, obj.get_unique_search_attribute()): obj.to_dict()})
         return result
+
+    @pny.db_session
+    def get_applications_by_user_id_and_type(self, module_name, table_name, user_id, app_type):
+        table_class = self.get_table_class(module_name=module_name, table_name=table_name)
+        objects = pny.select(app.app_id for app in table_class if user_id in app.users and app.app_type == app_type)[:]
+        return objects
+
+    @pny.db_session
+    def self_join_applications(self, module_name, table_name, app_id, app_type):
+        table_class = self.get_table_class(module_name=module_name, table_name=table_name)
+
 
     @staticmethod
     def get_table_class(module_name, table_name):
