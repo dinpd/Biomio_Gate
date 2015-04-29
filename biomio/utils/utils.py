@@ -1,11 +1,6 @@
-import os
+from __future__ import absolute_import
 from apns import APNs, Payload
-
-APP_ROOT = os.path.dirname(os.path.abspath(__file__))
-
-PRODUCTION_CERT_FILE = os.path.join(APP_ROOT, '..', '..', 'push_prod.pem')
-
-SANDBOX_CERT_FILE = os.path.join(APP_ROOT, '..', '..', 'push_dev.pem')
+from biomio.protocol.settings import APNS_PRODUCTION_PEM, APNS_DEV_PEM
 
 
 def send_push_notification(device_token, message, use_sandbox=False):
@@ -16,9 +11,9 @@ def send_push_notification(device_token, message, use_sandbox=False):
     :param use_sandbox: indicates whether to use sandbox mode.
     """
     if use_sandbox:
-        cert_file = SANDBOX_CERT_FILE
+        cert_file = APNS_PRODUCTION_PEM
     else:
-        cert_file = PRODUCTION_CERT_FILE
+        cert_file = APNS_DEV_PEM
 
     apns = APNs(use_sandbox=use_sandbox, cert_file=cert_file)
     payload = Payload(alert=message, sound='default', badge=1)

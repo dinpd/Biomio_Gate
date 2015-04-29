@@ -1,4 +1,8 @@
+import os
 from tornado.options import define, options, parse_config_file
+
+APP_ROOT = os.path.dirname(os.path.abspath(__file__))
+APP_ROOT = os.path.join(APP_ROOT, '..', '..')
 
 DEFAULT_CONNECTION_TTL = 30  # 30 minutes
 DEFAULT_PORT = 8080
@@ -6,6 +10,7 @@ DEFAULT_SESSION_TTL = 3 * 60  # 3 minutes
 DEFAULT_REDIS_PORT = 6379
 DEFAULT_REDIS_HOST = 'localhost'
 DEFAULT_BIOAUTH_TIMEOUT = 5 * 60
+
 
 DEFAULT_MYSQL_HOST = 'localhost'
 DEFAULT_MYSQL_USER = 'biomio_user'
@@ -15,6 +20,9 @@ DEFAULT_MYSQL_DATABASE_NAME = 'biom_website'
 DEFAULT_REDIS_MAX_MEMORY = '100000000'
 DEFAULT_REDIS_MEMORY_SAMPLES = '5'
 DEFAULT_REDIS_EVICTION_POLICY = 'allkeys-lru'
+
+APNS_PRODUCTION_PEM = os.path.join(APP_ROOT, 'push_prod.pem')
+APNS_DEV_PEM = os.path.join(APP_ROOT, 'dev_prod.pem')
 
 # Setting Tornado options
 define('connection_timeout', default=DEFAULT_CONNECTION_TTL,
@@ -39,6 +47,6 @@ define('redis_max_memory_samples', default=DEFAULT_REDIS_MEMORY_SAMPLES, help='R
 define('redis_eviction_policy', default=DEFAULT_REDIS_EVICTION_POLICY, help='Data eviction policy.')
 
 # options.logging = None
-parse_config_file(path='biomio.conf')
+parse_config_file(path=os.path.join(APP_ROOT, 'biomio.conf'))
 settings = options
 
