@@ -15,8 +15,7 @@ class BiomioMessageBuilder:
         self.set_header(**kwargs)
 
     def set_header(self, **kwargs):
-        for k, v in kwargs.iteritems():
-            self._header[k] = v
+        self._header.update(kwargs)
 
     def get_header_field_value(self, field_str):
         return self._header.get(field_str, None)

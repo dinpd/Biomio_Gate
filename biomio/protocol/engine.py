@@ -103,19 +103,18 @@ class MessageHandler:
                 real_fingerprint = Crypto.get_public_rsa_fingerprint(pub_key)
                 logger.debug("PUBLIC KEY: %s" % pub_key)
                 logger.debug("FINGERPRINT: %s" % real_fingerprint)
-                # if pub_key and real_fingerprint == fingerprint:
-                #TODO: fingerprint checking
-                if hasattr(e.request.msg, "secret") \
-                        and e.request.msg.secret:
-                    if pub_key is None:
-                        return STATE_REGISTRATION
-                    e.status = "Registration handshake is inappropriate. Given app is already registered."
+                if pub_key and real_fingerprint == fingerprint:
+                    if hasattr(e.request.msg, "secret") \
+                            and e.request.msg.secret:
+                        if pub_key is None:
+                            return STATE_REGISTRATION
+                        e.status = "Registration handshake is inappropriate. Given app is already registered."
+                    else:
+                        if pub_key is not None:
+                            return STATE_HANDSHAKE
+                        e.status = "Regular handshake is inappropriate. It is required to run registration handshake first."
                 else:
-                    if pub_key is not None:
-                        return STATE_HANDSHAKE
-                    e.status = "Regular handshake is inappropriate. It is required to run registration handshake first."
-                # else:
-                #     e.status = "Regular handshake failed. Invalid fingerprint."
+                    e.status = "Regular handshake failed. Invalid fingerprint."
 
         return STATE_DISCONNECTED
 
@@ -151,10 +150,9 @@ class MessageHandler:
 
         header_str = BiomioMessageBuilder.header_from_message(e.request)
 
-        #TODO: fix digest checking
-        # if Crypto.check_digest(key=key, data=header_str, digest=str(e.request.msg.key)):
-            # protocol_connection_established(protocol_instance=e.protocol_instance, app_id=app_id)
-        return STATE_READY
+        if Crypto.check_digest(key=key, data=header_str, digest=str(e.request.msg.key)):
+            protocol_connection_established(protocol_instance=e.protocol_instance, app_id=app_id)
+            return STATE_READY
 
         e.status = 'Handshake failed. Invalid signature.'
         return STATE_DISCONNECTED
@@ -314,7 +312,7 @@ def print_state_change(e):
     logger.info('STATE_TRANSITION: event: %s, %s -> %s' % (e.event, e.src, e.dst))
 
 
-def protocol_connection_established(protocol_instance, user_id, app_id):
+def protocol_connection_established(protocol_instance, app_id):
     # TODO: make separate method for
     pass
 

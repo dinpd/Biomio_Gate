@@ -91,7 +91,6 @@ def on_state_changed(e):
 
 
 # State callbacks
-
 def on_auth_wait(e):
     flow = e.bioauth_flow
 
