@@ -24,6 +24,8 @@ class BaseDataStore():
         self._UPDATE_JOB = sj.update_record_job
         self._DELETE_JOB = sj.delete_record_job
         self._SELECT_JOB = sj.select_records_by_ids_job
+        self._SELECT_PROBES = sj.get_probe_ids_by_user_email
+        self._SELECT_EXT = sj.get_extension_ids_by_probe_id
 
     @classmethod
     @abc.abstractmethod
@@ -210,3 +212,12 @@ class BaseDataStore():
         :param kwargs: iput parameters for job.
         """
         run_storage_job(job_to_run, **kwargs)
+
+    def _get_app_ids_by_app_id(self, table_class_name, object_id, callback, probes=False):
+        callback_code = RedisResultsListener.instance().subscribe_callback(callback=callback)
+        if probes:
+            self._run_storage_job(self._SELECT_PROBES, table_class_name=table_class_name, email=object_id,
+                                  callback_code=callback_code)
+        else:
+            self._run_storage_job(self._SELECT_EXT, table_class_name=table_class_name, probe_id=object_id,
+                                  callback_code=callback_code)

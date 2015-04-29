@@ -48,3 +48,10 @@ class ApplicationDataStore(BaseDataStore):
     @inherit_docstring_from(BaseDataStore)
     def select_data_by_ids(self, app_ids, callback):
         self._select_data_by_ids(table_class_name=self._table_class_name, object_ids=app_ids, callback=callback)
+
+    def get_probe_ids_by_user_email(self, email, callback):
+        self._get_app_ids_by_app_id(table_class_name=self._table_class_name, object_id=email, callback=callback,
+                                    probes=True)
+
+    def get_extension_ids_by_probe_id(self, probe_id, callback):
+        self._get_app_ids_by_app_id(table_class_name=self._table_class_name, object_id=probe_id, callback=callback)
