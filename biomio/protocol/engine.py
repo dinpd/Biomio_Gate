@@ -97,24 +97,27 @@ class MessageHandler:
                 # TODO: move to some state handling callback
                 e.protocol_instance.start_new_session()
 
-                fingerprint = str(e.request.header.appId)
-                pub_key = get_app_data_helper(app_id=fingerprint, key='public_key')
-
-                real_fingerprint = Crypto.get_public_rsa_fingerprint(pub_key)
-                logger.debug("PUBLIC KEY: %s" % pub_key)
-                logger.debug("FINGERPRINT: %s" % real_fingerprint)
-                if pub_key and real_fingerprint == fingerprint:
-                    if hasattr(e.request.msg, "secret") \
-                            and e.request.msg.secret:
-                        if pub_key is None:
-                            return STATE_REGISTRATION
-                        e.status = "Registration handshake is inappropriate. Given app is already registered."
+                if hasattr(e.request.msg, "secret") \
+                        and e.request.msg.secret:
+                    if not hasattr(e.request.header, "appId") \
+                            or not e.request.header.appId:
+                        return STATE_REGISTRATION
                     else:
-                        if pub_key is not None:
-                            return STATE_HANDSHAKE
-                        e.status = "Regular handshake is inappropriate. It is required to run registration handshake first."
+                        e.status = "Application id is set during registration handshake."
                 else:
-                    e.status = "Regular handshake failed. Invalid fingerprint."
+                    if hasattr(e.request.header, "appId") \
+                            and e.request.header.appId:
+                        fingerprint = str(e.request.header.appId)
+                        pub_key = get_app_data_helper(app_id=fingerprint, key='public_key')
+                        real_fingerprint = Crypto.get_public_rsa_fingerprint(pub_key)
+                        logger.debug("PUBLIC KEY: %s" % pub_key)
+                        logger.debug("FINGERPRINT: %s" % real_fingerprint)
+                        if pub_key and real_fingerprint == fingerprint:
+                            if pub_key is not None:
+                                return STATE_HANDSHAKE
+                            e.status = "Regular handshake is inappropriate. It is required to run registration handshake first."
+                        else:
+                            e.status = "Regular handshake failed. Invalid fingerprint."
 
         return STATE_DISCONNECTED
 
@@ -235,7 +238,7 @@ def app_registered(e):
 
     app_id = str(e.request.header.appId)
     user_id = str(e.request.header.appId)
-    protocol_connection_established(protocol_instance=e.protocol_instance, user_id=user_id, app_id=app_id)
+    protocol_connection_established(protocol_instance=e.protocol_instance, app_id=app_id)
 
     message = e.protocol_instance.create_next_message(
         request_seq=e.request.header.seq,

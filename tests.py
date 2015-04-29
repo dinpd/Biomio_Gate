@@ -58,7 +58,7 @@ class BiomioTest:
         self._handshake_key = None
 
     @nottest
-    def setup_test(self, app_id, app_type, os_id='', dev_id='', key=None, secret=None):
+    def setup_test(self, app_type, app_id=None, os_id='', dev_id='', key=None, secret=None):
         """
         Default setup for test methods.
         :param app_id: Application id.
@@ -68,7 +68,9 @@ class BiomioTest:
         :param dev_id: Device id (optional)
         """
         self._builder = BiomioMessageBuilder(oid='clientHeader', seq=0, protoVer='1.0', osId=os_id,
-                                             devId=dev_id, appId=app_id, appType=app_type)
+                                             devId=dev_id, appType=app_type)
+        if app_id:
+            self._builder.set_header(appId=app_id)
         self.last_server_message = None
         self.session_refresh_token = None
         self.current_session_token = None
@@ -871,6 +873,20 @@ class TestFaceRecognition(BiomioTest):
         rpcResp = results['rpcResp']
         ok_(rpcResp is not None, msg='No RPC response on auth.')
         eq_(str(rpcResp.msg.rpcStatus), 'complete', msg='RPC authentication failed, but result is positive')
+
+
+class TestRegistration(BiomioTest):
+    def setup(self):
+        self.setup_test(app_type=extension_app_type)
+
+    def teardown(self):
+        self.teardown_test()
+
+    def test_registration(self):
+        message = self.create_next_message(oid='clientHello', secret='secret')
+        response = self.send_message(message=message)
+        eq_(response.msg.oid, 'serverHello', msg='Response does not contains serverHello message')
+        ok_(hasattr(response.msg, 'key') and response.msg.key, msg="Responce does not contains generated private key.")
 
 
 def main():
