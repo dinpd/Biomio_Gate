@@ -4,7 +4,7 @@ import pony.orm as pny
 import abc
 from pony.orm.ormtypes import LongStr
 from biomio.constants import REDIS_USER_KEY, REDIS_EMAILS_KEY, REDIS_APPLICATION_KEY, MYSQL_APPS_TABLE_NAME, \
-    MYSQL_EMAILS_TABLE_NAME, MYSQL_USERS_TABLE_NAME
+    MYSQL_EMAILS_TABLE_NAME, MYSQL_USERS_TABLE_NAME, MYSQL_TRAINING_DATA_TABLE_NAME
 from biomio.utils.biomio_decorators import inherit_docstring_from
 
 database = pny.Database()
@@ -174,3 +174,28 @@ class ChangesTable(BaseEntityClass, database.Entity):
     @inherit_docstring_from(BaseEntityClass)
     def get_table_name():
         return ''
+
+
+class TrainingData(BaseEntityClass, database.Entity):
+    _table_ = MYSQL_TRAINING_DATA_TABLE_NAME
+    probe_id = pny.PrimaryKey(str, auto=False)
+    data = pny.Required(buffer, lazy=False)
+
+    @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
+    def create_record(**kwargs):
+        TrainingData(**kwargs)
+
+    @inherit_docstring_from(BaseEntityClass)
+    def get_redis_key(self):
+        return ''
+
+    @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
+    def get_unique_search_attribute():
+        return 'probe_id'
+
+    @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
+    def get_table_name():
+        return MYSQL_TRAINING_DATA_TABLE_NAME

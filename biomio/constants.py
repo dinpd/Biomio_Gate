@@ -6,10 +6,12 @@ APPS_TABLE_CLASS_NAME = 'Application'
 USERS_TABLE_CLASS_NAME = 'UserInformation'
 EMAILS_TABLE_CLASS_NAME = 'EmailsData'
 REDIS_CHANGES_CLASS_NAME = 'ChangesTable'
+TRAINING_DATA_TABLE_CLASS_NAME = 'TrainingData'
 
 MYSQL_APPS_TABLE_NAME = 'Applications'
 MYSQL_EMAILS_TABLE_NAME = 'EmailsData'
 MYSQL_USERS_TABLE_NAME = 'Profiles'
+MYSQL_TRAINING_DATA_TABLE_NAME = 'TrainingData'
 
 # Redis Constants
 REDIS_APP_AUTH_KEY = 'auth:%s'
