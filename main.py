@@ -78,7 +78,14 @@ class InitialProbeRestHandler(tornado.web.RequestHandler):
 class Application(tornado.web.Application):
     def __init__(self):
         handlers = [
-            (r'/websocket', WebSocketHandler),
+            (r'/websocket', WebSocketHandler)
+        ]
+        tornado.web.Application.__init__(self, handlers)
+
+
+class HttpApplication(tornado.web.Application):
+    def __init__(self):
+        handlers = [
             (r'/training', InitialProbeRestHandler)
         ]
         tornado.web.Application.__init__(self, handlers)
@@ -88,6 +95,12 @@ def run_tornado():
     server = tornado.httpserver.HTTPServer(app, ssl_options=ssl_options)
     logger.info('Running tornado server...')
     server.listen(settings.port)
+
+    http_app = HttpApplication()
+    http_server = tornado.httpserver.HTTPServer(http_app)
+    logger.info('Running REST tornado server...')
+    http_server.listen(settings.rest_port)
+
     tornado.ioloop.IOLoop.instance().start()
 
 if __name__ == '__main__':

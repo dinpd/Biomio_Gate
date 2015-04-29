@@ -24,6 +24,8 @@ DEFAULT_REDIS_EVICTION_POLICY = 'allkeys-lru'
 APNS_PRODUCTION_PEM = os.path.join(APP_ROOT, 'push_prod.pem')
 APNS_DEV_PEM = os.path.join(APP_ROOT, 'push_dev.pem')
 
+DEFAULT_REST_PORT = 8888
+
 # Setting Tornado options
 define('connection_timeout', default=DEFAULT_CONNECTION_TTL,
        help='Number of seconds in which inactive connection will be closed.')
@@ -39,6 +41,9 @@ define('mysql_host', default=DEFAULT_MYSQL_HOST, help='MySQL server host.')
 define('mysql_user', default=DEFAULT_MYSQL_USER, help='MySQL user.')
 define('mysql_pass', default=DEFAULT_MYSQL_PASSWORD, help='MySQL user password.')
 define('mysql_db_name', default=DEFAULT_MYSQL_DATABASE_NAME, help='MySQL database name.')
+
+# REST settings
+define('rest_port', default=DEFAULT_REST_PORT, help='REST port')
 
 # Setting Redis options
 define('redis_max_memory', default=DEFAULT_REDIS_MAX_MEMORY, help='Redis max memory option.')
