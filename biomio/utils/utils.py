@@ -11,9 +11,9 @@ def send_push_notification(device_token, message, use_sandbox=False):
     :param use_sandbox: indicates whether to use sandbox mode.
     """
     if use_sandbox:
-        cert_file = APNS_PRODUCTION_PEM
-    else:
         cert_file = APNS_DEV_PEM
+    else:
+        cert_file = APNS_PRODUCTION_PEM
 
     apns = APNs(use_sandbox=use_sandbox, cert_file=cert_file)
     payload = Payload(alert=message, sound='default', badge=1)
