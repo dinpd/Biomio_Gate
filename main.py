@@ -86,7 +86,7 @@ class Application(tornado.web.Application):
 class HttpApplication(tornado.web.Application):
     def __init__(self):
         handlers = [
-            (r'/training', InitialProbeRestHandler)
+            (r'/training.*', InitialProbeRestHandler)
         ]
         tornado.web.Application.__init__(self, handlers)
 
