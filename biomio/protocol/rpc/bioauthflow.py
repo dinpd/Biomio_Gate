@@ -126,15 +126,15 @@ auth_states = {
             'dst': [STATE_AUTH_WAIT],
             'decision': on_request
         },
-        {
-            'name': 'start',
-            'src': [STATE_AUTH_WAIT],
-            'dst': [STATE_AUTH_STARTED],
-            'decision': on_start
-        },
+        # {
+        #     'name': 'start',
+        #     'src': [STATE_AUTH_WAIT],
+        #     'dst': [STATE_AUTH_STARTED],
+        #     'decision': on_start
+        # },
         {
             'name': 'verification_started',
-            'src': [STATE_AUTH_STARTED],
+            'src': [STATE_AUTH_WAIT],
             'dst': STATE_AUTH_VERIFICATION_STARTED
         },
         {
@@ -266,7 +266,7 @@ class BioauthFlow:
 
     def auth_started(self, resource_list=None):
         self._resources_list = resource_list
-        self._state_machine_instance.start(bioauth_flow=self)
+        # self._state_machine_instance.start(bioauth_flow=self)
         self._store_state()
 
     @tornado.gen.engine

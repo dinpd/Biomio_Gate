@@ -91,7 +91,7 @@ class SessionManager:
         """
         session = self._sessions_by_token.get(token, None)
 
-        if not session and self._session_store.get_data(app_id=token):
+        if not session and self._session_store.get_data(refresh_token=token):
             session = Session()
             session.refresh_token = token
             self._enqueue_session(session=session)
