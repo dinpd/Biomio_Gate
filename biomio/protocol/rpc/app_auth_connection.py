@@ -19,8 +19,6 @@ class AppAuthConnection():
         self.extension_keys = []
         self._app_auth_data_callback = None
 
-        self._initialize_auth_key()
-
     def is_probe_owner(self):
         """
         Checks if probe connection is owner of this object.
@@ -101,10 +99,6 @@ class AppAuthConnection():
     def end_auth(self):
         AuthStateStorage.instance().remove_probe_data(self._app_key)
         self._app_key = None
-
-    def _initialize_auth_key(self):
-        if self.is_probe_owner():
-            self._app_key = self._listener.auth_key(extension_id=self._app_id)
 
     def store_data(self, **kwargs):
         """
