@@ -228,9 +228,8 @@ class BiomioTest:
     def get_probe_message_callback(self, samples, probe_type="touchIdSamples"):
         def on_message(test_obj, message, close_connection_callback):
             if str(message.msg.oid) == 'nop':
-                print "probe: NOP"
+                pass
             elif str(message.msg.oid) == 'try':
-                print "probe: TRY"
                 sample_num = int(message.msg.resource[0].samples)
                 samples_to_sent = samples[:sample_num]
                 probe_msg = test_obj.create_next_message(oid='probe', probeId=0,
@@ -630,7 +629,6 @@ class TestRpcCalls(BiomioTest):
         self.rpcSent = False
 
         def on_extension_message(test_obj, message, close_connection_callback):
-            # print "RESP!!" , message
             if str(message.msg.oid) == 'nop':
                 if not self.rpcSent:
                     message = test_obj.create_next_message(oid='rpcReq', namespace='extension_plugin', call='test_func_with_auth',
@@ -647,9 +645,8 @@ class TestRpcCalls(BiomioTest):
 
         def on_probe_message(test_obj, message, close_connection_callback):
             if str(message.msg.oid) == 'nop':
-                print "probe: NOP"
+                pass
             elif str(message.msg.oid) == 'try':
-                print "probe: TRY - close connection"
                 close_connection_callback(send_bye=False)
 
         # Separate thread with connection for extension
@@ -700,13 +697,45 @@ class TestFaceRecognition(BiomioTest):
 
     @attr('slow')
     @attr('fr')
+    def test_no_try_after_training_process(self):
+
+        result = {
+            'got_try_mesage': False
+        }
+
+        def on_probe_message(test_obj, message, close_connection_callback):
+            if str(message.msg.oid) == 'nop':
+                close_connection_callback(send_bye=False)
+            elif str(message.msg.oid) == 'try':
+                result['got_try_mesage'] = True
+                close_connection_callback(send_bye=False)
+
+        # Use REST request to server to start training process
+        urllib2.urlopen("http://{host}:{port}/training".format(host=settings.host, port=settings.rest_port)).read()
+
+        # Prerare list of samples for training
+        samples = []
+        images_path = FR_TRAINING_IMG_FOLDER_PATH
+        for image in FR_TRAINING_IMG_NAMES:
+            samples.append(TestRpcCalls.photo_data(images_path + image))
+
+        # Communicate as a probe app
+        TestRpcCalls.application_job(app_id=probe_app_id, app_type=probe_app_type, message_callback=self.get_probe_message_callback(samples=samples, probe_type='imageSamples'))
+
+        # Communicate as a probe app agon_probe_messagein - check if try message sent
+        TestRpcCalls.application_job(app_id=probe_app_id, app_type=probe_app_type, message_callback=on_probe_message)
+
+        ok_(not result['got_try_mesage'], msg='Got "try" message when training in progress.')
+
+    @attr('slow')
+    @attr('fr')
     def test_face_recognition_rpc_auth_proceed(self):
         results = {'rpcResp': None }
 
         # Message handler for extension emulation
         def on_message(test_obj, message, close_connection_callback):
             if str(message.msg.oid) == 'nop':
-                print "."
+                pass
             elif str(message.msg.oid) == 'rpcResp':
                 if TestRpcCalls.is_rpc_response_status(message=message, status='complete') \
                         or TestRpcCalls.is_rpc_response_status(message=message, status='fail'):
@@ -748,7 +777,7 @@ class TestFaceRecognition(BiomioTest):
         # Message handler for extension emulation
         def on_message(test_obj, message, close_connection_callback):
             if str(message.msg.oid) == 'nop':
-                print "."
+                pass
             elif str(message.msg.oid) == 'rpcResp':
                 if TestRpcCalls.is_rpc_response_status(message=message, status='complete') \
                         or TestRpcCalls.is_rpc_response_status(message=message, status='fail'):

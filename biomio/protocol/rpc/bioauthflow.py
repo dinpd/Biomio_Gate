@@ -19,6 +19,7 @@ STATE_AUTH_FAILED = 'auth_failed'
 STATE_AUTH_TIMEOUT = 'auth_timeout'
 STATE_AUTH_ERROR = 'auth_error'
 STATE_AUTH_TRAINING_STARTED = 'auth_training'
+STATE_AUTH_TRAINING_INPROGRESS = 'auth_training_inprogress'
 STATE_AUTH_TRAINING_DONE = 'auth_training_done'
 STATE_AUTH_TRAINING_FAILED = 'auth_training_failed'
 
@@ -150,8 +151,13 @@ auth_states = {
             'decision': on_got_results
         },
         {
-            'name': 'training_results_available',
+            'name': 'training_in_progress',
             'src': [STATE_AUTH_TRAINING_STARTED],
+            'dst': STATE_AUTH_TRAINING_INPROGRESS,
+        },
+        {
+            'name': 'training_results_available',
+            'src': [STATE_AUTH_TRAINING_INPROGRESS],
             'dst': [STATE_AUTH_TRAINING_DONE, STATE_AUTH_TRAINING_FAILED],
             'decision': on_training_results_available
         },
@@ -159,10 +165,12 @@ auth_states = {
             'name': 'state_changed',
             'src': [STATE_AUTH_READY, STATE_AUTH_WAIT, STATE_AUTH_STARTED, STATE_AUTH_VERIFICATION_STARTED,
                     STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR,
-                    STATE_AUTH_TRAINING_STARTED, STATE_AUTH_TRAINING_DONE, STATE_AUTH_TRAINING_FAILED],
+                    STATE_AUTH_TRAINING_STARTED, STATE_AUTH_TRAINING_INPROGRESS,
+                    STATE_AUTH_TRAINING_DONE, STATE_AUTH_TRAINING_FAILED],
             'dst': [STATE_AUTH_READY, STATE_AUTH_WAIT, STATE_AUTH_STARTED, STATE_AUTH_VERIFICATION_STARTED,
                     STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR,
-                    STATE_AUTH_TRAINING_STARTED, STATE_AUTH_TRAINING_DONE, STATE_AUTH_TRAINING_FAILED],
+                    STATE_AUTH_TRAINING_STARTED, STATE_AUTH_TRAINING_INPROGRESS,
+                    STATE_AUTH_TRAINING_DONE, STATE_AUTH_TRAINING_FAILED],
             'decision': on_state_changed
         }
     ],
@@ -274,6 +282,8 @@ class BioauthFlow:
         if not self._resources_list:
             logger.warning(msg='resource item list for probe is empty')
         self._state_machine_instance.verification_started(bioauth_flow=self)
+        self._store_state()
+
         result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, type, data, self.app_id, False)
         logger.debug(msg='SET NEXT AUTH RESULT: %s' % str(result))
         #TODO: count probes and set appropriate result
@@ -283,10 +293,13 @@ class BioauthFlow:
     @tornado.gen.engine
     def set_auth_training_results(self, appId, type, data):
         if self._state_machine_instance.current == STATE_AUTH_TRAINING_STARTED:
+            self._state_machine_instance.training_in_progress(bioauth_flow=self)
+            self._store_state()
+
             result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, type, data, self.app_id, True)
             logger.debug(msg='TRAINING RESULT: %s' % str(result))
-        self._state_machine_instance.training_results_available()
-        self._store_state()
+            self._state_machine_instance.training_results_available()
+            self._store_state()
 
     def set_auth_results(self, result):
         #TODO: make method private

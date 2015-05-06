@@ -149,6 +149,7 @@ class AppAuthConnection():
         :param connected_extension_id: Connected extension id.
         :param connected_probe_id: Connected probe id.
         """
+
         if self._app_key is None:
             key = self._listener.auth_key(extension_id=connected_extension_id, probe_id=connected_probe_id)
 
