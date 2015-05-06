@@ -101,7 +101,8 @@ BIOMIO_protocol_json_schema = {
                 "refreshToken": {"type": "string"},
                 "sessionttl": {"type": "number"},
                 "connectionttl": {"type": "number"},
-                "key": {"type": "string"}
+                "key": {"type": "string"},
+                "fingerprint": {"type": "string"}
             }
         },
         "try": {

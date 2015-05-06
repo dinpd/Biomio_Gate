@@ -882,12 +882,18 @@ class TestRegistration(BiomioTest):
     def teardown(self):
         self.teardown_test()
 
-    def test_registration(self):
+    def test_registration_hello_message_sent(self):
         message = self.create_next_message(oid='clientHello', secret='secret')
         response = self.send_message(message=message)
         eq_(response.msg.oid, 'serverHello', msg='Response does not contains serverHello message')
         ok_(hasattr(response.msg, 'key') and response.msg.key, msg="Responce does not contains generated private key.")
+        ok_(hasattr(response.msg, 'fingerprint') and response.msg.fingerprint, msg="Responce does not contains fingerprint generated for public key.")
 
+    def test_registration_ack_message(self):
+        message = self.create_next_message(oid='clientHello', secret='secret')
+        response = self.send_message(message=message)
+        message = self.create_next_message(oid='ack')
+        self.send_message(message=message, wait_for_response=False)
 
 def main():
     pass

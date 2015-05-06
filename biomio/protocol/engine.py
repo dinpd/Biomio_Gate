@@ -224,12 +224,13 @@ def registration(e):
         logger.info(" -------- APP REGISTRATION: extension")
 
     key, pub_key = Crypto.generate_keypair()
+    fingerprint = Crypto.get_public_rsa_fingerprint(pub_key)
 
     ApplicationDataStore.instance().store_data(
         app_id=str(e.request.header.appId),
         public_key=pub_key
     )
-    e.fsm.registered(protocol_instance=e.protocol_instance, request=e.request, key=key)
+    e.fsm.registered(protocol_instance=e.protocol_instance, request=e.request, key=key, fingerprint=fingerprint)
 
 
 def app_registered(e):
@@ -246,7 +247,8 @@ def app_registered(e):
         refreshToken=session.refresh_token,
         sessionttl=settings.session_ttl,
         connectionttl=settings.connection_timeout,
-        key=e.key
+        key=e.key,
+        fingerprint=e.fingerprint
     )
     e.protocol_instance.send_message(responce=message)
 

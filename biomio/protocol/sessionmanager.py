@@ -105,7 +105,7 @@ class SessionManager:
         :param token: Session refresj token string.
         :return: Protocol state name string if session is alive and state stored; None otherwise.
         """
-        data = self._session_store.get_data(app_id=token)
+        data = self._session_store.get_data(refresh_token=token)
         return data.get('state', None)
 
     def set_protocol_state(self, token, current_state):
