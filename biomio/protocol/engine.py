@@ -255,13 +255,15 @@ def ready(e):
         app_type = str(e.request.header.appType)
         app_id = str(e.request.header.appId)
         auth_wait_callback = e.protocol_instance.try_probe
-        e.protocol_instance.bioauth_flow = BioauthFlow(app_type=app_type, app_id=app_id, try_probe_callback=auth_wait_callback, auto_initialize=False)
+        cancel_auth_callback = e.protocol_instance.cancel_auth
+        e.protocol_instance.bioauth_flow = BioauthFlow(app_type=app_type, app_id=app_id,
+                                                       try_probe_callback=auth_wait_callback,
+                                                       cancel_auth_callback=cancel_auth_callback, auto_initialize=False)
 
         if e.protocol_instance.bioauth_flow.is_probe_owner():
             e.protocol_instance.policy = PolicyManager.get_policy_for_app(app_id=app_id)
 
         e.protocol_instance.bioauth_flow.initialize()
-
 
 def probe_trying(e):
     if not e.src == STATE_PROBE_TRYING:
@@ -351,7 +353,7 @@ biomio_states = {
         },
         {
             'name': 'bye',
-            'src': [STATE_CONNECTED, STATE_HANDSHAKE, STATE_READY],
+            'src': [STATE_CONNECTED, STATE_HANDSHAKE, STATE_READY, STATE_PROBE_TRYING, STATE_GETTING_PROBES],
             'dst': STATE_DISCONNECTED,
             'decision': MessageHandler.on_bye_message
         },
@@ -523,7 +525,7 @@ class BiomioProtocol:
         logger.info('SENT MESSAGE: "%s" ' % str(responce.msg.oid))
         logger.debug('SENT MESSAGE STRING: %s' % responce.serialize())
 
-    def close_connection(self, status_message=None, is_closed_by_client=None):
+    def close_connection(self, status_message=None, is_closed_by_client=False):
         """ Sends bye message and closes session.
 
         :note Temporary session object will be created to send bye message with status if necessary.
@@ -717,3 +719,6 @@ class BiomioProtocol:
     def try_probe(self, **kwargs):
         message = kwargs.get('message', None)
         self._state_machine_instance.probetry(request=self._last_received_message, protocol_instance=self, message=message)
+
+    def cancel_auth(self, **kwargs):
+        self.close_connection()

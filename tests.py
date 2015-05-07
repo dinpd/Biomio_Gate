@@ -623,7 +623,7 @@ class TestRpcCalls(BiomioTest):
         eq_(str(rpcResp.msg.rpcStatus), 'complete', msg='RPC authentication failed, but result is positive')
 
     @attr('slow')
-    def test_auth_stop_after_probe_reconnect(self):
+    def test_auth_stop_after_probe_disconnects(self):
         # Results
         results = {'rpcResp': None }
 
@@ -644,7 +644,6 @@ class TestRpcCalls(BiomioTest):
             wait_for_response=True)
 
         # Separate thread - probe connection
-        message_callback = self.get_probe_message_callback(samples=['True'], probe_type='touchIdSamples')
         t = threading.Thread(target=TestRpcCalls.application_job, kwargs={'app_id': probe_app_id, 'app_type': probe_app_type, 'message_callback': on_probe_message})
         t.start()
 
@@ -653,6 +652,39 @@ class TestRpcCalls(BiomioTest):
         rpcResp = results['rpcResp']
         ok_(rpcResp is not None, msg='No RPC response on auth.')
         eq_(str(rpcResp.msg.rpcStatus), 'fail', msg='RPC finished with positive result')
+
+
+    @attr('slow')
+    def test_auth_stop_after_extension_disconnects(self):
+        # Results
+        probe_results = {'gotTryMessage': False, 'gotByeMessage': False }
+
+        def on_probe_message(test_obj, message, close_connection_callback):
+            if str(message.msg.oid) == 'try':
+                probe_results['gotTryMessage'] = True
+            elif str(message.msg.oid) == 'bye':
+                probe_results['gotByeMessage'] = True
+                close_connection_callback(send_bye=False)
+
+        def on_extension_message(test_obj, message, close_connection_callback):
+            if str(message.msg.oid) == 'nop':
+                if probe_results['gotTryMessage']:
+                    close_connection_callback(send_bye=False)
+
+        message = self.create_next_message(oid='rpcReq', namespace='extension_plugin', call='test_func_with_auth',
+            data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
+        self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
+            wait_for_response=True)
+
+        # Separate thread - probe connection
+        t = threading.Thread(target=TestRpcCalls.application_job, kwargs={'app_id': probe_app_id, 'app_type': probe_app_type, 'message_callback': on_probe_message})
+        t.start()
+
+        self.keep_connection_and_communicate(biomio_test=self, message_callback=on_extension_message)
+
+        t.join()
+
+        ok_(probe_results['gotTryMessage'] and probe_results['gotByeMessage'], msg='Auth does not finished after extension disconnection.')
 
     # @attr('slow')
     # def test_try_resend_when_probe_disconnected(self):

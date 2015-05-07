@@ -133,12 +133,12 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
             if bioauth_flow.is_current_state(bioauthflow.STATE_AUTH_FAILED):
                 error_msg = 'Biometric authentication failed.'
             elif bioauth_flow.is_current_state(bioauthflow.STATE_AUTH_TIMEOUT):
-                error_msg = 'Biometric auth timeout'
+                error_msg = 'Biometric authentication timeout.'
+            elif bioauth_flow.is_current_state(bioauthflow.STATE_AUTH_CANCELED):
+                error_msg = 'Biometric authenctication canceled.'
             else:
                 error_msg = 'Biometric auth internal error'
             callback(result={"error": error_msg}, status='fail')
-
-            bioauth_flow.accept_results()
     except Exception as e:
         # TODO: handle exception
         callback(result={"error": 'Server internal error'}, status='fail')

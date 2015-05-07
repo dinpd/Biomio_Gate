@@ -11,12 +11,17 @@ import logging
 logger = logging.getLogger(__name__)
 
 STATE_AUTH_READY = 'auth_ready'
+
+# Auth States
 STATE_AUTH_WAIT = 'auth_wait'
 STATE_AUTH_VERIFICATION_STARTED = 'auth_verification_started'
 STATE_AUTH_SUCCEED = 'auth_succeed'
 STATE_AUTH_FAILED = 'auth_failed'
 STATE_AUTH_TIMEOUT = 'auth_timeout'
 STATE_AUTH_ERROR = 'auth_error'
+STATE_AUTH_CANCELED = 'auth_canceled'
+
+# Training states
 STATE_AUTH_TRAINING_STARTED = 'auth_training'
 STATE_AUTH_TRAINING_INPROGRESS = 'auth_training_inprogress'
 STATE_AUTH_TRAINING_DONE = 'auth_training_done'
@@ -63,7 +68,7 @@ def on_cancel_auth(e):
     flow = e.bioauth_flow
     logger.warning('BIOMETRIC AUTH [%s, %s]: AUTH CANCELED' % (flow.app_type, flow.app_id))
 
-    return STATE_AUTH_FAILED
+    return STATE_AUTH_CANCELED
 
 
 def on_state_changed(e):
@@ -105,6 +110,10 @@ def on_auth_finished(e):
     if flow.is_extension_owner():
         flow.rpc_callback()
 
+    if flow.is_probe_owner():
+        if e.fsm.current == STATE_AUTH_CANCELED:
+            flow.cancel_auth_callback()
+
 def on_auth_verification_started(e):
     flow = e.bioauth_flow
 
@@ -116,7 +125,7 @@ auth_states = {
     'events': [
         {
             'name': 'reset',
-            'src': [STATE_AUTH_READY, STATE_AUTH_WAIT,
+            'src': [STATE_AUTH_READY, STATE_AUTH_WAIT, STATE_AUTH_CANCELED,
                     STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR,
                     STATE_AUTH_TRAINING_STARTED, STATE_AUTH_TRAINING_DONE, STATE_AUTH_TRAINING_FAILED],
             'dst': [STATE_AUTH_READY],
@@ -124,7 +133,7 @@ auth_states = {
         },
         {
             'name': 'request',
-            'src': [STATE_AUTH_READY],
+            'src': [STATE_AUTH_READY, STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR, STATE_AUTH_CANCELED],
             'dst': [STATE_AUTH_WAIT],
             'decision': on_request
         },
@@ -136,12 +145,12 @@ auth_states = {
         {
             'name': 'results_available',
             'src': [STATE_AUTH_VERIFICATION_STARTED],
-            'dst': [STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR],
+            'dst': [STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR, STATE_AUTH_CANCELED],
             'decision': on_probe_available
         },
         {
             'name': 'results_accepted',
-            'src': [STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR],
+            'src': [STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR, STATE_AUTH_CANCELED],
             'dst': [STATE_AUTH_READY],
             'decision': on_got_results
         },
@@ -159,16 +168,16 @@ auth_states = {
         {
             'name': 'cancel_auth',
             'src': [STATE_AUTH_WAIT, STATE_AUTH_VERIFICATION_STARTED],
-            'dst': [STATE_AUTH_FAILED],
+            'dst': [STATE_AUTH_CANCELED],
             'decision': on_cancel_auth
         },
         {
             'name': 'state_changed',
-            'src': [STATE_AUTH_READY, STATE_AUTH_WAIT, STATE_AUTH_VERIFICATION_STARTED,
+            'src': [STATE_AUTH_READY, STATE_AUTH_WAIT, STATE_AUTH_VERIFICATION_STARTED, STATE_AUTH_CANCELED,
                     STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR,
                     STATE_AUTH_TRAINING_STARTED, STATE_AUTH_TRAINING_INPROGRESS,
                     STATE_AUTH_TRAINING_DONE, STATE_AUTH_TRAINING_FAILED],
-            'dst': [STATE_AUTH_READY, STATE_AUTH_WAIT, STATE_AUTH_VERIFICATION_STARTED,
+            'dst': [STATE_AUTH_READY, STATE_AUTH_WAIT, STATE_AUTH_VERIFICATION_STARTED, STATE_AUTH_CANCELED,
                     STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR,
                     STATE_AUTH_TRAINING_STARTED, STATE_AUTH_TRAINING_INPROGRESS,
                     STATE_AUTH_TRAINING_DONE, STATE_AUTH_TRAINING_FAILED],
@@ -181,6 +190,7 @@ auth_states = {
         'onauth_failed': on_auth_finished,
         'onauth_timeout': on_auth_finished,
         'onauth_error': on_auth_finished,
+        'onauth_canceled': on_auth_finished,
         'onauth_training': on_auth_training,
         'onauth_verification_started': on_auth_verification_started
     }
@@ -197,11 +207,12 @@ def _store_state(e):
 
 
 class BioauthFlow:
-    def __init__(self, app_type, app_id, try_probe_callback, auto_initialize=True):
+    def __init__(self, app_type, app_id, try_probe_callback, cancel_auth_callback, auto_initialize=True):
         self.app_type = app_type
         self.app_id = app_id
         self.rpc_callback = None
         self.try_probe_callback = try_probe_callback
+        self.cancel_auth_callback = cancel_auth_callback
         self.status = None
 
         self._state_machine_instance = Fysom(auth_states)
@@ -225,8 +236,6 @@ class BioauthFlow:
         logger.debug('BIOMETRIC AUTH OBJECT [%s, %s]: SHUTTING DOWN...' % (self.app_type, self.app_id))
         self.cancel_auth()
         self.auth_connection.set_app_disconnected()
-        if self.is_extension_owner():
-            self.reset()
         self._store_state()
 
     def _get_state_machine_logger_callback(self):
@@ -305,10 +314,6 @@ class BioauthFlow:
     def set_auth_results(self, result):
         #TODO: make method private
         self._state_machine_instance.results_available(bioauth_flow=self, result=result)
-        self._store_state()
-
-    def accept_results(self):
-        self._state_machine_instance.results_accepted(bioauth_flow=self)
         self._store_state()
 
     def is_current_state(self, state):
