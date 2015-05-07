@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 STATE_AUTH_READY = 'auth_ready'
 STATE_AUTH_WAIT = 'auth_wait'
-STATE_AUTH_STARTED = 'auth_started'
 STATE_AUTH_VERIFICATION_STARTED = 'auth_verification_started'
 STATE_AUTH_SUCCEED = 'auth_succeed'
 STATE_AUTH_FAILED = 'auth_failed'
@@ -35,10 +34,6 @@ def on_request(e):
         flow.auth_connection.start_auth()
 
     return STATE_AUTH_WAIT
-
-
-def on_start(e):
-    return STATE_AUTH_STARTED
 
 
 def on_probe_available(e):
@@ -64,19 +59,25 @@ def on_training_results_available(e):
     logger.debug('training results available!')
     return STATE_AUTH_TRAINING_DONE
 
+def on_cancel_auth(e):
+    flow = e.bioauth_flow
+    logger.warning('BIOMETRIC AUTH [%s, %s]: AUTH CANCELED' % (flow.app_type, flow.app_id))
+
+    return STATE_AUTH_FAILED
+
 
 def on_state_changed(e):
     flow = e.bioauth_flow
     next_state = flow.auth_connection.get_data(key=_PROBESTORE_STATE_KEY)
 
     if next_state is None:
-        if e.fsm.current == STATE_AUTH_STARTED or e.fsm.current == STATE_AUTH_WAIT or e.fsm.current == STATE_AUTH_VERIFICATION_STARTED:
+        if e.fsm.current == STATE_AUTH_WAIT or e.fsm.current == STATE_AUTH_VERIFICATION_STARTED:
             if flow.auth_connection.get_data():
                 next_state = STATE_AUTH_ERROR
-                logger.debug('BIOMETRIC AUTH [%s, %s]: AUTH INTERNAL ERROR - state not set')
+                logger.debug('BIOMETRIC AUTH [%s, %s]: AUTH INTERNAL ERROR - state not set' % (flow.app_type, flow.app_id))
             else:
                 next_state = STATE_AUTH_TIMEOUT
-                logger.debug('BIOMETRIC AUTH [%s, %s]: AUTH TIMEOUT')
+                logger.debug('BIOMETRIC AUTH [%s, %s]: AUTH TIMEOUT' % (flow.app_type, flow.app_id))
         else:
             next_state = STATE_AUTH_READY
 
@@ -115,7 +116,7 @@ auth_states = {
     'events': [
         {
             'name': 'reset',
-            'src': [STATE_AUTH_READY, STATE_AUTH_WAIT, STATE_AUTH_STARTED,
+            'src': [STATE_AUTH_READY, STATE_AUTH_WAIT,
                     STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR,
                     STATE_AUTH_TRAINING_STARTED, STATE_AUTH_TRAINING_DONE, STATE_AUTH_TRAINING_FAILED],
             'dst': [STATE_AUTH_READY],
@@ -127,12 +128,6 @@ auth_states = {
             'dst': [STATE_AUTH_WAIT],
             'decision': on_request
         },
-        # {
-        #     'name': 'start',
-        #     'src': [STATE_AUTH_WAIT],
-        #     'dst': [STATE_AUTH_STARTED],
-        #     'decision': on_start
-        # },
         {
             'name': 'verification_started',
             'src': [STATE_AUTH_WAIT],
@@ -162,12 +157,18 @@ auth_states = {
             'decision': on_training_results_available
         },
         {
+            'name': 'cancel_auth',
+            'src': [STATE_AUTH_WAIT, STATE_AUTH_VERIFICATION_STARTED],
+            'dst': [STATE_AUTH_FAILED],
+            'decision': on_cancel_auth
+        },
+        {
             'name': 'state_changed',
-            'src': [STATE_AUTH_READY, STATE_AUTH_WAIT, STATE_AUTH_STARTED, STATE_AUTH_VERIFICATION_STARTED,
+            'src': [STATE_AUTH_READY, STATE_AUTH_WAIT, STATE_AUTH_VERIFICATION_STARTED,
                     STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR,
                     STATE_AUTH_TRAINING_STARTED, STATE_AUTH_TRAINING_INPROGRESS,
                     STATE_AUTH_TRAINING_DONE, STATE_AUTH_TRAINING_FAILED],
-            'dst': [STATE_AUTH_READY, STATE_AUTH_WAIT, STATE_AUTH_STARTED, STATE_AUTH_VERIFICATION_STARTED,
+            'dst': [STATE_AUTH_READY, STATE_AUTH_WAIT, STATE_AUTH_VERIFICATION_STARTED,
                     STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR,
                     STATE_AUTH_TRAINING_STARTED, STATE_AUTH_TRAINING_INPROGRESS,
                     STATE_AUTH_TRAINING_DONE, STATE_AUTH_TRAINING_FAILED],
@@ -222,6 +223,7 @@ class BioauthFlow:
 
     def shutdown(self):
         logger.debug('BIOMETRIC AUTH OBJECT [%s, %s]: SHUTTING DOWN...' % (self.app_type, self.app_id))
+        self.cancel_auth()
         self.auth_connection.set_app_disconnected()
         if self.is_extension_owner():
             self.reset()
@@ -274,7 +276,6 @@ class BioauthFlow:
 
     def auth_started(self, resource_list=None):
         self._resources_list = resource_list
-        # self._state_machine_instance.start(bioauth_flow=self)
         self._store_state()
 
     @tornado.gen.engine
@@ -324,5 +325,10 @@ class BioauthFlow:
         data = {_PROBESTORE_STATE_KEY: STATE_AUTH_TRAINING_STARTED}
         app_id = 'auth:3a9d3f79ecc2c42b9114b4300a248777:88b960b1c9805fb586810f270def7378'
         AuthStateStorage.instance().store_probe_data(app_id, ttl=settings.bioauth_timeout, **data)
-        print 'start learning process...'
+        logger.debug('Training process started...')
+
+    def cancel_auth(self):
+        if self._state_machine_instance.current in [STATE_AUTH_WAIT]:
+            self._state_machine_instance.cancel_auth(bioauth_flow=self)
+            self._store_state()
 
