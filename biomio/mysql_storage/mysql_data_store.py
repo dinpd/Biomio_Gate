@@ -29,9 +29,12 @@ class MySQLDataStore():
         table_class_.create_record(**kwargs)
 
     @pny.db_session
-    def select_data(self, module_name, table_name):
+    def select_data(self, module_name, table_name, **kwargs):
         table_class_ = self.get_table_class(module_name, table_name)
-        result = pny.select(r for r in table_class_)
+        if 'order_by' in kwargs:
+            result = pny.select(r for r in table_class_).order_by('r.%s' % kwargs.get('order_by'))
+        else:
+            result = pny.select(r for r in table_class_)
         return [res.to_dict() for res in result]
 
     @pny.db_session

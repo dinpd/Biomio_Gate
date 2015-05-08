@@ -14,6 +14,8 @@ class EmailDataStore(BaseDataStore):
     PRIVATE_PGP_KEY_ATTR = 'private_pgp_key'
     USER_ATTR = 'user'
 
+    _KEYS_TO_DELETE = [REDIS_EMAILS_KEY]
+
     def __init__(self):
         BaseDataStore.__init__(self)
 
@@ -69,4 +71,5 @@ class EmailDataStore(BaseDataStore):
             self._run_storage_job(generate_pgp_keys_job, table_class_name=self._table_class_name, email=email,
                                   callback_code=callback_code, result_code=result_code)
 
-
+    def get_keys_to_delete(self):
+        return self._KEYS_TO_DELETE

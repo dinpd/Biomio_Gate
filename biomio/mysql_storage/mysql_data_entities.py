@@ -153,7 +153,7 @@ class Application(BaseEntityClass, database.Entity):
 class ChangesTable(BaseEntityClass, database.Entity):
     table_name = pny.Required(str)
     object_id = pny.Required(str)
-
+    created_date = pny.Required(datetime.datetime, default=lambda: datetime.datetime.now())
     pny.composite_key(table_name, object_id)
 
     @staticmethod

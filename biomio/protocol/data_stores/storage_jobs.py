@@ -1,7 +1,8 @@
 from __future__ import absolute_import
 
 from biomio.constants import REDIS_CHANGES_CLASS_NAME, REDIS_DO_NOT_STORE_RESULT_KEY, REDIS_PARTIAL_RESULTS_KEY, \
-    REDIS_RESULTS_COUNTER_KEY, EMAILS_TABLE_CLASS_NAME, USERS_TABLE_CLASS_NAME
+    REDIS_RESULTS_COUNTER_KEY, EMAILS_TABLE_CLASS_NAME, USERS_TABLE_CLASS_NAME, MYSQL_APPS_TABLE_NAME, \
+    MYSQL_EMAILS_TABLE_NAME
 from biomio.mysql_storage.mysql_data_store_interface import MySQLDataStoreInterface
 from biomio.protocol.data_stores.base_data_store import BaseDataStore
 from biomio.protocol.storage.redis_storage import RedisStorage
@@ -155,12 +156,28 @@ def get_extension_ids_by_probe_id(table_class_name, probe_id, callback_code):
 
 def update_redis_job():
     worker_logger.info('Doing REDIS UPDATE job')
-    result = MySQLDataStoreInterface.select_data(REDIS_CHANGES_CLASS_NAME)
-    worker_logger.debug(result)
-    for redis_keys in result:
-        worker_logger.debug('Redis Key', redis_keys.get('redis_key'))
-        BaseDataStore.instance().delete_custom_lru_redis_data(redis_keys.get('redis_key'))
+    results = MySQLDataStoreInterface.select_data(REDIS_CHANGES_CLASS_NAME, order_by='created_date')
+    worker_logger.debug(results)
+    for result in results:
+        keys_to_delete = get_storage_keys_by_table_name(result.get('table_name'))
+        for key_to_delete in keys_to_delete:
+            key = key_to_delete % result.get('object_id')
+            worker_logger.info('Deleting key - %s' % key)
+            BaseDataStore.instance().delete_custom_lru_redis_data(key)
     worker_logger.info('REDIS UPDATE done.')
+
+
+def get_storage_keys_by_table_name(table_name):
+    store_imported = False
+    if table_name == MYSQL_APPS_TABLE_NAME:
+        from biomio.protocol.data_stores.application_data_store import ApplicationDataStore as store
+        store_imported = True
+    elif table_name == MYSQL_EMAILS_TABLE_NAME:
+        from biomio.protocol.data_stores.email_data_store import EmailDataStore as store
+        store_imported = True
+    if store_imported:
+        return store.instance().get_keys_to_delete()
+    return []
 
 
 def test_schedule_job(message):

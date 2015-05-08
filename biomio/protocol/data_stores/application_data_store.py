@@ -14,6 +14,8 @@ class ApplicationDataStore(BaseDataStore):
     PUBLIC_KEY_ATTR = 'public_key'
     USER_ATTR = 'users'
 
+    _KEYS_TO_DELETE = [REDIS_APPLICATION_KEY]
+
     def __init__(self):
         BaseDataStore.__init__(self)
 
@@ -55,3 +57,6 @@ class ApplicationDataStore(BaseDataStore):
 
     def get_extension_ids_by_probe_id(self, probe_id, callback):
         self._get_app_ids_by_app_id(table_class_name=self._table_class_name, object_id=probe_id, callback=callback)
+
+    def get_keys_to_delete(self):
+        return self._KEYS_TO_DELETE

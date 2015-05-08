@@ -41,7 +41,7 @@ class MySQLDataStoreInterface:
                                               update_object_pk=object_id, **kwargs)
 
     @staticmethod
-    def select_data(table_name, module_name=TABLES_MODULE):
+    def select_data(table_name, module_name=TABLES_MODULE, **kwargs):
         """
             Gets all data for specified table.
         :param module_name: string name of the module
@@ -50,7 +50,7 @@ class MySQLDataStoreInterface:
         :return: dict(key=obj_id, value=dict(key=arg, value=val))
 
         """
-        return MySQLDataStore.instance().select_data(module_name=module_name, table_name=table_name)
+        return MySQLDataStore.instance().select_data(module_name=module_name, table_name=table_name, **kwargs)
 
     @staticmethod
     def delete_data(table_name, object_id, module_name=TABLES_MODULE):
