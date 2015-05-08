@@ -25,6 +25,7 @@ REDIS_DO_NOT_STORE_RESULT_KEY = 'do_not_store:%s'
 REDIS_PROBE_RESULT_KEY = 'probe_result:%s'
 REDIS_RESULTS_COUNTER_KEY = 'job_results_counter:%s'
 REDIS_PARTIAL_RESULTS_KEY = 'job_results_gatherer:%s'
+REDIS_JOB_RESULTS_ERROR = 'job_results_error:%s:%s'
 
 # Other constants
 REDIS_CONFIG_MAX_MEMORY_OPTION_KEY = 'maxmemory'
