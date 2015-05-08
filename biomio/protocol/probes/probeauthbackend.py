@@ -65,7 +65,7 @@ class ProbeAuthBackend:
             for sample in data:
                 touch_id_result = (str(sample).lower() == 'true')
                 result = result or touch_id_result
-            callback(result)
+            callback(dict(verified=result))
         elif type == "imageSamples":
             self._run_verification_job(data=data, fingerprint=fingerprint, training=training, callback=callback)
         else:

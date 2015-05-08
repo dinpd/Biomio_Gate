@@ -34,6 +34,7 @@ FR_TRAINING_IMG_NAMES = [
     'yaleB11_P00A+005E+10.pgm', 'yaleB11_P00A+005E-10.pgm', 'yaleB11_P00A+010E-20.pgm',
     'yaleB11_P00A+015E+20.pgm', 'yaleB11_P00A+020E+10.pgm'
     ]
+FR_TRAINING_TEST_RETRY = 'test_retry.pgm'
 
 # Set convenient for testing values
 settings.connection_timeout = 15
@@ -873,6 +874,73 @@ class TestFaceRecognition(BiomioTest):
         rpcResp = results['rpcResp']
         ok_(rpcResp is not None, msg='No RPC response on auth.')
         eq_(str(rpcResp.msg.rpcStatus), 'complete', msg='RPC authentication failed, but result is positive')
+
+
+    # @attr('slow')
+    # def test_auth_retry(self):
+    #     self.teardown_test()
+    #     results = {'rpcResp': None, 'firstProbeSent': False, 'rpcSent': False }
+    #
+    #     def on_extension_message(test_obj, message, close_connection_callback):
+    #         if str(message.msg.oid) == 'nop':
+    #             if not results['rpcSent']:
+    #                 message = test_obj.create_next_message(oid='rpcReq', namespace='extension_plugin', call='test_func_with_auth',
+    #                                                    data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
+    #                 test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False,
+    #                                   wait_for_response=True)
+    #                 on_extension_message.rpcCallSent = True
+    #                 results['rpcSent'] = True
+    #         elif str(message.msg.oid) == 'rpcResp':
+    #             if TestRpcCalls.is_rpc_response_status(message=message, status='complete') \
+    #                     or TestRpcCalls.is_rpc_response_status(message=message, status='fail'):
+    #                 results['rpcResp'] = message
+    #                 close_connection_callback()
+    #
+    #     probe_type = 'imageSamples'
+    #     samples1 = []
+    #     samples1.append(TestRpcCalls.photo_data(FR_TRAINING_IMG_FOLDER_PATH + FR_TRAINING_TEST_RETRY))
+    #     samples2 = []
+    #     images_path = FR_TRAINING_IMG_FOLDER_PATH
+    #     for image in FR_TRAINING_IMG_NAMES:
+    #         samples2.append(TestRpcCalls.photo_data(images_path + image))
+    #
+    #     def on_probe_message(test_obj, message, close_connection_callback):
+    #         if str(message.msg.oid) == 'nop':
+    #             pass
+    #         elif str(message.msg.oid) == 'try':
+    #             samples_to_sent = []
+    #
+    #             sample_num = int(message.msg.resource[0].samples)
+    #             if not results['firstProbeSent']:
+    #                 samples_to_sent = samples1[:sample_num]
+    #             else:
+    #                 samples_to_sent = samples2[:sample_num]
+    #
+    #             probe_msg = test_obj.create_next_message(oid='probe', probeId=0,
+    #                                      probeData={"oid": probe_type, "samples": samples_to_sent})
+    #
+    #             test_obj.send_message(websocket=test_obj.get_curr_connection(), message=probe_msg,
+    #                                          close_connection=False, wait_for_response=False)
+    #
+    #             if not results['firstProbeSent']:
+    #                 results['firstProbeSent'] = True
+    #             else:
+    #                 close_connection_callback()
+    #
+    #     # Separate thread with connection for extension
+    #     extension_thread = threading.Thread(target=TestRpcCalls.application_job, kwargs={'app_id': extension_app_id, 'app_type': extension_app_type, 'message_callback': on_extension_message})
+    #     extension_thread.start()
+    #
+    #     # Separate thread with connection for probe; probe will drop connection immediately after try message
+    #     # message_callback = self.get_probe_message_callback(samples=samples, probe_type='imageSamples')
+    #     probe_thread = threading.Thread(target=TestRpcCalls.application_job, kwargs={'app_id': probe_app_id, 'app_type': probe_app_type, 'message_callback': on_probe_message})
+    #     probe_thread.start()
+    #     probe_thread.join()
+    #
+    #     extension_thread.join()
+    #     rpcResp = results['rpcResp']
+    #     ok_(rpcResp is not None, msg='No RPC response on auth.')
+    #     eq_(str(rpcResp.msg.rpcStatus), 'complete', msg='RPC authentication failed, but result is positive')
 
 
 class TestRegistration(BiomioTest):

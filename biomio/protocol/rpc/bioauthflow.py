@@ -132,9 +132,15 @@ auth_states = {
         },
         {
             'name': 'request',
-            'src': [STATE_AUTH_READY, STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR, STATE_AUTH_CANCELED],
+            'src': [STATE_AUTH_READY, STATE_AUTH_SUCCEED, STATE_AUTH_FAILED,
+                    STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR, STATE_AUTH_CANCELED],
             'dst': [STATE_AUTH_WAIT],
             'decision': on_request
+        },
+        {
+            'name': 'retry',
+            'src': [STATE_AUTH_VERIFICATION_STARTED],
+            'dst': STATE_AUTH_WAIT
         },
         {
             'name': 'verification_started',
@@ -302,10 +308,17 @@ class BioauthFlow:
         self._store_state()
 
         result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, type, data, self.app_id, False)
-        logger.debug(msg='SET NEXT AUTH RESULT: %s' % str(result))
-        #TODO: count probes and set appropriate result
-        self.set_auth_results(result=result)
-        self._store_state()
+
+        error = result.get('error')
+        if error:
+            logger.debug(msg='Some samples could not be processed. Sending "try" message again.')
+            self._state_machine_instance.retry(bioauth_flow=self)
+            self._store_state()
+        else:
+            logger.debug(msg='SET NEXT AUTH RESULT: %s' % str(result.get('verified')))
+            #TODO: count probes and set appropriate result
+            self.set_auth_results(result=result.get('verified'))
+            self._store_state()
 
     @tornado.gen.engine
     def set_auth_training_results(self, appId, type, data):
@@ -314,6 +327,7 @@ class BioauthFlow:
             self._store_state()
 
             result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, type, data, self.app_id, True)
+
             logger.debug(msg='TRAINING RESULT: %s' % str(result))
             self._state_machine_instance.training_results_available()
             self._store_state()
