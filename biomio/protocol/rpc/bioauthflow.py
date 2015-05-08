@@ -258,12 +258,20 @@ class BioauthFlow:
         """
         Restores BioauthFlow object state by probe results key by given user id.
         """
-        logger.debug("Restoring state for bioauth flow: %s, %s" % (self.app_type, self.app_id))
-        try:
-            self._change_state_callback()
-            logger.debug("State to restore: %s" % self._state_machine_instance.current)
-        except Exception as e:
-            logger.exception("Failed to restore state")
+        next_state = self.auth_connection.get_data(key=_PROBESTORE_STATE_KEY)
+
+        if next_state in [STATE_AUTH_TRAINING_DONE, STATE_AUTH_CANCELED, STATE_AUTH_SUCCEED,
+                          STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR]:
+            # Result of previous auth is still stored in auth key
+            self.reset()
+        else:
+            #TODO: as after extension or probe disconnection we cancel authenctication, state restore is not a case
+            logger.debug("Restoring state for bioauth flow: %s, %s" % (self.app_type, self.app_id))
+            try:
+                self._change_state_callback()
+                logger.debug("State to restore: %s" % self._state_machine_instance.current)
+            except Exception as e:
+                logger.exception("Failed to restore state")
 
     def _store_state(self):
         data = {_PROBESTORE_STATE_KEY: self._state_machine_instance.current}
