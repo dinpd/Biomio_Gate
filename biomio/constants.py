@@ -31,3 +31,14 @@ REDIS_JOB_RESULTS_ERROR = 'job_results_error:%s:%s'
 REDIS_CONFIG_MAX_MEMORY_OPTION_KEY = 'maxmemory'
 REDIS_CONFIG_MEMORY_SAMPLES_OPTION_KEY = 'maxmemory-samples'
 REDIS_CONFIG_EVICTION_POLICY_OPTION_KEY = 'maxmemory-policy'
+
+MODULES_CLASSES_BY_TABLE_NAMES = {
+    MYSQL_APPS_TABLE_NAME: dict(
+        module_name='biomio.protocol.data_stores.application_data_store',
+        class_name='ApplicationDataStore'
+    ),
+    MYSQL_EMAILS_TABLE_NAME: dict(
+        module_name='biomio.protocol.data_stores.email_data_store',
+        class_name='EmailDataStore'
+    )
+}

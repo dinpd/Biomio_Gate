@@ -1,12 +1,12 @@
 from __future__ import absolute_import
 
 from biomio.constants import REDIS_CHANGES_CLASS_NAME, REDIS_DO_NOT_STORE_RESULT_KEY, REDIS_PARTIAL_RESULTS_KEY, \
-    REDIS_RESULTS_COUNTER_KEY, EMAILS_TABLE_CLASS_NAME, USERS_TABLE_CLASS_NAME, MYSQL_APPS_TABLE_NAME, \
-    MYSQL_EMAILS_TABLE_NAME
+    REDIS_RESULTS_COUNTER_KEY, EMAILS_TABLE_CLASS_NAME, USERS_TABLE_CLASS_NAME, MODULES_CLASSES_BY_TABLE_NAMES
 from biomio.mysql_storage.mysql_data_store_interface import MySQLDataStoreInterface
 from biomio.protocol.data_stores.base_data_store import BaseDataStore
 from biomio.protocol.storage.redis_storage import RedisStorage
 from biomio.utils.gnugpg_generator import generate_pgp_key_pair
+from biomio.utils.utils import import_module_class
 from logger import worker_logger
 
 
@@ -168,16 +168,22 @@ def update_redis_job():
 
 
 def get_storage_keys_by_table_name(table_name):
-    store_imported = False
-    if table_name == MYSQL_APPS_TABLE_NAME:
-        from biomio.protocol.data_stores.application_data_store import ApplicationDataStore as store
-        store_imported = True
-    elif table_name == MYSQL_EMAILS_TABLE_NAME:
-        from biomio.protocol.data_stores.email_data_store import EmailDataStore as store
-        store_imported = True
-    if store_imported:
+    module_class_name = MODULES_CLASSES_BY_TABLE_NAMES.get(table_name)
+    if module_class_name is None:
+        worker_logger.info('There is no module and class names specified for given MySQL table name - %s' % table_name)
+        return []
+    try:
+        module_name = module_class_name.get('module_name')
+        class_name = module_class_name.get('class_name')
+        store = import_module_class(module=module_name,
+                                    class_name=class_name)
+        if store is None:
+            worker_logger.info('Given module - %s, does not contain specified class - %s' % (module_name, class_name))
+            return []
         return store.instance().get_keys_to_delete()
-    return []
+    except Exception as e:
+        worker_logger.exception(e)
+        return []
 
 
 def test_schedule_job(message):
