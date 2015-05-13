@@ -226,32 +226,31 @@ def registration(e):
     else:
         logger.info(" -------- APP REGISTRATION: extension")
 
-    # key, pub_key = Crypto.generate_keypair()
-    # fingerprint = Crypto.get_public_rsa_fingerprint(pub_key)
-    #
-    # ApplicationDataStore.instance().store_data(
-    #     app_id=str(e.request.header.appId),
-    #     public_key=pub_key
-    #
+    secret = str(e.request.msg.secret)
+    logger.debug('SECRET: %s' % secret)
 
-    e.fsm.registered(protocol_instance=e.protocol_instance, request=e.request, key=key, fingerprint=fingerprint)
+    registration_callback = create_registration_callback(fsm=e.fsm, protocol_instance=e.protocol_instance, request=e.request)
+    callback_code = RedisResultsListener.instance().subscribe_callback(callback=registration_callback)
+    run_storage_job(test_verify_code_job, code=secret, callback_code=callback_code)
 
 
-def register():
-    callback_code = RedisResultsListener.instance().subscribe_callback(callback=registration_results_available)
-    run_storage_job(test_verify_code_job, code='', callback_code=callback_code)
+def create_registration_callback(fsm, protocol_instance, request):
+    def registration_callback(result):
+        verified = result.get('verified', False)
+        key = result.get('private_key')
+        fingerprint = result.get('app_id')
+        error = result.get('error')
+        logger.info("REGISTRATION RESULTS: verified: %s, fingerprint: %s, error: %s", verified, fingerprint, error)
+        fsm.registered(protocol_instance=protocol_instance, request=request, verified=verified, key=key, fingerprint=fingerprint, error=error)
 
-def registration_results_available(**result):
-    print "REGISTRATION RESULTS: ", result
+    return registration_callback
 
-register()
 
 def app_registered(e):
     # Send serverHello responce after entering handshake state
     session = e.protocol_instance.get_current_session()
 
-    app_id = str(e.request.header.appId)
-    user_id = str(e.request.header.appId)
+    app_id = str(e.fingerprint)
     protocol_connection_established(protocol_instance=e.protocol_instance, app_id=app_id)
 
     message = e.protocol_instance.create_next_message(

@@ -203,7 +203,7 @@ def test_verify_code_job(code, callback_code):
     }
 
     try:
-        # app_verifyication_url = 'http://biom.io/php/commands/verify_service/%s' % (str(code))
+        # app_verifyication_url = 'http://biom.io/backups/beta/php/commands/verify_service/%s' % (str(code))
         # response = requests.get(app_verifyication_url)
         # print response.text
         # response_text = response.text
