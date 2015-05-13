@@ -11,7 +11,7 @@ import threading
 from binascii import b2a_base64
 
 import ssl
-import urllib2
+import requests
 
 from biomio.protocol.message import BiomioMessageBuilder
 from biomio.protocol.settings import settings
@@ -751,7 +751,7 @@ class TestFaceRecognition(BiomioTest):
     @attr('fr')
     def test_face_recognition_training_process(self):
         # Use REST request to server to start training process
-        urllib2.urlopen("http://{host}:{port}/training".format(host=settings.host, port=settings.rest_port)).read()
+        requests.get("http://{host}:{port}/training".format(host=settings.host, port=settings.rest_port))
 
         # Prerare list of samples for training
         samples = []

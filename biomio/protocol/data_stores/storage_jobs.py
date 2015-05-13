@@ -7,6 +7,13 @@ from biomio.protocol.data_stores.base_data_store import BaseDataStore
 from biomio.protocol.storage.redis_storage import RedisStorage
 from biomio.utils.gnugpg_generator import generate_pgp_key_pair
 from biomio.utils.utils import import_module_class
+
+import requests
+from biomio.protocol.crypt import Crypto
+from biomio.protocol.data_stores.application_data_store import ApplicationDataStore
+#TODO: remove when registration is finished
+from setup_default_user_data import extension_key, extension_pub_key, extension_app_id
+
 from logger import worker_logger
 
 
@@ -188,3 +195,44 @@ def get_storage_keys_by_table_name(table_name):
 
 def test_schedule_job(message):
     worker_logger.info(message)
+
+def test_verify_code_job(code, callback_code):
+
+    result = {
+        'verified': False
+    }
+
+    try:
+        # app_verifyication_url = 'http://biom.io/php/commands/verify_service/%s' % (str(code))
+        # response = requests.get(app_verifyication_url)
+        # print response.text
+        # response_text = response.text
+        # response_text = {'response': 'false'}
+        response_text = {'response': 'true', 'user_id': 'id'}
+
+        if response_text['response'].lower() == 'true':
+            result.update({'verified': True})
+
+        if result.get('verified', False):
+            key, pub_key = Crypto.generate_keypair()
+            fingerprint = Crypto.get_public_rsa_fingerprint(pub_key)
+
+            #TODO: remove when registration is finished
+            key = extension_key
+            pub_key = extension_pub_key
+            fingerprint = extension_app_id
+
+            ApplicationDataStore.instance().store_data(
+                app_id=str(fingerprint),
+                public_key=pub_key
+            )
+            result.update({'app_id': fingerprint, 'private_key': key})
+
+    except Exception as e:
+        worker_logger.exception(e)
+        result.update({'error': 'Sorry but we were not able to register the app: Internal error occured.'})
+
+    finally:
+        BaseDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
+                                                  record_dict=result, callback_code=callback_code)
+        worker_logger.info('Finished app registration with result: %s' % str(result))

@@ -1,6 +1,5 @@
 from itertools import izip
 from functools import wraps
-import ast
 
 from jsonschema import ValidationError
 
@@ -13,6 +12,10 @@ from biomio.protocol.rpc.rpchandler import RpcHandler
 from biomio.protocol.data_stores.application_data_store import ApplicationDataStore
 from biomio.protocol.probes.policymanager import PolicyManager
 from biomio.protocol.rpc.bioauthflow import BioauthFlow, STATE_AUTH_TRAINING_STARTED
+
+from biomio.protocol.storage.redis_results_listener import RedisResultsListener
+from biomio.protocol.data_stores.storage_jobs_processor import run_storage_job
+from biomio.protocol.data_stores.storage_jobs import test_verify_code_job
 
 import tornado.gen
 import greenado
@@ -223,15 +226,25 @@ def registration(e):
     else:
         logger.info(" -------- APP REGISTRATION: extension")
 
-    key, pub_key = Crypto.generate_keypair()
-    fingerprint = Crypto.get_public_rsa_fingerprint(pub_key)
+    # key, pub_key = Crypto.generate_keypair()
+    # fingerprint = Crypto.get_public_rsa_fingerprint(pub_key)
+    #
+    # ApplicationDataStore.instance().store_data(
+    #     app_id=str(e.request.header.appId),
+    #     public_key=pub_key
+    #
 
-    ApplicationDataStore.instance().store_data(
-        app_id=str(e.request.header.appId),
-        public_key=pub_key
-    )
     e.fsm.registered(protocol_instance=e.protocol_instance, request=e.request, key=key, fingerprint=fingerprint)
 
+
+def register():
+    callback_code = RedisResultsListener.instance().subscribe_callback(callback=registration_results_available)
+    run_storage_job(test_verify_code_job, code='', callback_code=callback_code)
+
+def registration_results_available(**result):
+    print "REGISTRATION RESULTS: ", result
+
+register()
 
 def app_registered(e):
     # Send serverHello responce after entering handshake state
@@ -391,6 +404,8 @@ biomio_states = {
         'onchangestate': print_state_change
     }
 }
+
+
 
 class BiomioProtocol:
     """ The BiomioProtocol class is an abstraction for protocol implementation.
