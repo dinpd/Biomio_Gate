@@ -165,7 +165,10 @@ class MessageHandler:
 
     @staticmethod
     def on_registered(e):
-        return STATE_APP_REGISTERED
+        if e.error:
+            e.status = e.error
+
+        return STATE_APP_REGISTERED if e.verified else STATE_DISCONNECTED
 
     @staticmethod
     def on_probe_trying(e):
