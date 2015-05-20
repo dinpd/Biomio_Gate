@@ -75,7 +75,7 @@ def rpc_call(rpc_func):
 
 def get_verification_started_callback(callback):
     def verification_started_callback_func():
-        callback(result={"msg": 'Verification is in a progress.'}, status='inprogress')
+        callback(result={"msg": 'Verification in progress...'}, status='inprogress')
     return verification_started_callback_func
 
 def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):

@@ -231,6 +231,8 @@ BIOMIO_protocol_json_schema = {
             }
         },
         # TODO: improve in future - separate messages to send each photo
+        # TODO: "status": ["success", "failed", "canceled"]
+        # TODO: probeData, probeId is not required
         "probe": {
             "type": "object",
             "required": ["oid", "probeId", "probeData"],
