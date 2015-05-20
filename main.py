@@ -6,6 +6,7 @@ import tornado.httpserver
 import tornado.ioloop
 import tornado.gen
 import traceback
+from biomio.protocol.data_stores.email_data_store import EmailDataStore
 
 from biomio.protocol.settings import settings
 from biomio.protocol.engine import BiomioProtocol
@@ -75,6 +76,12 @@ class InitialProbeRestHandler(tornado.web.RequestHandler):
                    '</body></html>')
 
 
+class NewEmailPGPKeysHandler(tornado.web.RequestHandler):
+    def post(self, email, *args, **kwargs):
+        logger.info('Received new_email request from AI with email - %s' % email)
+        EmailDataStore.instance().generate_pgp_keys_by_ai_request(email=email)
+
+
 class Application(tornado.web.Application):
     def __init__(self):
         handlers = [
@@ -86,7 +93,8 @@ class Application(tornado.web.Application):
 class HttpApplication(tornado.web.Application):
     def __init__(self):
         handlers = [
-            (r'/training.*', InitialProbeRestHandler)
+            (r'/training.*', InitialProbeRestHandler),
+            (r'/new_email/(?P<email>[\w.%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4})', NewEmailPGPKeysHandler)
         ]
         tornado.web.Application.__init__(self, handlers)
 

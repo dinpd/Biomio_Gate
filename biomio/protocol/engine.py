@@ -15,7 +15,7 @@ from biomio.protocol.rpc.bioauthflow import BioauthFlow, STATE_AUTH_TRAINING_STA
 
 from biomio.protocol.storage.redis_results_listener import RedisResultsListener
 from biomio.protocol.data_stores.storage_jobs_processor import run_storage_job
-from biomio.protocol.data_stores.storage_jobs import test_verify_code_job
+from biomio.protocol.data_stores.storage_jobs import verify_registration_job
 
 import tornado.gen
 import greenado
@@ -225,8 +225,10 @@ def handshake(e):
 
 def registration(e):
     if e.request.header.appType == 'probe':
+        app_type = 'probe'
         logger.info(" -------- APP REGISTRATION: probe")
     else:
+        app_type = 'extension'
         logger.info(" -------- APP REGISTRATION: extension")
 
     secret = str(e.request.msg.secret)
@@ -234,7 +236,7 @@ def registration(e):
 
     registration_callback = create_registration_callback(fsm=e.fsm, protocol_instance=e.protocol_instance, request=e.request)
     callback_code = RedisResultsListener.instance().subscribe_callback(callback=registration_callback)
-    run_storage_job(test_verify_code_job, code=secret, callback_code=callback_code)
+    run_storage_job(verify_registration_job, code=secret, app_type=app_type, callback_code=callback_code)
 
 
 def create_registration_callback(fsm, protocol_instance, request):

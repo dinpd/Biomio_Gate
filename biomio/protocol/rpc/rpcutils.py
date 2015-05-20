@@ -207,3 +207,13 @@ def select_store_data(data_store_instance, object_ids):
     except Exception as e:
         logger.exception(e)
     raise tornado.gen.Return(result)
+
+
+@greenado.generator
+def verify_emails_ai(data_store_instance, emails):
+    result = None
+    try:
+        result = yield  tornado.gen.Task(data_store_instance.update_emails_pgp_keys, emails)
+    except Exception as e:
+        logger.exception(e)
+    raise tornado.gen.Return(result)

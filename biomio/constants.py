@@ -12,6 +12,7 @@ MYSQL_APPS_TABLE_NAME = 'Applications'
 MYSQL_EMAILS_TABLE_NAME = 'EmailsData'
 MYSQL_USERS_TABLE_NAME = 'Profiles'
 MYSQL_TRAINING_DATA_TABLE_NAME = 'TrainingData'
+MYSQL_CHANGES_TABLE_NAME = 'UILog'
 
 # Redis Constants
 REDIS_APP_AUTH_KEY = 'auth:%s'
@@ -42,3 +43,8 @@ MODULES_CLASSES_BY_TABLE_NAMES = {
         class_name='EmailDataStore'
     )
 }
+
+# REST Commands
+REST_VERIFY_COMMAND = 'verify_service/%s'
+REST_CREATE_EMAIL_KEYS = 'get_user/%s'
+REST_REGISTER_BIOMETRICS = 'register_biometrics/%s'

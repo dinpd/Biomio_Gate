@@ -24,6 +24,8 @@ DEFAULT_REDIS_EVICTION_POLICY = 'allkeys-lru'
 APNS_PRODUCTION_PEM = os.path.join(APP_ROOT, 'push_prod.pem')
 APNS_DEV_PEM = os.path.join(APP_ROOT, 'push_dev.pem')
 
+DEFAULT_AI_REST_URL = 'http://biom.io/backups/beta2/php/commands.php/%s'
+
 DEFAULT_REST_PORT = 8888
 
 # Setting Tornado options
@@ -50,6 +52,10 @@ define('redis_max_memory', default=DEFAULT_REDIS_MAX_MEMORY, help='Redis max mem
 define('redis_max_memory_samples', default=DEFAULT_REDIS_MEMORY_SAMPLES, help='Redis number of samples to check '
                                                                               'for every eviction.')
 define('redis_eviction_policy', default=DEFAULT_REDIS_EVICTION_POLICY, help='Data eviction policy.')
+
+
+# Setting REST client options
+define('ai_rest_url', default=DEFAULT_AI_REST_URL, help='REST url to communicate with AI')
 
 # options.logging = None
 parse_config_file(path=os.path.join(APP_ROOT, 'biomio.conf'))

@@ -1,8 +1,11 @@
 from __future__ import absolute_import
+from requests.exceptions import HTTPError
 
 from biomio.constants import REDIS_CHANGES_CLASS_NAME, REDIS_DO_NOT_STORE_RESULT_KEY, REDIS_PARTIAL_RESULTS_KEY, \
-    REDIS_RESULTS_COUNTER_KEY, EMAILS_TABLE_CLASS_NAME, USERS_TABLE_CLASS_NAME, MODULES_CLASSES_BY_TABLE_NAMES
+    REDIS_RESULTS_COUNTER_KEY, EMAILS_TABLE_CLASS_NAME, USERS_TABLE_CLASS_NAME, MODULES_CLASSES_BY_TABLE_NAMES, \
+    REST_VERIFY_COMMAND, REST_CREATE_EMAIL_KEYS, REST_REGISTER_BIOMETRICS
 from biomio.mysql_storage.mysql_data_store_interface import MySQLDataStoreInterface
+from biomio.protocol.settings import settings
 from biomio.protocol.data_stores.base_data_store import BaseDataStore
 from biomio.protocol.storage.redis_storage import RedisStorage
 from biomio.utils.gnugpg_generator import generate_pgp_key_pair
@@ -11,8 +14,6 @@ from biomio.utils.utils import import_module_class
 import requests
 from biomio.protocol.crypt import Crypto
 from biomio.protocol.data_stores.application_data_store import ApplicationDataStore
-#TODO: remove when registration is finished
-from setup_default_user_data import extension_key, extension_pub_key, extension_app_id
 
 from logger import worker_logger
 
@@ -80,20 +81,19 @@ def select_records_by_ids_job(table_class_name, object_ids, callback_code):
     worker_logger.info('Got records for table class - %s, with object_ids - %s' % (table_class_name, object_ids))
 
 
-def generate_pgp_keys_job(table_class_name, email, callback_code, result_code):
-    worker_logger.info('Started email pgp keys generation, for email - %s' % email)
+def verify_email_job(table_class_name, email, callback_code, result_code):
+    worker_logger.info('Started email verification, for email - %s' % email)
     result = dict(email=email)
     try:
-        # TODO send rest here.
-        public_pgp_key, private_pgp_key, pass_phrase = generate_pgp_key_pair(email=email)
-        if public_pgp_key is not None:
-            result.update({"public_pgp_key": public_pgp_key})
-            MySQLDataStoreInterface.update_data(table_name=table_class_name, object_id=email, pass_phrase=pass_phrase,
-                                                public_pgp_key=public_pgp_key, private_pgp_key=private_pgp_key)
-        else:
-            worker_logger.exception('Something went wrong, check logs, pgp keys were not generated for email - %s' %
-                                    email)
-            result.update({'error': 'Sorry but we were not able to generate PGP keys for user %s' % email})
+        check_email_url = settings.ai_rest_url % (REST_CREATE_EMAIL_KEYS % email)
+        response = requests.post(check_email_url)
+        try:
+            response.raise_for_status()
+        except HTTPError as e:
+            worker_logger.exception(e)
+            result.update({'error': 'We cannot send encrypted email to user, because - %s' % response.reason})
+        if 'error' not in result:
+            result = generate_email_pgp_keys(email, table_class_name, result)
     except Exception as e:
         worker_logger.exception(e)
         result.update({'error': 'Sorry but we were not able to generate PGP keys for email %s' % email})
@@ -113,7 +113,29 @@ def generate_pgp_keys_job(table_class_name, email, callback_code, result_code):
             BaseDataStore.instance().delete_custom_persistence_redis_data(key=REDIS_PARTIAL_RESULTS_KEY % callback_code)
             BaseDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
                                                       record_dict=result, callback_code=callback_code)
-        worker_logger.info('Finished email pgp keys generation, for email - %s' % email)
+        worker_logger.info('Finished email verification, for email - %s' % email)
+
+
+def generate_pgp_keys_job(table_class_name, email):
+    worker_logger.info('Started email PGP keys generation, email - %s' % email)
+    generate_email_pgp_keys(email=email, table_class_name=table_class_name)
+    worker_logger.info('Finished email PGP keys generation, email - %s' % email)
+
+
+def generate_email_pgp_keys(email, table_class_name, result=None):
+    public_pgp_key, private_pgp_key, pass_phrase = generate_pgp_key_pair(email=email)
+    if public_pgp_key is not None:
+        MySQLDataStoreInterface.update_data(table_name=table_class_name, object_id=email,
+                                            pass_phrase=pass_phrase,
+                                            public_pgp_key=public_pgp_key, private_pgp_key=private_pgp_key)
+        key, value = "public_pgp_key", public_pgp_key
+    else:
+        worker_logger.exception('Something went wrong, check logs, pgp keys were not generated for email - %s' %
+                                email)
+        key, value = 'error', 'Sorry but we were not able to generate PGP keys for user %s' % email
+    if result is not None:
+        result.update({key: value})
+        return result
 
 
 def get_probe_ids_by_user_email(table_class_name, email, callback_code):
@@ -163,12 +185,12 @@ def get_extension_ids_by_probe_id(table_class_name, probe_id, callback_code):
 
 def update_redis_job():
     worker_logger.info('Doing REDIS UPDATE job')
-    results = MySQLDataStoreInterface.select_data(REDIS_CHANGES_CLASS_NAME, order_by='created_date')
+    results = MySQLDataStoreInterface.select_data(REDIS_CHANGES_CLASS_NAME, order_by='change_time')
     worker_logger.debug(results)
     for result in results:
         keys_to_delete = get_storage_keys_by_table_name(result.get('table_name'))
         for key_to_delete in keys_to_delete:
-            key = key_to_delete % result.get('object_id')
+            key = key_to_delete % result.get('record_id')
             worker_logger.info('Deleting key - %s' % key)
             BaseDataStore.instance().delete_custom_lru_redis_data(key)
     worker_logger.info('REDIS UPDATE done.')
@@ -196,43 +218,54 @@ def get_storage_keys_by_table_name(table_name):
 def test_schedule_job(message):
     worker_logger.info(message)
 
-def test_verify_code_job(code, callback_code):
 
-    result = {
-        'verified': False
-    }
-
+def verify_registration_job(code, app_type, callback_code):
+    result = dict(verified=False)
+    user_id = None
     try:
-        # app_verifyication_url = 'http://biom.io/backups/beta/php/commands/verify_service/%s' % (str(code))
-        # response = requests.get(app_verifyication_url)
-        # print response.text
-        # response_text = response.text
-        # response_text = {'response': 'false'}
-        response_text = {'response': 'true', 'user_id': 'id'}
-
-        if response_text['response'].lower() == 'true':
-            result.update({'verified': True})
-
-        if result.get('verified', False):
+        app_verification_url = settings.ai_rest_url % (REST_VERIFY_COMMAND % str(code))
+        response = requests.post(app_verification_url)
+        try:
+            response.raise_for_status()
+            response = response.json()
+            user_id = response.get('user_id')
+            worker_logger.debug('Received user ID - %s' % user_id)
+            if user_id is None:
+                result.update({'error': "Didn't receive any user ID from AI."})
+            else:
+                result.update({'verified': True})
+        except HTTPError as e:
+            worker_logger.exception(e)
+            result.update({'error': response.reason})
+        if result.get('verified'):
             key, pub_key = Crypto.generate_keypair()
             fingerprint = Crypto.get_public_rsa_fingerprint(pub_key)
 
-            #TODO: remove when registration is finished
-            key = extension_key
-            pub_key = extension_pub_key
-            fingerprint = extension_app_id
-
             ApplicationDataStore.instance().store_data(
                 app_id=str(fingerprint),
-                public_key=pub_key
+                public_key=pub_key,
+                app_type=app_type,
+                users=int(user_id)
             )
             result.update({'app_id': fingerprint, 'private_key': key})
 
     except Exception as e:
         worker_logger.exception(e)
-        result.update({'error': 'Sorry but we were not able to register the app: Internal error occured.'})
+        result.update({'error': 'Sorry but we were not able to register the app: Internal error occurred.'})
 
     finally:
         BaseDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
                                                   record_dict=result, callback_code=callback_code)
         worker_logger.info('Finished app registration with result: %s' % str(result))
+
+
+def register_biometrics_job(code):
+    worker_logger.info('Registering biometrics on AI with code - %s' % code)
+    register_biometrics_url = settings.ai_rest_url % (REST_REGISTER_BIOMETRICS % code)
+    response = requests.post(register_biometrics_url)
+    try:
+        response.raise_for_status()
+        worker_logger.info('Registered biometrics on AI with code - %s' % code)
+    except HTTPError as e:
+        worker_logger.exception(e)
+        worker_logger.exception('Failed to register biometrics, reason - %s' % response.reason)

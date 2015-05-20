@@ -4,7 +4,7 @@ import pony.orm as pny
 import abc
 from pony.orm.ormtypes import LongStr
 from biomio.constants import REDIS_USER_KEY, REDIS_EMAILS_KEY, REDIS_APPLICATION_KEY, MYSQL_APPS_TABLE_NAME, \
-    MYSQL_EMAILS_TABLE_NAME, MYSQL_USERS_TABLE_NAME, MYSQL_TRAINING_DATA_TABLE_NAME
+    MYSQL_EMAILS_TABLE_NAME, MYSQL_USERS_TABLE_NAME, MYSQL_TRAINING_DATA_TABLE_NAME, MYSQL_CHANGES_TABLE_NAME
 from biomio.utils.biomio_decorators import inherit_docstring_from
 
 database = pny.Database()
@@ -54,17 +54,17 @@ class BaseEntityClass(object):
 class UserInformation(BaseEntityClass, database.Entity):
     _table_ = MYSQL_USERS_TABLE_NAME
     id = pny.PrimaryKey(int, auto=True)
-    api_id = pny.Required(int, default=1)
-    name = pny.Required(str, 50, default='test_name')
+    api_id = pny.Required(int, default=1, lazy=True)
+    name = pny.Required(str, 50, default='test_name', lazy=True)
     emails = pny.Set('EmailsData')
-    phones = pny.Optional(str, 255, default='[]')
-    password = pny.Required(str, 50, default='test_pass')
-    temp_pass = pny.Optional(str, 50, default='test_temp_pass')
-    type = pny.Required(str, 50, default='USER', sql_type="enum('ADMIN','USER','PROVIDER','PARTNER')")
-    acc_type = pny.Required(bool, default=True)
-    creation_time = pny.Required(datetime.datetime, default=lambda: datetime.datetime.now())
-    last_login_time = pny.Required(datetime.datetime, default=lambda: datetime.datetime.now(), auto=True)
-    last_ip = pny.Required(str, 20, default='127.0.0.1', auto=True)
+    phones = pny.Optional(str, 255, default='[]', lazy=True)
+    password = pny.Required(str, 50, default='test_pass', lazy=True)
+    temp_pass = pny.Optional(str, 50, default='test_temp_pass', lazy=True)
+    type = pny.Required(str, 50, default='USER', sql_type="enum('ADMIN','USER','PROVIDER','PARTNER')", lazy=True)
+    acc_type = pny.Required(bool, default=True, lazy=True)
+    creation_time = pny.Required(datetime.datetime, default=lambda: datetime.datetime.now(), lazy=True)
+    last_login_time = pny.Required(datetime.datetime, default=lambda: datetime.datetime.now(), auto=True, lazy=True)
+    last_ip = pny.Required(str, 20, default='127.0.0.1', auto=True, lazy=True)
     applications = pny.Set('Application')
 
     @inherit_docstring_from(BaseEntityClass)
@@ -90,8 +90,8 @@ class UserInformation(BaseEntityClass, database.Entity):
 class EmailsData(BaseEntityClass, database.Entity):
     _table_ = MYSQL_EMAILS_TABLE_NAME
     email = pny.PrimaryKey(str, auto=False)
-    pass_phrase = pny.Required(str)
-    public_pgp_key = pny.Required(LongStr, lazy=False)
+    pass_phrase = pny.Optional(str)
+    public_pgp_key = pny.Optional(LongStr, lazy=False)
     private_pgp_key = pny.Optional(LongStr, lazy=False, nullable=True)
     user = pny.Required(UserInformation)
 
@@ -151,10 +151,11 @@ class Application(BaseEntityClass, database.Entity):
 
 
 class ChangesTable(BaseEntityClass, database.Entity):
+    _table_ = MYSQL_CHANGES_TABLE_NAME
     table_name = pny.Required(str)
-    object_id = pny.Required(str)
-    created_date = pny.Required(datetime.datetime, default=lambda: datetime.datetime.now())
-    pny.composite_key(table_name, object_id)
+    record_id = pny.Required(str)
+    change_time = pny.Required(datetime.datetime, default=lambda: datetime.datetime.now())
+    pny.composite_key(table_name, record_id)
 
     @staticmethod
     @inherit_docstring_from(BaseEntityClass)
@@ -173,7 +174,7 @@ class ChangesTable(BaseEntityClass, database.Entity):
     @staticmethod
     @inherit_docstring_from(BaseEntityClass)
     def get_table_name():
-        return ''
+        return MYSQL_CHANGES_TABLE_NAME
 
 
 class TrainingData(BaseEntityClass, database.Entity):
