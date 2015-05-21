@@ -42,6 +42,15 @@ class BaseEntityClass(object):
 
     @staticmethod
     @abc.abstractmethod
+    def update_record(record_id, **kwargs):
+        """
+            Updates record inside current table
+        :param record_id: record to update
+        :param kwargs: param/value dictionary
+        """
+
+    @staticmethod
+    @abc.abstractmethod
     def get_table_name():
         """
             Returns MySQL table name of the current entity.
@@ -86,6 +95,11 @@ class UserInformation(BaseEntityClass, database.Entity):
     def get_table_name():
         return MYSQL_USERS_TABLE_NAME
 
+    @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
+    def update_record(record_id, **kwargs):
+        pass
+
 
 class EmailsData(BaseEntityClass, database.Entity):
     _table_ = MYSQL_EMAILS_TABLE_NAME
@@ -118,6 +132,17 @@ class EmailsData(BaseEntityClass, database.Entity):
     def get_table_name():
         return MYSQL_EMAILS_TABLE_NAME
 
+    @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
+    def update_record(record_id, **kwargs):
+        search_query = {EmailsData.get_unique_search_attribute(): record_id}
+        email_data = EmailsData.get(**search_query)
+
+        for key, value in kwargs.iteritems():
+            if not hasattr(email_data, key):
+                continue
+            setattr(email_data, key, value)
+
 
 class Application(BaseEntityClass, database.Entity):
     _table_ = MYSQL_APPS_TABLE_NAME
@@ -149,6 +174,26 @@ class Application(BaseEntityClass, database.Entity):
     def get_table_name():
         return MYSQL_APPS_TABLE_NAME
 
+    @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
+    def update_record(record_id, **kwargs):
+        search_query = {Application.get_unique_search_attribute(): record_id}
+        application = Application.get(**search_query)
+
+        for key, value in kwargs.iteritems():
+            if not hasattr(application, key):
+                continue
+            if key == 'users':
+                for user_id in value:
+                    if isinstance(user_id, UserInformation):
+                        application.users.add(user_id)
+                    else:
+                        search_query = {UserInformation.get_unique_search_attribute(): user_id}
+                        user = UserInformation.get(**search_query)
+                        application.users.add(user)
+            else:
+                setattr(application, key, value)
+
 
 class ChangesTable(BaseEntityClass, database.Entity):
     _table_ = MYSQL_CHANGES_TABLE_NAME
@@ -176,6 +221,11 @@ class ChangesTable(BaseEntityClass, database.Entity):
     def get_table_name():
         return MYSQL_CHANGES_TABLE_NAME
 
+    @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
+    def update_record(record_id, **kwargs):
+        pass
+
 
 class TrainingData(BaseEntityClass, database.Entity):
     _table_ = MYSQL_TRAINING_DATA_TABLE_NAME
@@ -200,3 +250,14 @@ class TrainingData(BaseEntityClass, database.Entity):
     @inherit_docstring_from(BaseEntityClass)
     def get_table_name():
         return MYSQL_TRAINING_DATA_TABLE_NAME
+
+    @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
+    def update_record(record_id, **kwargs):
+        search_query = {TrainingData.get_unique_search_attribute(): record_id}
+        training_data = TrainingData.get(**search_query)
+
+        for key, value in kwargs.iteritems():
+            if not hasattr(training_data, key):
+                continue
+            setattr(training_data, key, value)

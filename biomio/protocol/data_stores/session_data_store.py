@@ -33,3 +33,7 @@ class SessionDataStore(BaseDataStore):
     @inherit_docstring_from(BaseDataStore)
     def delete_data(self, refresh_token):
         self.delete_custom_persistence_redis_data(self.get_data_key(refresh_token))
+
+    @inherit_docstring_from(BaseDataStore)
+    def update_data(self, refresh_token, **kwargs):
+        self._store_persistence_data(self.get_data_key(refresh_token), **kwargs)

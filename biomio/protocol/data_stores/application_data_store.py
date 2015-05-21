@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 from biomio.constants import REDIS_APPLICATION_KEY, APPS_TABLE_CLASS_NAME
 from biomio.protocol.data_stores.base_data_store import BaseDataStore
+from biomio.protocol.data_stores.storage_jobs import assign_user_to_extension_job
 from biomio.utils.biomio_decorators import inherit_docstring_from
 
 
@@ -51,6 +52,11 @@ class ApplicationDataStore(BaseDataStore):
     def select_data_by_ids(self, app_ids, callback):
         self._select_data_by_ids(table_class_name=self._table_class_name, object_ids=app_ids, callback=callback)
 
+    @inherit_docstring_from(BaseDataStore)
+    def update_data(self, app_id, **kwargs):
+        self._update_lru_data(key=self.get_data_key(app_id), table_class_name=self._table_class_name, object_id=app_id,
+                              **kwargs)
+
     def get_probe_ids_by_user_email(self, email, callback):
         self._get_app_ids_by_app_id(table_class_name=self._table_class_name, object_id=email, callback=callback,
                                     probes=True)
@@ -60,3 +66,7 @@ class ApplicationDataStore(BaseDataStore):
 
     def get_keys_to_delete(self):
         return self._KEYS_TO_DELETE
+
+    def assign_user_to_extension(self, app_id, email):
+        self._run_storage_job(assign_user_to_extension_job, table_class_name=self._table_class_name,
+                              app_id=app_id, email=email)

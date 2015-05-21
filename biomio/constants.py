@@ -48,3 +48,25 @@ MODULES_CLASSES_BY_TABLE_NAMES = {
 REST_VERIFY_COMMAND = 'verify_service/%s'
 REST_CREATE_EMAIL_KEYS = 'get_user/%s'
 REST_REGISTER_BIOMETRICS = 'register_biometrics/%s'
+
+TRAINING_FACE_TYPE = 'face-photo'
+TRAINING_FINGER_TYPE = 'fingerprints'
+TRAINING_VOICE_TYPE = 'voice'
+
+TRAINING_GATE_AI_TYPES_MAP = {
+    TRAINING_FACE_TYPE: 'face',
+    TRAINING_FINGER_TYPE: 'fingerprints',
+    TRAINING_VOICE_TYPE: 'voice'
+}
+
+
+TRAINING_TYPES_AI_RESPONSE = {
+    'face': '0',
+    'fingerprints': '0',
+    'voice': '0'
+}
+
+def get_ai_training_response(training_type):
+    response = TRAINING_TYPES_AI_RESPONSE
+    response.update({TRAINING_GATE_AI_TYPES_MAP.get(training_type, ''): '1'})
+    return response

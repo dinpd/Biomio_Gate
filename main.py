@@ -69,8 +69,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
 class InitialProbeRestHandler(tornado.web.RequestHandler):
     def get(self):
-        #TODO: what parameters should be passed to training REST call?
-        BioauthFlow.start_training(app_id='test_app_id')
+        BioauthFlow.start_training(probe_id=self.get_query_argument('probe_id'), code=self.get_query_argument('code'))
         self.write('<html><head><title>BIOMIO: Initial Probes</title></head><body>'
                    'Please, use BIOMIO probe application to input initial probes.'
                    '</body></html>')

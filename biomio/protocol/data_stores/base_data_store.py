@@ -51,6 +51,15 @@ class BaseDataStore():
         pass
 
     @abc.abstractmethod
+    def update_data(self, object_id, **kwargs):
+        """
+            Updates data in redis
+        :param object_id: The ID of the object that must be updated
+        :param kwargs: Values to update
+        """
+        pass
+
+    @abc.abstractmethod
     def get_data(self, object_id, callback):
         """
             Get data from MySQL if it doesn't exist in Redis (asynchronously)
@@ -101,6 +110,18 @@ class BaseDataStore():
             run_storage_job(self._CREATE_JOB, table_class_name=table_class_name, **kwargs)
         else:
             run_storage_job(self._UPDATE_JOB, table_class_name=table_class_name, object_id=object_id, **kwargs)
+
+    def _update_lru_data(self, key, table_class_name, object_id, ex=None, **kwargs):
+        """
+            Internal method which updates data in redis and after that updates data in MySQL
+        :param key: str Generated Redis Key.
+        :param table_class_name: str Pony MySQL Entity class name.
+        :param object_id: str ID of the object that must be updated in MySQL.
+        :param ex: boolean optional parameter, redis data expiration, default = None.
+        :param kwargs: Key/Value parameters that must be stored in redis and after in MySQL.
+        """
+        self._lru_redis.store_data(key=key, ex=ex, **kwargs)
+        run_storage_job(self._UPDATE_JOB, table_class_name=table_class_name, object_id=object_id, **kwargs)
 
     def _get_lru_data(self, key, table_class_name, object_id, callback):
         """

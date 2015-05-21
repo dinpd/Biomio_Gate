@@ -41,3 +41,8 @@ class UserDataStore(BaseDataStore):
     @inherit_docstring_from(BaseDataStore)
     def select_data_by_ids(self, user_ids, callback):
         self._select_data_by_ids(table_class_name=self._table_class_name, object_ids=user_ids, callback=callback)
+
+    @inherit_docstring_from(BaseDataStore)
+    def update_data(self, user_id, **kwargs):
+        self._update_lru_data(key=self.get_data_key(user_id), table_class_name=self._table_class_name,
+                              object_id=user_id, **kwargs)

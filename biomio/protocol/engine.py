@@ -85,6 +85,21 @@ def get_app_data_helper(app_id, key=None):
 
     raise tornado.gen.Return(value=value)
 
+@greenado.generator
+def get_app_keys_helper(app_id, extension=False):
+    value = None
+    try:
+        if extension:
+            app_data = yield tornado.gen.Task(ApplicationDataStore.instance().get_probe_ids_by_user_email, app_id)
+        else:
+            app_data = yield tornado.gen.Task(ApplicationDataStore.instance().get_extension_ids_by_probe_id, app_id)
+
+        value = app_data if app_data is not None else {}
+    except Exception as e:
+        logger.exception(e)
+    raise tornado.gen.Return(value=value)
+
+
 
 class MessageHandler:
     @staticmethod
@@ -668,6 +683,7 @@ class BiomioProtocol:
                 data,
                 wait_callback,
                 self.bioauth_flow,
+                self.bioauth_flow.app_id,
                 self.get_process_callback_for_rpc_result(input_msg=input_msg)
             )
         elif message_id == 'rpcEnumNsReq':

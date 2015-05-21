@@ -4,6 +4,7 @@ import inspect
 import tornado.gen
 import greenado
 import traceback
+from biomio.protocol.data_stores.application_data_store import ApplicationDataStore
 
 from biomio.protocol.rpc import bioauthflow
 
@@ -19,6 +20,7 @@ CALLBACK_ARG = 'callback'
 USER_ID_ARG = 'user_id'
 WAIT_CALLBACK_ARG = 'wait_callback'
 BIOAUTH_FLOW_INSTANCE_ARG = 'bioauth_flow'
+APP_ID_ATG = 'app_id'
 
 
 def _check_rpc_arguments(callable_func, current_kwargs):
@@ -43,7 +45,7 @@ def _check_rpc_arguments(callable_func, current_kwargs):
 
     required_args = _get_required_args(callable_func)
 
-    implicit_params_list = [USER_ID_ARG, CALLBACK_ARG, WAIT_CALLBACK_ARG, BIOAUTH_FLOW_INSTANCE_ARG]
+    implicit_params_list = [USER_ID_ARG, CALLBACK_ARG, WAIT_CALLBACK_ARG, BIOAUTH_FLOW_INSTANCE_ARG, APP_ID_ATG]
     for k, v in current_kwargs.iteritems():
         if k in implicit_params_list and k not in required_args:
             continue
@@ -86,10 +88,14 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
     :param callable_kwargs: List of named arguments of RPC routine.
     """
     user_id = callable_kwargs.get(USER_ID_ARG, None)
+    app_id = callable_kwargs.get(APP_ID_ATG, None)
     wait_callback = callable_kwargs.get(WAIT_CALLBACK_ARG, None)
     callback = callable_kwargs.get(CALLBACK_ARG, None)
     bioauth_flow = callable_kwargs.get(BIOAUTH_FLOW_INSTANCE_ARG, None)
-
+    
+    if app_id is not None and bioauth_flow is not None and bioauth_flow.app_type == 'extension':
+        assign_user_to_extension(ApplicationDataStore.instance(), app_id=app_id, email=user_id)
+    
     # Send RPC message with inprogress state
     try:
         wait_callback()
@@ -107,7 +113,8 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
                 callback(result={"error": error_msg}, status='fail')
                 return
 
-        future = tornado.gen.Task(bioauth_flow.request_auth, get_verification_started_callback(callback=callback))
+        future = tornado.gen.Task(bioauth_flow.request_auth, user_id,
+                                  get_verification_started_callback(callback=callback))
         greenado.gyield(future)
 
         # TODO: check for current auth state
@@ -135,7 +142,7 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
             elif bioauth_flow.is_current_state(bioauthflow.STATE_AUTH_TIMEOUT):
                 error_msg = 'Biometric authentication timeout.'
             elif bioauth_flow.is_current_state(bioauthflow.STATE_AUTH_CANCELED):
-                error_msg = 'Biometric authenctication canceled.'
+                error_msg = 'Biometric authentication canceled.'
             else:
                 error_msg = 'Biometric auth internal error'
             callback(result={"error": error_msg}, status='fail')
@@ -217,3 +224,6 @@ def verify_emails_ai(data_store_instance, emails):
     except Exception as e:
         logger.exception(e)
     raise tornado.gen.Return(result)
+
+def assign_user_to_extension(data_store_instance, app_id, email):
+    data_store_instance.assign_user_to_extension(app_id=app_id, email=email)

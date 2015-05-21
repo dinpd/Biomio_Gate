@@ -1,4 +1,6 @@
-
+from biomio.constants import get_ai_training_response
+from biomio.protocol.data_stores.storage_jobs import register_biometrics_job
+from biomio.protocol.data_stores.storage_jobs_processor import run_storage_job
 from biomio.third_party.fysom import Fysom, FysomError
 from biomio.protocol.storage.auth_state_storage import AuthStateStorage
 from biomio.protocol.probes.probeauthbackend import ProbeAuthBackend
@@ -36,7 +38,7 @@ def on_request(e):
     flow = e.bioauth_flow
 
     if flow.is_extension_owner():
-        flow.auth_connection.start_auth()
+        flow.auth_connection.start_auth(on_behalf_of=e.on_behalf_of)
 
     return STATE_AUTH_WAIT
 
@@ -201,7 +203,11 @@ auth_states = {
     }
 }
 
+# TODO: Move to constants
 _PROBESTORE_STATE_KEY = 'state'
+_PROBESTORE_TRAINING_TYPE_KEY = 'training_type'
+_PROBESTORE_AI_CODE_KEY = 'ai_code'
+_PROBESTORE_ON_BEHALF_OF_KEY = 'on_behalf_of'
 
 
 # Helper Methods
@@ -287,13 +293,17 @@ class BioauthFlow:
         self._store_state()
 
     @tornado.gen.engine
-    def request_auth(self, verification_started_callback, callback):
+    def request_auth(self, verification_started_callback, on_behalf_of, callback):
         """
         Should be called for extension to request biometric authentication from probe.
         """
         self._verification_started_callback = verification_started_callback # Store callback to call later before verification started
         self.rpc_callback = callback # Store callback to call later in STATE_AUTH_FINISHED state
-        self._state_machine_instance.request(bioauth_flow=self)
+        data_dict = {
+            _PROBESTORE_ON_BEHALF_OF_KEY: on_behalf_of
+        }
+        self.auth_connection.store_data(**data_dict)
+        self._state_machine_instance.request(bioauth_flow=self, on_behalf_of=on_behalf_of)
         self._store_state()
 
     def auth_started(self, resource_list=None):
@@ -325,7 +335,11 @@ class BioauthFlow:
         if self._state_machine_instance.current == STATE_AUTH_TRAINING_STARTED:
             self._state_machine_instance.training_in_progress(bioauth_flow=self)
             self._store_state()
-
+            training_type = self.auth_connection.get_data(key=_PROBESTORE_TRAINING_TYPE_KEY)
+            ai_code = self.auth_connection.get_data(key=_PROBESTORE_AI_CODE_KEY)
+            if training_type is not None and ai_code is not None:
+                ai_response = get_ai_training_response(training_type)
+                run_storage_job(register_biometrics_job, code=ai_code, response_type=ai_response)
             result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, type, data, self.app_id, True)
 
             logger.debug(msg='TRAINING RESULT: %s' % str(result))
@@ -347,9 +361,13 @@ class BioauthFlow:
         return self.auth_connection.is_extension_owner()
 
     @classmethod
-    def start_training(cls, app_id):
-        data = {_PROBESTORE_STATE_KEY: STATE_AUTH_TRAINING_STARTED}
-        app_id = 'auth:3a9d3f79ecc2c42b9114b4300a248777:88b960b1c9805fb586810f270def7378'
+    def start_training(cls, probe_id, code):
+        data = {
+            _PROBESTORE_STATE_KEY: STATE_AUTH_TRAINING_STARTED,
+            _PROBESTORE_TRAINING_TYPE_KEY: 'face-photo',
+            _PROBESTORE_AI_CODE_KEY: code
+        }
+        app_id = 'auth:%s:%s' % (code, probe_id)
         AuthStateStorage.instance().store_probe_data(app_id, ttl=settings.bioauth_timeout, **data)
         logger.debug('Training process started...')
 

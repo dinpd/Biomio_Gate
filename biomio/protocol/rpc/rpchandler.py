@@ -1,6 +1,7 @@
 
 from biomio.protocol.rpc.rpcpluginmanager import RpcPluginManager
-from biomio.protocol.rpc.rpcutils import CALLBACK_ARG, USER_ID_ARG, WAIT_CALLBACK_ARG, BIOAUTH_FLOW_INSTANCE_ARG
+from biomio.protocol.rpc.rpcutils import CALLBACK_ARG, USER_ID_ARG, WAIT_CALLBACK_ARG, BIOAUTH_FLOW_INSTANCE_ARG, \
+    APP_ID_ATG
 
 import logging
 logger = logging.getLogger(__name__)
@@ -14,7 +15,7 @@ class RpcHandler:
         pass
 
 
-    def process_rpc_call(self, user_id, call, namespace, data, wait_callback, bioauth_flow, callback):
+    def process_rpc_call(self, user_id, call, namespace, data, wait_callback, bioauth_flow, app_id, callback):
         """
         Processes RPC call with the given parameters.
         :param user_id: User ID string
@@ -38,6 +39,7 @@ class RpcHandler:
                 call_params[WAIT_CALLBACK_ARG] = wait_callback
                 call_params[CALLBACK_ARG] = callback
                 call_params[BIOAUTH_FLOW_INSTANCE_ARG] = bioauth_flow
+                call_params[APP_ID_ATG] = app_id
 
                 rpc_call(**call_params)
 

@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+import json
 from requests.exceptions import HTTPError
 
 from biomio.constants import REDIS_CHANGES_CLASS_NAME, REDIS_DO_NOT_STORE_RESULT_KEY, REDIS_PARTIAL_RESULTS_KEY, \
@@ -13,7 +14,6 @@ from biomio.utils.utils import import_module_class
 
 import requests
 from biomio.protocol.crypt import Crypto
-from biomio.protocol.data_stores.application_data_store import ApplicationDataStore
 
 from logger import worker_logger
 
@@ -143,16 +143,19 @@ def get_probe_ids_by_user_email(table_class_name, email, callback_code):
     result = dict()
     try:
         email_data = MySQLDataStoreInterface.get_object(table_name=EMAILS_TABLE_CLASS_NAME, object_id=email)
-        worker_logger.debug('Email Data - %s' % email_data.to_dict())
-        worker_logger.debug(email_data.user)
-        probe_ids = MySQLDataStoreInterface.get_applications_by_user_id_and_type(table_name=table_class_name,
-                                                                                 user_id=email_data.user,
-                                                                                 app_type='probe')
-        worker_logger.debug('probe IDS - %s' % probe_ids)
-        result = dict(result=probe_ids)
+        if email_data is not None:
+            worker_logger.debug('Email Data - %s' % email_data.to_dict())
+            worker_logger.debug(email_data.user)
+            probe_ids = MySQLDataStoreInterface.get_applications_by_user_id_and_type(table_name=table_class_name,
+                                                                                     user_id=email_data.user,
+                                                                                     app_type='probe')
+            worker_logger.debug('probe IDS - %s' % probe_ids)
+            result.update({'result': probe_ids})
+        else:
+            result.update({'error': 'Email is not registered'})
     except Exception as e:
         worker_logger.exception(e)
-        result = dict(error=str(e))
+        result.update({'error': str(e)})
     finally:
         BaseDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
                                                   record_dict=result, callback_code=callback_code)
@@ -241,6 +244,8 @@ def verify_registration_job(code, app_type, callback_code):
             key, pub_key = Crypto.generate_keypair()
             fingerprint = Crypto.get_public_rsa_fingerprint(pub_key)
 
+            from biomio.protocol.data_stores.application_data_store import ApplicationDataStore
+
             ApplicationDataStore.instance().store_data(
                 app_id=str(fingerprint),
                 public_key=pub_key,
@@ -259,13 +264,35 @@ def verify_registration_job(code, app_type, callback_code):
         worker_logger.info('Finished app registration with result: %s' % str(result))
 
 
-def register_biometrics_job(code):
+def register_biometrics_job(code, response_type):
     worker_logger.info('Registering biometrics on AI with code - %s' % code)
     register_biometrics_url = settings.ai_rest_url % (REST_REGISTER_BIOMETRICS % code)
-    response = requests.post(register_biometrics_url)
+    headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+    response = requests.post(register_biometrics_url, data=json.dumps(response_type), headers=headers)
     try:
         response.raise_for_status()
         worker_logger.info('Registered biometrics on AI with code - %s' % code)
     except HTTPError as e:
         worker_logger.exception(e)
         worker_logger.exception('Failed to register biometrics, reason - %s' % response.reason)
+
+
+def assign_user_to_extension_job(table_class_name, app_id, email):
+    worker_logger.info('Checking if user with email %s is assigned to application %s' % (email, app_id))
+    email_data = MySQLDataStoreInterface.get_object(table_name=EMAILS_TABLE_CLASS_NAME, object_id=email,
+                                                    return_dict=True)
+    if email_data is not None:
+        extension = MySQLDataStoreInterface.get_object(table_name=table_class_name, object_id=app_id, return_dict=True)
+        email_user = email_data.get('user')
+        extension_users = extension.get('users')
+        if email_user in extension_users:
+            worker_logger.info('User with email %s is assigned to application %s' % (email, app_id))
+        else:
+            extension_users.append(email_user)
+
+            from biomio.protocol.data_stores.application_data_store import ApplicationDataStore
+
+            ApplicationDataStore.instance().update_data(app_id=app_id, users=extension_users)
+            worker_logger.info('Assigned user with email %s to application %s' % (email, app_id))
+    else:
+        worker_logger.info('Email %s is not registered' % email)

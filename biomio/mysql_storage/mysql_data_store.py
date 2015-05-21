@@ -49,11 +49,7 @@ class MySQLDataStore():
     @pny.db_session
     def update_data(self, module_name, table_name, update_object_pk, **kwargs):
         table_class = self.get_table_class(module_name, table_name)
-        search_query = {table_class.get_unique_search_attribute(): update_object_pk}
-        update_object = table_class.get(**search_query)
-        if update_object is not None:
-            for (k, v) in kwargs.iteritems():
-                setattr(update_object, k, v)
+        table_class.update_record(record_id=update_object_pk, **kwargs)
 
     @pny.db_session
     def update_data_set(self, module_name, update_table_name, update_object_pk, add_table_name, add_object_pk,

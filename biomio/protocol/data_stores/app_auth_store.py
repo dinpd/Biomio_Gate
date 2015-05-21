@@ -36,3 +36,7 @@ class AppAuthStore(BaseDataStore):
     @inherit_docstring_from(BaseDataStore)
     def delete_data(self, app_id):
         self.delete_custom_persistence_redis_data(self.get_data_key(app_id))
+
+    @inherit_docstring_from(BaseDataStore)
+    def update_data(self, app_id, ttl=None, **kwargs):
+        self._store_persistence_data(key=self.get_data_key(app_id), ex=ttl, **kwargs)

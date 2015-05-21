@@ -1,9 +1,10 @@
 import ast
 from yapsy.IPlugin import IPlugin
+from biomio.protocol.data_stores.application_data_store import ApplicationDataStore
 from biomio.protocol.data_stores.email_data_store import EmailDataStore
 
 from biomio.protocol.rpc.rpcutils import rpc_call_with_auth, rpc_call, get_store_data, select_store_data, \
-    verify_emails_ai
+    verify_emails_ai, assign_user_to_extension
 import logging
 
 logger = logging.getLogger(__name__)
@@ -33,7 +34,8 @@ class ExtensionPlugin(IPlugin):
         return result
 
     @rpc_call
-    def get_users_public_pgp_keys(self, emails):
+    def get_users_public_pgp_keys(self, user_id, emails, app_id):
+        assign_user_to_extension(ApplicationDataStore.instance(), app_id=app_id, email=user_id)
         emails = self.parse_email_data(emails).split(',')
         emails_store_instance = EmailDataStore.instance()
         public_pgp_keys = []

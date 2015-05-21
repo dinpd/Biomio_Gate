@@ -1,15 +1,13 @@
+from biomio.protocol.engine import get_app_keys_helper
+
 __author__ = 'alexchmykhalo'
-
-from setup_default_user_data import probe_app_id, extension_app_id
-from biomio.protocol.data_stores.app_connection_store import AppConnectionStore
-
 
 
 class AppConnectionManager():
     _instance = None
 
     def __init__(self):
-        self.connections = {}
+        pass
 
     @classmethod
     def instance(cls):
@@ -18,16 +16,13 @@ class AppConnectionManager():
 
         return cls._instance
 
-    def get_connected_apps(self, app_id):
+    def get_connected_apps(self, app_id, extension=False):
         """
         Generates list of connected app id for the given app.
         :param app_id: Application id for which get connected apps.
         :return: List of connected app ids.
         """
-        #TODO: temporary hardcoded
-        self.connections = {
-            extension_app_id: [probe_app_id],
-            probe_app_id: [extension_app_id]
-        }
-
-        return self.connections.get(app_id, [])
+        apps = get_app_keys_helper(app_id=app_id, extension=extension)
+        if apps is not None:
+            return apps.get('result', [])
+        return []
