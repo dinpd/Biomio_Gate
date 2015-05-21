@@ -14,9 +14,6 @@ class MySQLDataStore():
                            db=settings.mysql_db_name)
         self.database.generate_mapping(create_tables=True)
 
-    def __del__(self):
-        self.database.disconnect()
-
     @classmethod
     def instance(cls):
         if cls._instance is None:
@@ -95,7 +92,6 @@ class MySQLDataStore():
     @pny.db_session
     def self_join_applications(self, module_name, table_name, app_id, app_type):
         table_class = self.get_table_class(module_name=module_name, table_name=table_name)
-
 
     @staticmethod
     def get_table_class(module_name, table_name):
