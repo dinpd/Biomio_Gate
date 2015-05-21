@@ -226,4 +226,10 @@ def verify_emails_ai(data_store_instance, emails):
     raise tornado.gen.Return(result)
 
 def assign_user_to_extension(data_store_instance, app_id, email):
+    email = parse_email_data(email)
     data_store_instance.assign_user_to_extension(app_id=app_id, email=email)
+
+def parse_email_data(emails):
+    for rep in ['<', '>']:
+        emails = emails.replace(rep, '')
+    return emails

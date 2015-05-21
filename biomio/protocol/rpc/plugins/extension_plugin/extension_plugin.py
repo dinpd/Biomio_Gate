@@ -4,7 +4,7 @@ from biomio.protocol.data_stores.application_data_store import ApplicationDataSt
 from biomio.protocol.data_stores.email_data_store import EmailDataStore
 
 from biomio.protocol.rpc.rpcutils import rpc_call_with_auth, rpc_call, get_store_data, select_store_data, \
-    verify_emails_ai, assign_user_to_extension
+    verify_emails_ai, assign_user_to_extension, parse_email_data
 import logging
 
 logger = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ class ExtensionPlugin(IPlugin):
 
     @rpc_call_with_auth
     def get_pass_phrase(self, email):
-        email = self.parse_email_data(email)
+        email = parse_email_data(email)
         email_store_instance = EmailDataStore.instance()
         email_data = get_store_data(email_store_instance, object_id=email)
         if email_data is None or len(email_data) == 0:
@@ -36,7 +36,7 @@ class ExtensionPlugin(IPlugin):
     @rpc_call
     def get_users_public_pgp_keys(self, user_id, emails, app_id):
         assign_user_to_extension(ApplicationDataStore.instance(), app_id=app_id, email=user_id)
-        emails = self.parse_email_data(emails).split(',')
+        emails = parse_email_data(emails).split(',')
         emails_store_instance = EmailDataStore.instance()
         public_pgp_keys = []
         emails_data = select_store_data(emails_store_instance, emails)
@@ -63,8 +63,3 @@ class ExtensionPlugin(IPlugin):
                 logger.debug("No results from emails verification, emails - %s" % emails)
         return {'public_pgp_keys': ','.join(public_pgp_keys)}
 
-    @staticmethod
-    def parse_email_data(emails):
-        for rep in ['<', '>']:
-            emails = emails.replace(rep, '')
-        return emails
