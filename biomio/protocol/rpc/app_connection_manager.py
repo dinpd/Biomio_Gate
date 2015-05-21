@@ -1,3 +1,5 @@
+from biomio.protocol.data_stores.application_data_store import ApplicationDataStore
+
 __author__ = 'alexchmykhalo'
 
 
@@ -14,16 +16,14 @@ class AppConnectionManager():
 
         return cls._instance
 
-    def get_connected_apps(self, app_id, extension=False):
+    def get_connected_apps(self, app_id, callback, extension=False):
         """
         Generates list of connected app id for the given app.
         :param app_id: Application id for which get connected apps.
         :return: List of connected app ids.
         """
 
-        from biomio.protocol.engine import get_app_keys_helper
-
-        apps = get_app_keys_helper(app_id=app_id, extension=extension)
-        if apps is not None:
-            return apps.get('result', [])
-        return []
+        if extension:
+            ApplicationDataStore.instance().get_probe_ids_by_user_email(email=app_id, callback=callback)
+        else:
+            ApplicationDataStore.instance().get_extension_ids_by_probe_id(probe_id=app_id, callback=callback)
