@@ -244,7 +244,6 @@ BIOMIO_protocol_json_schema = {
                         {"$ref": "#/definitions/touchIdSamples"}
                     ]
                 },
-                "success": {"type": "string"}
                 "status": { "enum": ["success", "failed", "canceled"] }
             }
         },
