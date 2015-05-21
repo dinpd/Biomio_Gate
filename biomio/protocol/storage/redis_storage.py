@@ -141,12 +141,12 @@ class RedisStorage():
 
     def remove_keys(self, keys):
         """
-        :param keys:
-        :return:
+        Removes all given keys from redis. Executing as an atomic operation.
+        :param keys: List of keys to remove.
         """
         pipeline = self._redis.pipeline()
 
         for key in keys:
-            pipeline.delete()
+            pipeline.delete(key)
 
         pipeline.execute()

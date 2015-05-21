@@ -86,7 +86,6 @@ class AppAuthConnection():
             extension_id = self._find_connected_extension()
             if extension_id:
                 # Extension connected and auth started
-                # TODO: remove all other extension keys using Lua script
                 self._connect_to_extension(extension_id=extension_id)
 
     def set_app_disconnected(self):
