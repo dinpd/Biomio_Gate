@@ -88,5 +88,6 @@ class AppConnectionListener():
                     try:
                         self._callback(extension_id, probe_id)
                     except Exception as e:
+                        logger.warn(str(e))
                         pass
 
