@@ -68,6 +68,9 @@ class AppAuthConnection():
         for probe_id in probes_list:
             key = self._listener.auth_key(extension_id=extension_id, probe_id=probe_id)
             self.extension_keys.append(key)
+        if self.extension_keys:
+            #TODO: refactor
+            self.store_data(state='auth_wait')
 
     def set_app_connected(self, app_auth_data_callback):
         """
