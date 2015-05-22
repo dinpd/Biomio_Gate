@@ -19,6 +19,7 @@ def run_storage_job(job_to_run, **kwargs):
     :param kwargs:
     """
     worker_logger.info('Running job - %s' % str(job_to_run))
+    worker_logger.info(kwargs)
     q.enqueue(job_to_run, **kwargs)
 
 
