@@ -1,3 +1,4 @@
+import time
 from biomio.mysql_storage.mysql_data_entities import pny, database
 from biomio.protocol.settings import settings
 
@@ -7,6 +8,7 @@ if settings.logging == 'DEBUG':
 
 class MySQLDataStore():
     _instance = None
+    _locked = False
 
     def __init__(self):
         self.database = database
@@ -17,7 +19,12 @@ class MySQLDataStore():
     @classmethod
     def instance(cls):
         if cls._instance is None:
+            if cls._locked:
+                time.sleep(1)
+                return cls.instance()
+            cls._locked = True
             cls._instance = MySQLDataStore()
+            cls._locked = False
         return cls._instance
 
     @pny.db_session
