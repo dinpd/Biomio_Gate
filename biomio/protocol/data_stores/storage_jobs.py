@@ -262,6 +262,10 @@ def verify_registration_job(code, app_type, callback_code):
                 users=int(user_id)
             )
             result.update({'app_id': fingerprint, 'private_key': key})
+            if app_type == 'probe':
+                headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+                data = {'probe_id': fingerprint}
+                requests.post(app_verification_url, data=json.dumps(data), headers=headers)
 
     except Exception as e:
         worker_logger.exception(e)
@@ -274,13 +278,13 @@ def verify_registration_job(code, app_type, callback_code):
 
 
 def register_biometrics_job(code, response_type):
-    worker_logger.info('Registering biometrics on AI with code - %s' % code)
+    worker_logger.info('Registering biometrics on AI with code - %s and response_type - %s' % (code, response_type))
     register_biometrics_url = settings.ai_rest_url % (REST_REGISTER_BIOMETRICS % code)
     headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
     response = requests.post(register_biometrics_url, data=json.dumps(response_type), headers=headers)
     try:
         response.raise_for_status()
-        worker_logger.info('Registered biometrics on AI with code - %s' % code)
+        worker_logger.info('Registered biometrics on AI with code - %s and response type - %s' % (code, response_type))
     except HTTPError as e:
         worker_logger.exception(e)
         worker_logger.exception('Failed to register biometrics, reason - %s' % response.reason)
