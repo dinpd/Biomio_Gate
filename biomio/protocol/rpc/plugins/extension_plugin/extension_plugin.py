@@ -61,5 +61,6 @@ class ExtensionPlugin(IPlugin):
                         logger.exception(e)
             else:
                 logger.debug("No results from emails verification, emails - %s" % emails)
-        return {'public_pgp_keys': ','.join(public_pgp_keys), 'emails_with_errors': emails_with_errors}
-
+        if len(emails_with_errors):
+            return {'public_pgp_keys': ','.join(public_pgp_keys), 'emails_with_errors': emails_with_errors}
+        return {'public_pgp_keys': ','.join(public_pgp_keys)}

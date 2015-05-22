@@ -91,7 +91,12 @@ def verify_email_job(table_class_name, email, callback_code, result_code):
             response.raise_for_status()
         except HTTPError as e:
             worker_logger.exception(e)
-            result.update({'error': 'We cannot send encrypted email to user, because - %s' % response.reason})
+            if response.reason == 'not gmail':
+                result.update({'error': 'Is not Gmail E-mail address.'})
+            elif response.reason == 'not email':
+                result.update({'error': 'Not valid E-mail format.'})
+            else:
+                result.update({'error': response.reason})
         if 'error' not in result:
             result = generate_email_pgp_keys(email, table_class_name, result)
     except Exception as e:
@@ -132,7 +137,7 @@ def generate_email_pgp_keys(email, table_class_name, result=None):
     else:
         worker_logger.exception('Something went wrong, check logs, pgp keys were not generated for email - %s' %
                                 email)
-        key, value = 'error', 'Sorry but we were not able to generate PGP keys for user %s' % email
+        key, value = 'error', 'PGP keys were not generated.'
     if result is not None:
         result.update({key: value})
         return result
