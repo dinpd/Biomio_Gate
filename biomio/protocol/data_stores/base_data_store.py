@@ -236,7 +236,6 @@ class BaseDataStore():
 
     def _get_app_ids_by_app_id(self, table_class_name, object_id, callback, probes=False):
         callback_code = RedisResultsListener.instance().subscribe_callback(callback=callback)
-        logger.debug(table_class_name, object_id, callback_code)
         if probes:
             self._run_storage_job(self._SELECT_PROBES, table_class_name=table_class_name, email=object_id,
                                   callback_code=callback_code)
