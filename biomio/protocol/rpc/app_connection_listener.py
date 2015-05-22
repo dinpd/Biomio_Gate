@@ -16,7 +16,7 @@ PROBE_SUBSCRIBE_PATTERN = '*:{probe_id}'
 class AppConnectionListener():
 
     def __init__(self, app_id, app_type):
-        self._redis_channel = AppConnectionListener._subscribe_channel(app_id=app_id, app_type=app_type)
+        self._redis_channel = AppConnectionListener.app_key_pattern(app_id=app_id, app_type=app_type)
 
         self._callback = None
 
@@ -24,7 +24,7 @@ class AppConnectionListener():
         self._redis.connect()
 
     @staticmethod
-    def _subscribe_channel(app_id, app_type):
+    def app_key_pattern(app_id, app_type):
         redis_key_pattern = ''
 
         if app_type == 'extension':
@@ -71,13 +71,21 @@ class AppConnectionListener():
         else:
             logger.error(msg='Could not unsubscribe applicaiton')
 
+    @staticmethod
+    def extension_id(redis_auth_key):
+        return re.search(REDIS_APP_AUTH_KEY % '(.*):(.*)', redis_auth_key).group(1)
+
+    @staticmethod
+    def probe_id(redis_auth_key):
+        return re.search(REDIS_APP_AUTH_KEY % '(.*):(.*)', redis_auth_key).group(2)
+
     def _on_redis_message(self, msg):
         if msg.kind == 'pmessage':
             if msg.body == 'set' or msg.body == 'expired' or msg.body == 'del':
                 redis_key = re.search('.*:(%s)' % (REDIS_APP_AUTH_KEY % '.*'), msg.channel).group(1)
 
-                extension_id = re.search(REDIS_APP_AUTH_KEY % '(.*):(.*)', msg.channel).group(1)
-                probe_id = re.search(REDIS_APP_AUTH_KEY % '(.*):(.*)', msg.channel).group(2)
+                extension_id = AppConnectionListener.extension_id(redis_auth_key=msg.channel)
+                probe_id = AppConnectionListener.probe_id(redis_auth_key=msg.channel)
 
                 # data = self._persistence_redis.get_data(probe_key)
                 # if msg.body == 'expired' and data:

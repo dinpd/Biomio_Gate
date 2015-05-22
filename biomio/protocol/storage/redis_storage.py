@@ -150,3 +150,11 @@ class RedisStorage():
             pipeline.delete(key)
 
         pipeline.execute()
+
+    def find_keys(self, pattern):
+        """
+        Returns list of keys matching pattern.
+        :param pattern: Pattern for key search.
+        :return: List of keys matching.
+        """
+        return self._redis.keys(pattern=pattern)

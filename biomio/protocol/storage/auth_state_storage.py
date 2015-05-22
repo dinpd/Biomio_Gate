@@ -81,3 +81,5 @@ class AuthStateStorage:
     def remove_keys(self, keys):
         self._persistence_redis.remove_keys(keys=keys)
 
+    def get_matching_keys(self, pattern):
+        return self._persistence_redis.find_keys(pattern=pattern)
