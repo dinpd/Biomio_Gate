@@ -153,7 +153,6 @@ BIOMIO_protocol_json_schema = {
             "properties": {
                 "oid": { "enum": ["clientHello"] },
                 "secret": {"type": "string"},
-                # TODO: ask Boris
                 "apnsToken": {"type": "string"},
             }
         },
