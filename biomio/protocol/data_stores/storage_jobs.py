@@ -168,18 +168,22 @@ def get_extension_ids_by_probe_id(table_class_name, probe_id, callback_code):
     try:
         probe_data = MySQLDataStoreInterface.get_object(table_name=table_class_name, object_id=probe_id,
                                                         return_dict=True)
-        worker_logger.debug('Probe data - %s' % probe_data)
-        user = MySQLDataStoreInterface.get_object(table_name=USERS_TABLE_CLASS_NAME,
-                                                  object_id=probe_data.get('users')[0])
-        worker_logger.debug('USer data - %s' % user.to_dict())
-        extension_ids = MySQLDataStoreInterface.get_applications_by_user_id_and_type(table_name=table_class_name,
-                                                                                     user_id=user,
-                                                                                     app_type='extension')
-        worker_logger.debug('Extension IDS - %s' % extension_ids)
-        result = dict(result=extension_ids)
+        extension_ids = []
+        if probe_data is not None:
+            worker_logger.debug('Probe data - %s' % probe_data)
+            user = MySQLDataStoreInterface.get_object(table_name=USERS_TABLE_CLASS_NAME,
+                                                      object_id=probe_data.get('users')[0])
+            worker_logger.debug('USer data - %s' % user.to_dict())
+            extension_ids = MySQLDataStoreInterface.get_applications_by_user_id_and_type(table_name=table_class_name,
+                                                                                         user_id=user,
+                                                                                         app_type='extension')
+            worker_logger.debug('Extension IDS - %s' % extension_ids)
+        else:
+            worker_logger.info('No record for probe id - %s' % probe_id)
+        result.update({'result': extension_ids})
     except Exception as e:
         worker_logger.exception(e)
-        result = dict(error=str(e))
+        result.update({'error': str(e)})
     finally:
         BaseDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
                                                   record_dict=result, callback_code=callback_code)

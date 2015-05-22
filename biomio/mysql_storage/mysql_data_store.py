@@ -46,7 +46,7 @@ class MySQLDataStore():
         table_class = self.get_table_class(module_name, table_name)
         search_query = {table_class.get_unique_search_attribute(): object_id}
         result = table_class.get(**search_query)
-        if return_dict:
+        if return_dict and result is not None:
             return result.to_dict(with_collections=True)
         return result
 
