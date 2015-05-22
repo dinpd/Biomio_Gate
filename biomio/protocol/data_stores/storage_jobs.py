@@ -152,10 +152,10 @@ def get_probe_ids_by_user_email(table_class_name, email, callback_code):
             worker_logger.debug('probe IDS - %s' % probe_ids)
             result.update({'result': probe_ids})
         else:
-            result.update({'error': 'Email is not registered'})
+            result.update({'result': [], 'error': 'Email is not registered'})
     except Exception as e:
         worker_logger.exception(e)
-        result.update({'error': str(e)})
+        result.update({'result': [], 'error': str(e)})
     finally:
         BaseDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
                                                   record_dict=result, callback_code=callback_code)
