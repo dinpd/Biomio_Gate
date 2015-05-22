@@ -72,7 +72,7 @@ class InitialProbeRestHandler(tornado.web.RequestHandler):
         BioauthFlow.start_training(probe_id=self.get_query_argument('device_id'), code=self.get_query_argument('code'))
         self.write('<html><head><title>BIOMIO: Initial Probes</title></head><body>'
                    'Please, use BIOMIO probe application to input initial probes. PROBE_ID - %s'
-                   '</body></html>' % self.get_query_argument('probe_id'))
+                   '</body></html>' % self.get_query_argument('device_id'))
 
 
 class NewEmailPGPKeysHandler(tornado.web.RequestHandler):
