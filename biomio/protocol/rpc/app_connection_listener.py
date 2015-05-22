@@ -16,7 +16,8 @@ PROBE_SUBSCRIBE_PATTERN = '*:{probe_id}'
 class AppConnectionListener():
 
     def __init__(self, app_id, app_type):
-        self._redis_channel = AppConnectionListener.app_key_pattern(app_id=app_id, app_type=app_type)
+        redis_key_pattern = AppConnectionListener.app_key_pattern(app_id=app_id, app_type=app_type)
+        self._redis_channel = GENERAL_SUBSCRIBE_PATTERN.format(redis_key_pattern=) if redis_key_pattern else ''
 
         self._callback = None
 
@@ -34,8 +35,7 @@ class AppConnectionListener():
         else:
             logger.error(msg='Unknown app type')
 
-        print redis_key_pattern
-        return GENERAL_SUBSCRIBE_PATTERN.format(redis_key_pattern=redis_key_pattern) if redis_key_pattern else ''
+        return redis_key_pattern
 
     @staticmethod
     def auth_key(extension_id, probe_id=None):
