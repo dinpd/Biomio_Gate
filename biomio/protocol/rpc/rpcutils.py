@@ -113,8 +113,8 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
                 callback(result={"error": error_msg}, status='fail')
                 return
 
-        future = tornado.gen.Task(bioauth_flow.request_auth, user_id, user_id,
-                                  get_verification_started_callback(callback=callback))
+        future = tornado.gen.Task(bioauth_flow.request_auth, get_verification_started_callback(callback=callback),
+                                  user_id)
         greenado.gyield(future)
 
         # TODO: check for current auth state
