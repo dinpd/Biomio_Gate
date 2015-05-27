@@ -232,7 +232,7 @@ BIOMIO_protocol_json_schema = {
         # TODO: improve in future - separate messages to send each photo
         "probe": {
             "type": "object",
-            "required": ["oid", "probeData"],
+            "required": ["oid", "status"],
             "properties": {
                 "oid": { "enum": ["probe"] },
                 "probeId": {"type": "number"},
