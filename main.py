@@ -68,7 +68,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
 
 class InitialProbeRestHandler(tornado.web.RequestHandler):
-    def post(self):
+    def get(self):
         BioauthFlow.start_training(probe_id=self.get_query_argument('device_id'), code=self.get_query_argument('code'))
         self.write('<html><head><title>BIOMIO: Initial Probes</title></head><body>'
                    'Please, use BIOMIO probe application to input initial probes. PROBE_ID - %s'
