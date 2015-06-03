@@ -368,7 +368,7 @@ class BioauthFlow:
             _PROBESTORE_TRAINING_TYPE_KEY: 'face-photo',
             _PROBESTORE_AI_CODE_KEY: code
         }
-        app_id = 'auth:%s:%s' % (code, probe_id)
+        app_id = 'auth:%s:%s' % ('code_%s' % code, probe_id)
         AuthStateStorage.instance().store_probe_data(app_id, ttl=settings.bioauth_timeout, **data)
         logger.debug('Training process started...')
 
