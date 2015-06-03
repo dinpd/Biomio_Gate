@@ -269,7 +269,10 @@ def verify_registration_job(code, app_type, callback_code):
             result.update({'app_id': fingerprint, 'private_key': key})
             if app_type == 'probe':
                 data = {'probe_id': fingerprint}
-                requests.post(app_verification_url, data=json.dumps(data))
+                worker_logger.debug(json.dumps(data))
+                worker_logger.debug(app_verification_url)
+                response = requests.post(app_verification_url, data=json.dumps(data))
+                worker_logger.debug(response.text)
 
     except Exception as e:
         worker_logger.exception(e)
