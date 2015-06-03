@@ -239,7 +239,12 @@ def verify_registration_job(code, app_type, callback_code):
         response = requests.post(app_verification_url)
         try:
             response.raise_for_status()
-            response = response.json()
+            try:
+                response = response.json()
+            except ValueError as e:
+                worker_logger.exception(e)
+                worker_logger.debug(response)
+                raise Exception(e)
             user_id = response.get('user_id')
             worker_logger.debug('Received user ID - %s' % user_id)
             if user_id is None:
