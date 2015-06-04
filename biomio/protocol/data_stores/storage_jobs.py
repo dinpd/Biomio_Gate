@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+import base64
 import json
 from requests.exceptions import HTTPError
 
@@ -284,8 +285,11 @@ def verify_registration_job(code, app_type, callback_code):
 
 def register_biometrics_job(code, response_type):
     worker_logger.info('Registering biometrics on AI with code - %s and response_type - %s' % (code, response_type))
-    register_biometrics_url = settings.ai_rest_url % (REST_REGISTER_BIOMETRICS % code)
-    response = requests.post(register_biometrics_url, data=json.dumps(response_type))
+    worker_logger.debug('Biometrics Type Response - %s' % response_type)
+    response_type = base64.b64encode(json.dumps(response_type))
+    worker_logger.debug(' Encoded Biometrics Type Response - %s' % response_type)
+    register_biometrics_url = settings.ai_rest_url % (REST_REGISTER_BIOMETRICS % (code, response_type))
+    response = requests.post(register_biometrics_url)
     try:
         response.raise_for_status()
         worker_logger.info('Registered biometrics on AI with code - %s and response type - %s' % (code, response_type))

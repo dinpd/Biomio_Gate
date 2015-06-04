@@ -47,7 +47,7 @@ MODULES_CLASSES_BY_TABLE_NAMES = {
 # REST Commands
 REST_VERIFY_COMMAND = 'verify_service/%s/%s'
 REST_CREATE_EMAIL_KEYS = 'get_user/%s'
-REST_REGISTER_BIOMETRICS = 'register_biometrics/%s'
+REST_REGISTER_BIOMETRICS = 'register_biometrics/%s/%s'
 
 TRAINING_FACE_TYPE = 'face-photo'
 TRAINING_FINGER_TYPE = 'fingerprints'
