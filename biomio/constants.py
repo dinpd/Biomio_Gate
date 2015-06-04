@@ -62,7 +62,7 @@ TRAINING_GATE_AI_TYPES_MAP = {
 
 TRAINING_TYPES_AI_RESPONSE = {
     'face': '0',
-    'fingerprints': '0',
+    'fingerprints': ['0', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
     'voice': '0'
 }
 
