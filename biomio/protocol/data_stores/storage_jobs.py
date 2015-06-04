@@ -235,7 +235,7 @@ def verify_registration_job(code, app_type, callback_code):
     result = dict(verified=False)
     user_id = None
     try:
-        app_verification_url = settings.ai_rest_url % (REST_VERIFY_COMMAND % str(code))
+        app_verification_url = settings.ai_rest_url % (REST_VERIFY_COMMAND % (str(code), '0'))
         response = requests.post(app_verification_url)
         try:
             response.raise_for_status()
@@ -268,10 +268,8 @@ def verify_registration_job(code, app_type, callback_code):
             )
             result.update({'app_id': fingerprint, 'private_key': key})
             if app_type == 'probe':
-                data = {'probe_id': fingerprint}
-                worker_logger.debug(json.dumps(data))
-                worker_logger.debug(app_verification_url)
-                response = requests.post(app_verification_url, data=json.dumps(data))
+                app_verification_url = settings.ai_rest_url % (REST_VERIFY_COMMAND % (str(code), fingerprint))
+                response = requests.post(app_verification_url)
                 worker_logger.debug(response.text)
 
     except Exception as e:
