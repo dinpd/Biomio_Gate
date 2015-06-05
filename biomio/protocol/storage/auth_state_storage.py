@@ -53,12 +53,12 @@ class AuthStateStorage:
         """
         self._persistence_redis.store_data(key=id, ex=ttl, **kwargs)
 
-    def remove_probe_data(self, id):
+    def remove_probe_data(self, key):
         """
         Removes custom auth state data.
         :param id: Auth state key id.
         """
-        self._persistence_redis.delete_data(id)
+        self._persistence_redis.delete_data(key=key)
 
     def probe_data_exists(self, id):
         """
