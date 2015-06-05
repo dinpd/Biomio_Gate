@@ -127,6 +127,9 @@ class MessageHandler:
                             and e.request.header.appId:
                         fingerprint = str(e.request.header.appId)
                         pub_key = get_app_data_helper(app_id=fingerprint, key='public_key')
+                        if pub_key is None:
+                            e.status = "Regular handshake is inappropriate. It is required to run registration handshake first."
+                            return STATE_DISCONNECTED
                         real_fingerprint = Crypto.get_public_rsa_fingerprint(pub_key)
                         logger.debug("PUBLIC KEY: %s" % pub_key)
                         logger.debug("FINGERPRINT: %s" % real_fingerprint)
