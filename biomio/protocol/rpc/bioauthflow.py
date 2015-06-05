@@ -339,17 +339,17 @@ class BioauthFlow:
 
             training_type = self.auth_connection.get_data(key=_PROBESTORE_TRAINING_TYPE_KEY)
             ai_code = self.auth_connection.get_data(key=_PROBESTORE_AI_CODE_KEY)
+            key_to_delete = None
             if training_type is not None and ai_code is not None:
                 key_to_delete = 'auth:%s:%s' % ('code_%s' % ai_code, self.app_id)
-                logger.debug(key_to_delete)
-                AuthStateStorage.instance().remove_probe_data(key=key_to_delete)
-                logger.debug(AuthStateStorage.instance().get_probe_data(key_to_delete))
                 ai_response = get_ai_training_response(training_type)
                 run_storage_job(register_biometrics_job, code=ai_code, response_type=ai_response)
 
             logger.debug(msg='TRAINING RESULT: %s' % str(result))
             self._state_machine_instance.training_results_available()
             self._store_state()
+            if key_to_delete is not None:
+                AuthStateStorage.instance().remove_probe_data(key=key_to_delete)
 
     def set_auth_results(self, result):
         #TODO: make method private
