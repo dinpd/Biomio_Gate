@@ -259,6 +259,11 @@ def verify_registration_job(code, app_type, callback_code):
             key, pub_key = Crypto.generate_keypair()
             fingerprint = Crypto.get_public_rsa_fingerprint(pub_key)
 
+            if app_type == 'probe':
+                app_verification_url = settings.ai_rest_url % (REST_VERIFY_COMMAND % (str(code), fingerprint))
+                response = requests.post(app_verification_url)
+                worker_logger.debug(response.text)
+
             from biomio.protocol.data_stores.application_data_store import ApplicationDataStore
 
             ApplicationDataStore.instance().store_data(
@@ -268,10 +273,6 @@ def verify_registration_job(code, app_type, callback_code):
                 users=int(user_id)
             )
             result.update({'app_id': fingerprint, 'private_key': key})
-            if app_type == 'probe':
-                app_verification_url = settings.ai_rest_url % (REST_VERIFY_COMMAND % (str(code), fingerprint))
-                response = requests.post(app_verification_url)
-                worker_logger.debug(response.text)
 
     except Exception as e:
         worker_logger.exception(e)
