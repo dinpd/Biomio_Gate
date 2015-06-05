@@ -85,7 +85,7 @@ class RedisStorage():
             Deletes data from redis for specified key.
         :param key: To delete data for.
         """
-        self._redis.delete(key)
+        self._redis.delete([key])
 
     def decrement_int_value(self, key):
         """
