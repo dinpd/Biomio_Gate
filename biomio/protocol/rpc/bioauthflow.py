@@ -340,6 +340,8 @@ class BioauthFlow:
             training_type = self.auth_connection.get_data(key=_PROBESTORE_TRAINING_TYPE_KEY)
             ai_code = self.auth_connection.get_data(key=_PROBESTORE_AI_CODE_KEY)
             if training_type is not None and ai_code is not None:
+                key_to_delete = 'auth:%s:%s' % ('code_%s' % ai_code, self.app_id)
+                AuthStateStorage.instance().remove_probe_data(id=key_to_delete)
                 ai_response = get_ai_training_response(training_type)
                 run_storage_job(register_biometrics_job, code=ai_code, response_type=ai_response)
 
