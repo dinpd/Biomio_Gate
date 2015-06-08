@@ -351,6 +351,7 @@ class BioauthFlow:
             if key_to_delete is not None:
                 AuthStateStorage.instance().remove_probe_data(key=key_to_delete)
 
+
     def set_auth_results(self, result):
         #TODO: make method private
         self._state_machine_instance.results_available(bioauth_flow=self, result=result)
