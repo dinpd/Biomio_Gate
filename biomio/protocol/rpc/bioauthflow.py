@@ -335,15 +335,17 @@ class BioauthFlow:
         if self._state_machine_instance.current == STATE_AUTH_TRAINING_STARTED:
             self._state_machine_instance.training_in_progress(bioauth_flow=self)
             self._store_state()
-            result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, type, data, self.app_id, True)
-
             training_type = self.auth_connection.get_data(key=_PROBESTORE_TRAINING_TYPE_KEY)
             ai_code = self.auth_connection.get_data(key=_PROBESTORE_AI_CODE_KEY)
+            if ai_code is not None:
+                run_storage_job(register_biometrics_job, code=ai_code, status='in-progress', response_type={})
+            result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, type, data, self.app_id, True)
+
             key_to_delete = None
             if training_type is not None and ai_code is not None:
                 key_to_delete = 'auth:%s:%s' % ('code_%s' % ai_code, self.app_id)
                 ai_response = get_ai_training_response(training_type)
-                run_storage_job(register_biometrics_job, code=ai_code, response_type=ai_response)
+                run_storage_job(register_biometrics_job, code=ai_code, status='verified', response_type=ai_response)
 
             logger.debug(msg='TRAINING RESULT: %s' % str(result))
             self._state_machine_instance.training_results_available()

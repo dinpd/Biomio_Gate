@@ -284,9 +284,10 @@ def verify_registration_job(code, app_type, callback_code):
         worker_logger.info('Finished app registration with result: %s' % str(result))
 
 
-def register_biometrics_job(code, response_type):
+def register_biometrics_job(code, status, response_type):
     worker_logger.info('Registering biometrics on AI with code - %s and response_type - %s' % (code, response_type))
     worker_logger.debug('Biometrics Type Response - %s' % response_type)
+    response_type.update({'status': status})
     response_type = base64.b64encode(json.dumps(response_type))
     worker_logger.debug(' Encoded Biometrics Type Response - %s' % response_type)
     register_biometrics_url = settings.ai_rest_url % (REST_REGISTER_BIOMETRICS % (code, response_type))
