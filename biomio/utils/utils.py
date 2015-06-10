@@ -1,6 +1,6 @@
 from __future__ import absolute_import
+import importlib
 from apns import APNs, Payload
-from django.utils import importlib
 from biomio.protocol.settings import APNS_PRODUCTION_PEM, APNS_DEV_PEM
 
 
