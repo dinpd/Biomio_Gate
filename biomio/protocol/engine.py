@@ -11,7 +11,9 @@ from biomio.protocol.crypt import Crypto
 from biomio.protocol.rpc.rpchandler import RpcHandler
 from biomio.protocol.data_stores.application_data_store import ApplicationDataStore
 from biomio.protocol.probes.policymanager import PolicyManager
+from biomio.protocol.probes.policies.fixedorderpolicy import FIELD_RESOURCE_TYPE, FIELD_SAMPLES_NUM
 from biomio.protocol.rpc.bioauthflow import BioauthFlow, STATE_AUTH_TRAINING_STARTED
+from biomio.protocol.probes.proberequest import ProbeRequest
 
 from biomio.protocol.storage.redis_results_listener import RedisResultsListener
 from biomio.protocol.data_stores.storage_jobs_processor import run_storage_job
@@ -200,15 +202,17 @@ class MessageHandler:
     @staticmethod
     @verify_header
     def on_getting_probe(e):
-        auth_data = []
-        for sample in e.request.msg.probeData.samples:
-            auth_data.append(str(sample))
 
-        flow = e.protocol_instance.bioauth_flow
-        if flow.is_current_state(state=STATE_AUTH_TRAINING_STARTED):
-            flow.set_auth_training_results(appId=int(e.request.msg.probeId), type=str(e.request.msg.probeData.oid), data=auth_data)
+        current_probe_request = e.protocol_instance._current_probe_request
+        if current_probe_request.add_next_sample(probe_id=e.request.msg.probeId, samples_list=e.request.msg.probeData.samples):
+            if current_probe_request.has_pending_probes():
+                return STATE_GETTING_PROBES
+            else:
+                return STATE_READY
         else:
-            flow.set_next_auth_result(appId=int(e.request.msg.probeId), type=str(e.request.msg.probeData.oid), data=auth_data)
+            e.status = "Could not add probe samples."
+            return STATE_DISCONNECTED
+
         return STATE_READY
 
     @staticmethod
@@ -314,6 +318,16 @@ def probe_trying(e):
             flow.auth_started(resource_list=e.protocol_instance.available_resources)
 
         if resources:
+            probe_request = ProbeRequest()
+
+            for res in resources:
+                resource_type = res.get(FIELD_RESOURCE_TYPE, None)
+                samples_number = res.get(FIELD_SAMPLES_NUM, 0)
+                if resource_type is not None and samples_number:
+                    probe_request.add_probe(probe_type=resource_type, samples=samples_number)
+
+            e.protocol_instance._current_probe_request = probe_request
+
             # Send "try" message to probe
             try_message_str = None
             if hasattr(e, 'message'):
@@ -465,6 +479,7 @@ class BiomioProtocol:
 
         self.policy = None
         self.bioauth_flow = None
+        self._current_probe_request = None
         # self.available_resources = []
         #TODO: resources hardcoded temporarely
         self.available_resources = ["fp-scanner"]

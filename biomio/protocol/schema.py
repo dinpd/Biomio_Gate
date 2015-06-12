@@ -232,7 +232,7 @@ BIOMIO_protocol_json_schema = {
         # TODO: improve in future - separate messages to send each photo
         "probe": {
             "type": "object",
-            "required": ["oid", "status"],
+            "required": ["oid", "probeStatus"],
             "properties": {
                 "oid": { "enum": ["probe"] },
                 "probeId": {"type": "number"},
@@ -243,7 +243,7 @@ BIOMIO_protocol_json_schema = {
                         {"$ref": "#/definitions/touchIdSamples"}
                     ]
                 },
-                "status": { "enum": ["success", "failed", "canceled"] }
+                "probeStatus": { "enum": ["success", "failed", "canceled"] }
             }
         },
         "verify": {

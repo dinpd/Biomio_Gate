@@ -1,8 +1,6 @@
 from biomio.algorithms.algo_job_processor import run_algo_job
 from biomio.protocol.storage.probe_results_listener import ProbeResultsListener
 
-__author__ = 'alexchmykhalo'
-
 import tornado.gen
 
 

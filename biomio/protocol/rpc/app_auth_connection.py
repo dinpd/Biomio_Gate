@@ -1,3 +1,4 @@
+from genericpath import exists
 from biomio.protocol.rpc.app_connection_listener import AppConnectionListener
 from biomio.protocol.rpc.app_connection_manager import AppConnectionManager
 from biomio.protocol.storage.auth_state_storage import AuthStateStorage
@@ -66,7 +67,6 @@ class AppAuthConnection():
         # Start listen to auth data changes
         self._app_auth_data_callback = app_auth_data_callback
         self._listener.subscribe(callback=self._on_connection_data)
-
         if self.is_probe_owner():
             app_key_pattern = AppConnectionListener.app_key_pattern(app_id=self._app_id, app_type=self._app_type)
             existing_keys = AuthStateStorage.instance().get_matching_keys(pattern=app_key_pattern)
@@ -142,7 +142,6 @@ class AppAuthConnection():
         key = self._listener.auth_key(extension_id=connected_extension_id, probe_id=connected_probe_id)
         if self._app_key is None or self._app_key != key:
             if AuthStateStorage.instance().probe_data_exists(id=key):
-                self._app_key = key
                 if self.is_probe_owner():
                     self.remove_extension_keys_that_are_not_connected()
                 else:

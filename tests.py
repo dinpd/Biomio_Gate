@@ -236,7 +236,8 @@ class BiomioTest:
                 sample_num = int(message.msg.resource[0].samples)
                 samples_to_sent = samples[:sample_num]
                 probe_msg = test_obj.create_next_message(oid='probe', probeId=0,
-                                         probeData={"oid": probe_type, "samples": samples_to_sent})
+                                                         probeData={"oid": probe_type, "samples": samples_to_sent},
+                                                         probeStatus="success")
 
                 test_obj.send_message(websocket=test_obj.get_curr_connection(), message=probe_msg,
                                              close_connection=False, wait_for_response=False)
