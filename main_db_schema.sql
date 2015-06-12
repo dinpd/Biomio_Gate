@@ -1,8 +1,8 @@
-CREATE DATABASE  IF NOT EXISTS `biom_website` /*!40100 DEFAULT CHARACTER SET utf8 COLLATE utf8_unicode_ci */;
-USE `biom_website`;
+CREATE DATABASE  IF NOT EXISTS `biomio_db` /*!40100 DEFAULT CHARACTER SET utf8 COLLATE utf8_unicode_ci */;
+USE `biomio_db`;
 -- MySQL dump 10.13  Distrib 5.5.43, for debian-linux-gnu (x86_64)
 --
--- Host: biom.io    Database: biom_website
+-- Host: biom.io    Database: biomio_db
 -- ------------------------------------------------------
 -- Server version	5.5.42-37.1
 
@@ -82,7 +82,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'NO_AUTO_VALUE_ON_ZERO' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`biom`@`localhost`*/ /*!50003 TRIGGER `devices_creation_time` BEFORE INSERT ON `Devices`
+/*!50003 CREATE*/ /*!50017 DEFINER=`biomio_admin`@`%`*/ /*!50003 TRIGGER `devices_creation_time` BEFORE INSERT ON `Devices`
  FOR EACH ROW BEGIN
     SET NEW.dateCreated = NOW();
     SET NEW.dateModified = NOW();
@@ -101,7 +101,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'NO_AUTO_VALUE_ON_ZERO' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`biom`@`localhost`*/ /*!50003 TRIGGER `devices_modification_time` BEFORE UPDATE ON `Devices`
+/*!50003 CREATE*/ /*!50017 DEFINER=`biomio_admin`@`%`*/ /*!50003 TRIGGER `devices_modification_time` BEFORE UPDATE ON `Devices`
  FOR EACH ROW BEGIN
     SET NEW.dateModified = NOW();
 END */;;
@@ -207,7 +207,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'NO_AUTO_VALUE_ON_ZERO' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`biom`@`localhost`*/ /*!50003 TRIGGER `fingerprints_creation_time` BEFORE INSERT ON `Fingerprints`
+/*!50003 CREATE*/ /*!50017 DEFINER=`biomio_admin`@`%`*/ /*!50003 TRIGGER `fingerprints_creation_time` BEFORE INSERT ON `Fingerprints`
  FOR EACH ROW BEGIN
     SET NEW.dateCreated = NOW();
     SET NEW.dateModified = NOW();
@@ -226,7 +226,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'NO_AUTO_VALUE_ON_ZERO' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`biom`@`localhost`*/ /*!50003 TRIGGER `fingerprints_modification_time` BEFORE UPDATE ON `Fingerprints`
+/*!50003 CREATE*/ /*!50017 DEFINER=`biomio_admin`@`%`*/ /*!50003 TRIGGER `fingerprints_modification_time` BEFORE UPDATE ON `Fingerprints`
  FOR EACH ROW BEGIN
     SET NEW.dateModified = NOW();
 END */;;
@@ -303,7 +303,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'NO_AUTO_VALUE_ON_ZERO' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`biom`@`localhost`*/ /*!50003 TRIGGER `policies_creation_time` BEFORE INSERT ON `Policies`
+/*!50003 CREATE*/ /*!50017 DEFINER=`biomio_admin`@`%`*/ /*!50003 TRIGGER `policies_creation_time` BEFORE INSERT ON `Policies`
  FOR EACH ROW BEGIN
     SET NEW.dateCreated = NOW();
     SET NEW.dateModified = NOW();
@@ -322,7 +322,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'NO_AUTO_VALUE_ON_ZERO' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`biom`@`localhost`*/ /*!50003 TRIGGER `policies_modification_time` BEFORE UPDATE ON `Policies`
+/*!50003 CREATE*/ /*!50017 DEFINER=`biomio_admin`@`%`*/ /*!50003 TRIGGER `policies_modification_time` BEFORE UPDATE ON `Policies`
  FOR EACH ROW BEGIN
     SET NEW.dateModified = NOW();
 END */;;
@@ -409,7 +409,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'NO_AUTO_VALUE_ON_ZERO' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`biom`@`localhost`*/ /*!50003 TRIGGER `provider_info_creation_time` BEFORE INSERT ON `ProviderInfo`
+/*!50003 CREATE*/ /*!50017 DEFINER=`biomio_admin`@`%`*/ /*!50003 TRIGGER `provider_info_creation_time` BEFORE INSERT ON `ProviderInfo`
  FOR EACH ROW BEGIN
     SET NEW.dateCreated = NOW();
     SET NEW.dateModified = NOW();
@@ -428,7 +428,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'NO_AUTO_VALUE_ON_ZERO' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`biom`@`localhost`*/ /*!50003 TRIGGER `provider_info_modification_time` BEFORE UPDATE ON `ProviderInfo`
+/*!50003 CREATE*/ /*!50017 DEFINER=`biomio_admin`@`%`*/ /*!50003 TRIGGER `provider_info_modification_time` BEFORE UPDATE ON `ProviderInfo`
  FOR EACH ROW BEGIN
     SET NEW.dateModified = NOW();
 END */;;
@@ -473,7 +473,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'NO_AUTO_VALUE_ON_ZERO' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`biom`@`localhost`*/ /*!50003 TRIGGER `reports_creation_time` BEFORE INSERT ON `Reports`
+/*!50003 CREATE*/ /*!50017 DEFINER=`biomio_admin`@`%`*/ /*!50003 TRIGGER `reports_creation_time` BEFORE INSERT ON `Reports`
  FOR EACH ROW BEGIN
     SET NEW.dateCreated = NOW();
 END */;;
@@ -522,7 +522,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'NO_AUTO_VALUE_ON_ZERO' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`biom`@`localhost`*/ /*!50003 TRIGGER `resource_users_creation_time` BEFORE INSERT ON `ResourceUsers`
+/*!50003 CREATE*/ /*!50017 DEFINER=`biomio_admin`@`%`*/ /*!50003 TRIGGER `resource_users_creation_time` BEFORE INSERT ON `ResourceUsers`
  FOR EACH ROW BEGIN
     SET NEW.dateCreated = NOW();
     SET NEW.dateModified = NOW();
@@ -541,7 +541,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'NO_AUTO_VALUE_ON_ZERO' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`biom`@`localhost`*/ /*!50003 TRIGGER `resource_users_modification_time` BEFORE UPDATE ON `ResourceUsers`
+/*!50003 CREATE*/ /*!50017 DEFINER=`biomio_admin`@`%`*/ /*!50003 TRIGGER `resource_users_modification_time` BEFORE UPDATE ON `ResourceUsers`
  FOR EACH ROW BEGIN
     SET NEW.dateModified = NOW();
 END */;;
@@ -591,7 +591,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'NO_AUTO_VALUE_ON_ZERO' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`biom`@`localhost`*/ /*!50003 TRIGGER `secure_locations_creation_time` BEFORE INSERT ON `SecureLocations`
+/*!50003 CREATE*/ /*!50017 DEFINER=`biomio_admin`@`%`*/ /*!50003 TRIGGER `secure_locations_creation_time` BEFORE INSERT ON `SecureLocations`
  FOR EACH ROW BEGIN
     SET NEW.dateCreated = NOW();
     SET NEW.dateModified = NOW();
@@ -610,7 +610,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'NO_AUTO_VALUE_ON_ZERO' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`biom`@`localhost`*/ /*!50003 TRIGGER `secure_locations_modification_time` BEFORE UPDATE ON `SecureLocations`
+/*!50003 CREATE*/ /*!50017 DEFINER=`biomio_admin`@`%`*/ /*!50003 TRIGGER `secure_locations_modification_time` BEFORE UPDATE ON `SecureLocations`
  FOR EACH ROW BEGIN
     SET NEW.dateModified = NOW();
 END */;;
@@ -878,7 +878,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'NO_AUTO_VALUE_ON_ZERO' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`biom`@`localhost`*/ /*!50003 TRIGGER `user_info_creation_time` BEFORE INSERT ON `UserInfo`
+/*!50003 CREATE*/ /*!50017 DEFINER=`biomio_admin`@`%`*/ /*!50003 TRIGGER `user_info_creation_time` BEFORE INSERT ON `UserInfo`
  FOR EACH ROW BEGIN
     SET NEW.dateCreated = NOW();
     SET NEW.dateModified = NOW();
@@ -897,7 +897,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'NO_AUTO_VALUE_ON_ZERO' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`biom`@`localhost`*/ /*!50003 TRIGGER `user_info_modification_time` BEFORE UPDATE ON `UserInfo`
+/*!50003 CREATE*/ /*!50017 DEFINER=`biomio_admin`@`%`*/ /*!50003 TRIGGER `user_info_modification_time` BEFORE UPDATE ON `UserInfo`
  FOR EACH ROW BEGIN
     SET NEW.dateModified = NOW();
 END */;;
@@ -1004,7 +1004,7 @@ UNLOCK TABLES;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = '' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`biom`@`localhost`*/ /*!50003 TRIGGER websites_creation_time BEFORE INSERT ON Websites FOR EACH ROW 
+/*!50003 CREATE*/ /*!50017 DEFINER=`biomio_admin`@`%`*/ /*!50003 TRIGGER websites_creation_time BEFORE INSERT ON Websites FOR EACH ROW
 BEGIN
     SET NEW.dateCreated = NOW();
     SET NEW.dateModified = NOW();
@@ -1023,7 +1023,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = '' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`biom`@`localhost`*/ /*!50003 TRIGGER websites_modification_time BEFORE UPDATE ON Websites FOR EACH ROW 
+/*!50003 CREATE*/ /*!50017 DEFINER=`biomio_admin`@`%`*/ /*!50003 TRIGGER websites_modification_time BEFORE UPDATE ON Websites FOR EACH ROW
 BEGIN
     SET NEW.dateModified = NOW();
 END */;;
@@ -1061,11 +1061,11 @@ INSERT INTO `application_userinformation` VALUES ('0e7655e9b04b982df6addf330d4f7
 UNLOCK TABLES;
 
 --
--- Dumping events for database 'biom_website'
+-- Dumping events for database 'biomio_db'
 --
 
 --
--- Dumping routines for database 'biom_website'
+-- Dumping routines for database 'biomio_db'
 --
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
