@@ -1,3 +1,4 @@
+from django.db.migrations import state
 from biomio.constants import get_ai_training_response
 from biomio.protocol.data_stores.storage_jobs import register_biometrics_job
 from biomio.protocol.data_stores.storage_jobs_processor import run_storage_job
@@ -312,6 +313,12 @@ class BioauthFlow:
         self._resources_list = resource_list
         self._store_state()
 
+    def set_probe_results(self, samples_by_probe_type):
+        if self.is_current_state(state=STATE_AUTH_TRAINING_STARTED):
+            self.set_auth_training_results(samples_by_probe_type=samples_by_probe_type)
+        else:
+            self.set_next_auth_result(samples_by_probe_type=samples_by_probe_type)
+
     @tornado.gen.engine
     def set_next_auth_result(self, samples_by_probe_type):
         if not self._resources_list:
@@ -338,7 +345,7 @@ class BioauthFlow:
         self._store_state()
 
     @tornado.gen.engine
-    def set_auth_training_results(self, appId, type, data):
+    def set_auth_training_results(self, samples_by_probe_type):
         if self._state_machine_instance.current == STATE_AUTH_TRAINING_STARTED:
             self._state_machine_instance.training_in_progress(bioauth_flow=self)
             self._store_state()
@@ -346,7 +353,11 @@ class BioauthFlow:
             ai_code = self.auth_connection.get_data(key=_PROBESTORE_AI_CODE_KEY)
             if ai_code is not None:
                 run_storage_job(register_biometrics_job, code=ai_code, status='in-progress', response_type={})
-            result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, type, data, self.app_id, True)
+
+            training_result = False
+            for probe_type, samples_list in samples_by_probe_type.iteritems():
+                result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, probe_type, samples_list, self.app_id, True)
+                training_result = result or training_result
 
             key_to_delete = None
             if training_type is not None and ai_code is not None:
@@ -354,7 +365,7 @@ class BioauthFlow:
                 ai_response = get_ai_training_response(training_type)
                 run_storage_job(register_biometrics_job, code=ai_code, status='verified', response_type=ai_response)
 
-            logger.debug(msg='TRAINING RESULT: %s' % str(result))
+            logger.debug(msg='TRAINING RESULT: %s' % str(training_result))
             self._state_machine_instance.training_results_available()
             self._store_state()
             if key_to_delete is not None:

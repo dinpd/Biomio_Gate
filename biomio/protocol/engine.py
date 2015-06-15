@@ -210,8 +210,9 @@ class MessageHandler:
                 next_state = STATE_GETTING_PROBES
             else:
                 flow = e.protocol_instance.bioauth_flow
-                flow.set_next_auth_result(samples_by_probe_type=current_probe_request.get_samples_by_probe_type())
+                flow.set_probe_results(samples_by_probe_type=current_probe_request.get_samples_by_probe_type())
                 next_state = STATE_READY
+                e.protocol_instance.current_probe_request = None
         else:
             e.status = "Could not add probe samples."
             next_state = STATE_DISCONNECTED
