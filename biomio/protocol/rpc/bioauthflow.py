@@ -245,9 +245,12 @@ class BioauthFlow:
 
     def shutdown(self):
         logger.debug('BIOMETRIC AUTH OBJECT [%s, %s]: SHUTTING DOWN...' % (self.app_type, self.app_id))
-        self.cancel_auth()
+        if self.is_probe_owner() and (self.is_current_state(STATE_AUTH_VERIFICATION_STARTED)):
+            logger.debug("BIOMETRIC AUTH OBJECT [%s, %s]: APP DISCONNECTED - CONTINUE PROBE VERIFICATION...")
+        else:
+            self.cancel_auth()
+            self._store_state()
         self.auth_connection.set_app_disconnected()
-        self._store_state()
 
     def _get_state_machine_logger_callback(self):
         def _state_machine_logger(e):
@@ -272,11 +275,10 @@ class BioauthFlow:
         next_state = self.auth_connection.get_data(key=_PROBESTORE_STATE_KEY)
 
         if next_state in [STATE_AUTH_TRAINING_DONE, STATE_AUTH_CANCELED, STATE_AUTH_SUCCEED,
-                          STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR]:
+                          STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR, STATE_AUTH_VERIFICATION_STARTED]:
             # Result of previous auth is still stored in auth key
             self.reset()
         else:
-            #TODO: as after extension or probe disconnection we cancel authenctication, state restore is not a case
             logger.debug("Restoring state for bioauth flow: %s, %s" % (self.app_type, self.app_id))
             try:
                 self._change_state_callback()
@@ -311,24 +313,29 @@ class BioauthFlow:
         self._store_state()
 
     @tornado.gen.engine
-    def set_next_auth_result(self, appId, type, data):
+    def set_next_auth_result(self, samples_by_probe_type):
         if not self._resources_list:
             logger.warning(msg='resource item list for probe is empty')
         self._state_machine_instance.verification_started(bioauth_flow=self)
         self._store_state()
 
-        result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, type, data, self.app_id, False)
+        auth_result = False
 
-        error = result.get('error')
-        if error:
-            logger.debug(msg='Some samples could not be processed. Sending "try" message again.')
-            self._state_machine_instance.retry(bioauth_flow=self)
-            self._store_state()
-        else:
-            logger.debug(msg='SET NEXT AUTH RESULT: %s' % str(result.get('verified')))
-            #TODO: count probes and set appropriate result
-            self.set_auth_results(result=result.get('verified'))
-            self._store_state()
+        for probe_type, samples_list in samples_by_probe_type.iteritems():
+            result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, probe_type, samples_list, self.app_id, False)
+            error = result.get('error')
+            verified = result.get('verified')
+            if error:
+                logger.debug(msg='Some samples could not be processed. Sending "try" message again.')
+                self._state_machine_instance.retry(bioauth_flow=auth_result)
+                self._store_state()
+                break
+            else:
+                logger.debug(msg='SET NEXT AUTH RESULT: %s' % verified)
+                auth_result = verified or auth_result
+
+        self.set_auth_results(result=auth_result)
+        self._store_state()
 
     @tornado.gen.engine
     def set_auth_training_results(self, appId, type, data):

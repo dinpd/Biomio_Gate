@@ -202,18 +202,21 @@ class MessageHandler:
     @staticmethod
     @verify_header
     def on_getting_probe(e):
+        next_state = STATE_READY
 
-        current_probe_request = e.protocol_instance._current_probe_request
+        current_probe_request = e.protocol_instance.current_probe_request
         if current_probe_request.add_next_sample(probe_id=e.request.msg.probeId, samples_list=e.request.msg.probeData.samples):
             if current_probe_request.has_pending_probes():
-                return STATE_GETTING_PROBES
+                next_state = STATE_GETTING_PROBES
             else:
-                return STATE_READY
+                flow = e.protocol_instance.bioauth_flow
+                flow.set_next_auth_result(samples_by_probe_type=current_probe_request.get_samples_by_probe_type())
+                next_state = STATE_READY
         else:
             e.status = "Could not add probe samples."
-            return STATE_DISCONNECTED
+            next_state = STATE_DISCONNECTED
 
-        return STATE_READY
+        return next_state
 
     @staticmethod
     @verify_header
@@ -326,7 +329,7 @@ def probe_trying(e):
                 if resource_type is not None and samples_number:
                     probe_request.add_probe(probe_type=resource_type, samples=samples_number)
 
-            e.protocol_instance._current_probe_request = probe_request
+            e.protocol_instance.current_probe_request = probe_request
 
             # Send "try" message to probe
             try_message_str = None
@@ -479,7 +482,7 @@ class BiomioProtocol:
 
         self.policy = None
         self.bioauth_flow = None
-        self._current_probe_request = None
+        self.current_probe_request = None
         # self.available_resources = []
         #TODO: resources hardcoded temporarely
         self.available_resources = ["fp-scanner"]

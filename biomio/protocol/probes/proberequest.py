@@ -45,12 +45,12 @@ class ProbeRequest:
     def add_next_sample(self, probe_id, samples_list):
         try:
             # Get probe type by index (id)
-            probe_type = self.probe_list[probe_id]
+            probe_type = self.probe_list[int(probe_id)]
 
             # Check sample number(id) is in bounds
             samples_count = self.sample_count_by_probe_type.get(probe_type, 0)
             if samples_count > len(self.sample_data_by_probe_type.get(probe_type, [])):
-                if not self.sample_count_by_probe_type.has_key(probe_type):
+                if not self.sample_data_by_probe_type.has_key(str(probe_type)):
                     # First sample for given probe - create list for samples
                     self.sample_data_by_probe_type[probe_type] = samples_list
                 else:
@@ -63,3 +63,6 @@ class ProbeRequest:
             pass
 
         return False
+
+    def get_samples_by_probe_type(self):
+        return self.sample_data_by_probe_type
