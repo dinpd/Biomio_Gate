@@ -75,12 +75,13 @@ class AppAuthConnection():
             self.remove_extension_keys_that_are_not_connected()
 
     def remove_extension_keys_that_are_not_connected(self):
-        extension_id = AppConnectionListener.extension_id(redis_auth_key=self._app_key)
-        pattern = AppConnectionListener.app_key_pattern(app_id=extension_id, app_type='extension')
-        keys_to_remove = AuthStateStorage.instance().get_matching_keys(pattern)
-        if self._app_key in keys_to_remove:
-            keys_to_remove.remove(self._app_key)
-        AuthStateStorage.instance().remove_keys(keys=keys_to_remove)
+        if self._app_key:
+            extension_id = AppConnectionListener.extension_id(redis_auth_key=self._app_key)
+            pattern = AppConnectionListener.app_key_pattern(app_id=extension_id, app_type='extension')
+            keys_to_remove = AuthStateStorage.instance().get_matching_keys(pattern)
+            if self._app_key in keys_to_remove:
+                keys_to_remove.remove(self._app_key)
+            AuthStateStorage.instance().remove_keys(keys=keys_to_remove)
 
     def set_app_disconnected(self):
         """
@@ -142,6 +143,7 @@ class AppAuthConnection():
         key = self._listener.auth_key(extension_id=connected_extension_id, probe_id=connected_probe_id)
         if self._app_key is None or self._app_key != key:
             if AuthStateStorage.instance().probe_data_exists(id=key):
+                self._app_key = key
                 if self.is_probe_owner():
                     self.remove_extension_keys_that_are_not_connected()
                 else:

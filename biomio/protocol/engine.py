@@ -427,7 +427,7 @@ biomio_states = {
         },
         {
             'name': 'probe',
-            'src': STATE_PROBE_TRYING,
+            'src': [STATE_PROBE_TRYING, STATE_GETTING_PROBES],
             'dst': [STATE_GETTING_PROBES, STATE_READY, STATE_DISCONNECTED],
             'decision': MessageHandler.on_getting_probe
         }
