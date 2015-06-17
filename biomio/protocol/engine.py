@@ -203,19 +203,23 @@ class MessageHandler:
     @verify_header
     def on_getting_probe(e):
         next_state = STATE_READY
-
-        current_probe_request = e.protocol_instance.current_probe_request
-        if current_probe_request.add_next_sample(probe_id=e.request.msg.probeId, samples_list=e.request.msg.probeData.samples):
-            if current_probe_request.has_pending_probes():
-                next_state = STATE_GETTING_PROBES
-            else:
-                flow = e.protocol_instance.bioauth_flow
-                flow.set_probe_results(samples_by_probe_type=current_probe_request.get_samples_by_probe_type())
-                next_state = STATE_READY
-                e.protocol_instance.current_probe_request = None
+        flow = e.protocol_instance.bioauth_flow
+        if e.request.msg.probeStatus == 'canceled':
+            flow.cancel_auth()
+            next_state = STATE_READY
+            e.protocol_instance.current_probe_request = None
         else:
-            e.status = "Could not add probe samples."
-            next_state = STATE_DISCONNECTED
+            current_probe_request = e.protocol_instance.current_probe_request
+            if current_probe_request.add_next_sample(probe_id=e.request.msg.probeId, samples_list=e.request.msg.probeData.samples):
+                if current_probe_request.has_pending_probes():
+                    next_state = STATE_GETTING_PROBES
+                else:
+                    flow.set_probe_results(samples_by_probe_type=current_probe_request.get_samples_by_probe_type())
+                    next_state = STATE_READY
+                    e.protocol_instance.current_probe_request = None
+            else:
+                e.status = "Could not add probe samples."
+                next_state = STATE_DISCONNECTED
 
         return next_state
 
@@ -781,4 +785,4 @@ class BiomioProtocol:
         self._state_machine_instance.probetry(request=self._last_received_message, protocol_instance=self, message=message)
 
     def cancel_auth(self, **kwargs):
-        self.close_connection()
+        self._state_machine_instance.current = STATE_READY

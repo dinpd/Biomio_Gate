@@ -175,7 +175,7 @@ auth_states = {
         },
         {
             'name': 'cancel_auth',
-            'src': [STATE_AUTH_WAIT, STATE_AUTH_VERIFICATION_STARTED],
+            'src': [STATE_AUTH_WAIT, STATE_AUTH_VERIFICATION_STARTED, STATE_AUTH_TRAINING_STARTED],
             'dst': [STATE_AUTH_CANCELED],
             'decision': on_cancel_auth
         },
@@ -398,7 +398,7 @@ class BioauthFlow:
         logger.debug('Training process started...')
 
     def cancel_auth(self):
-        if self._state_machine_instance.current in [STATE_AUTH_WAIT]:
+        if self._state_machine_instance.current in [STATE_AUTH_WAIT, STATE_AUTH_TRAINING_STARTED]:
             self._state_machine_instance.cancel_auth(bioauth_flow=self)
             self._store_state()
 
