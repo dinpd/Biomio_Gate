@@ -1,4 +1,3 @@
-from django.db.migrations import state
 from biomio.constants import get_ai_training_response
 from biomio.protocol.data_stores.storage_jobs import register_biometrics_job
 from biomio.protocol.data_stores.storage_jobs_processor import run_storage_job
