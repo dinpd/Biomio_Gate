@@ -54,7 +54,7 @@ class ProbeAuthBackend:
         pass
 
     @tornado.gen.engine
-    def probe(self, type, data, fingerprint=None, training=False, callback=None):
+    def probe(self, type, data, fingerprint=None, training=False, try_type=None, ai_code=None, callback=None):
         logger.debug('Processing probe (%s)...' % type)
 
         result = False
@@ -66,13 +66,14 @@ class ProbeAuthBackend:
                 result = result or touch_id_result
             callback(dict(verified=result))
         elif type == "face-photo":
-            self._run_verification_job(data=data, fingerprint=fingerprint, training=training, callback=callback)
+            self._run_verification_job(data=data, fingerprint=fingerprint, training=training, callback=callback,
+                                       try_type=try_type, ai_code=ai_code)
         else:
             logger.error('Unknown probe type %s' % type)
         pass
 
     @staticmethod
-    def _run_verification_job(data, fingerprint, training, callback):
+    def _run_verification_job(data, fingerprint, training, callback, try_type, ai_code):
         callback_code = ProbeResultsListener.instance().subscribe_callback(callback=callback)
         settings = dict(
             algoID="001002",
@@ -82,7 +83,7 @@ class ProbeAuthBackend:
             # TODO: Remove this 'change type' loop for images list...
             data = [str(image) for image in data]
             run_algo_job(training_job, images=data, fingerprint=fingerprint,
-                         settings=settings, callback_code=callback_code)
+                         settings=settings, callback_code=callback_code, try_type=try_type, ai_code=ai_code)
         else:
             result_code = ProbeResultsListener.instance().activate_results_gatherer(len(data))
             for image in data:

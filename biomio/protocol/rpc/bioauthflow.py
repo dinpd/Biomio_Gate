@@ -1,6 +1,3 @@
-from biomio.constants import get_ai_training_response
-from biomio.protocol.data_stores.storage_jobs import register_biometrics_job
-from biomio.protocol.data_stores.storage_jobs_processor import run_storage_job
 from biomio.third_party.fysom import Fysom, FysomError
 from biomio.protocol.storage.auth_state_storage import AuthStateStorage
 from biomio.protocol.probes.probeauthbackend import ProbeAuthBackend
@@ -348,21 +345,18 @@ class BioauthFlow:
         if self._state_machine_instance.current == STATE_AUTH_TRAINING_STARTED:
             self._state_machine_instance.training_in_progress(bioauth_flow=self)
             self._store_state()
-            training_type = self.auth_connection.get_data(key=_PROBESTORE_TRAINING_TYPE_KEY)
+            try_type = self.auth_connection.get_data(key=_PROBESTORE_TRAINING_TYPE_KEY)
             ai_code = self.auth_connection.get_data(key=_PROBESTORE_AI_CODE_KEY)
-            if ai_code is not None:
-                run_storage_job(register_biometrics_job, code=ai_code, status='in-progress', response_type={})
 
             training_result = False
             for probe_type, samples_list in samples_by_probe_type.iteritems():
-                result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, probe_type, samples_list, self.app_id, True)
+                result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, probe_type, samples_list,
+                                                self.app_id, True, try_type, ai_code)
                 training_result = result or training_result
 
             key_to_delete = None
-            if training_type is not None and ai_code is not None:
+            if ai_code is not None:
                 key_to_delete = 'auth:%s:%s' % ('code_%s' % ai_code, self.app_id)
-                ai_response = get_ai_training_response(training_type)
-                run_storage_job(register_biometrics_job, code=ai_code, status='verified', response_type=ai_response)
 
             logger.debug(msg='TRAINING RESULT: %s' % str(training_result))
             self._state_machine_instance.training_results_available()
