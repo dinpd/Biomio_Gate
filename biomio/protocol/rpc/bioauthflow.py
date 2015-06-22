@@ -330,7 +330,7 @@ class BioauthFlow:
             verified = result.get('verified')
             if error:
                 logger.debug(msg='Some samples could not be processed. Sending "try" message again.')
-                self._state_machine_instance.retry(bioauth_flow=auth_result)
+                self._state_machine_instance.retry(bioauth_flow=self)
                 self._store_state()
                 break
             else:

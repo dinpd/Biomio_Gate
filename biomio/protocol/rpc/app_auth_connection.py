@@ -71,7 +71,8 @@ class AppAuthConnection():
             app_key_pattern = AppConnectionListener.app_key_pattern(app_id=self._app_id, app_type=self._app_type)
             existing_keys = AuthStateStorage.instance().get_matching_keys(pattern=app_key_pattern)
             if existing_keys:
-                self._app_key = existing_keys[0]
+                self._app_key = existing_keys.pop(0)
+            AuthStateStorage.instance().remove_keys(keys=existing_keys)
             self.remove_extension_keys_that_are_not_connected()
 
     def remove_extension_keys_that_are_not_connected(self):
