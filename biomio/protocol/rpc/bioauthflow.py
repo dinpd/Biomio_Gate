@@ -354,16 +354,10 @@ class BioauthFlow:
                                                 self.app_id, True, try_type, ai_code)
                 training_result = result or training_result
 
-            key_to_delete = None
-            if ai_code is not None:
-                key_to_delete = 'auth:%s:%s' % ('code_%s' % ai_code, self.app_id)
-
             logger.debug(msg='TRAINING RESULT: %s' % str(training_result))
             self._state_machine_instance.training_results_available()
             self._store_state()
-            if key_to_delete is not None:
-                AuthStateStorage.instance().remove_probe_data(key=key_to_delete)
-
+            self.auth_connection.end_auth()
 
     def set_auth_results(self, result):
         #TODO: make method private
@@ -392,6 +386,8 @@ class BioauthFlow:
 
     def cancel_auth(self):
         if self._state_machine_instance.current in [STATE_AUTH_WAIT, STATE_AUTH_TRAINING_STARTED]:
+            if self._state_machine_instance.current == STATE_AUTH_TRAINING_STARTED:
+                self.auth_connection.end_auth()
             self._state_machine_instance.cancel_auth(bioauth_flow=self)
             self._store_state()
 

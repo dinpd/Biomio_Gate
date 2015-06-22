@@ -95,8 +95,9 @@ class AppAuthConnection():
             self._set_keys_for_connected_probes(extension_id=self._app_id, on_behalf_of=on_behalf_of)
 
     def end_auth(self):
-        AuthStateStorage.instance().remove_probe_data(self._app_key)
+        key_to_remove = self._app_key
         self._app_key = None
+        AuthStateStorage.instance().remove_probe_data(key_to_remove)
 
     def store_data(self, **kwargs):
         """
