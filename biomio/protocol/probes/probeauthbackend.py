@@ -87,5 +87,5 @@ class ProbeAuthBackend:
         else:
             result_code = ProbeResultsListener.instance().activate_results_gatherer(len(data))
             for image in data:
-                run_algo_job(verification_job, image=image, fingerprint=fingerprint, settings=settings,
+                run_algo_job(verification_job, image=str(image), fingerprint=fingerprint, settings=settings,
                              callback_code=callback_code, result_code=result_code)
