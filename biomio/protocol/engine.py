@@ -1,7 +1,10 @@
 from itertools import izip
 from functools import wraps
+import logging
 
 from jsonschema import ValidationError
+import tornado.gen
+import greenado
 
 from biomio.protocol.message import BiomioMessageBuilder
 from biomio.third_party.fysom import Fysom, FysomError
@@ -14,15 +17,10 @@ from biomio.protocol.probes.policymanager import PolicyManager
 from biomio.protocol.probes.policies.fixedorderpolicy import FIELD_RESOURCE_TYPE, FIELD_SAMPLES_NUM
 from biomio.protocol.rpc.bioauthflow import BioauthFlow, STATE_AUTH_TRAINING_STARTED
 from biomio.protocol.probes.proberequest import ProbeRequest
-
 from biomio.protocol.storage.redis_results_listener import RedisResultsListener
 from biomio.protocol.data_stores.storage_jobs_processor import run_storage_job
-from biomio.protocol.data_stores.storage_jobs import verify_registration_job
+from biomio.worker.storage_jobs import verify_registration_job
 
-import tornado.gen
-import greenado
-
-import logging
 logger = logging.getLogger(__name__)
 
 PROTOCOL_VERSION = '1.0'

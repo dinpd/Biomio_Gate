@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 from biomio.constants import REDIS_APPLICATION_KEY, APPS_TABLE_CLASS_NAME
 from biomio.protocol.data_stores.base_data_store import BaseDataStore
-from biomio.protocol.data_stores.storage_jobs import assign_user_to_extension_job
+from biomio.worker.storage_jobs import assign_user_to_extension_job
 from biomio.utils.biomio_decorators import inherit_docstring_from
 
 

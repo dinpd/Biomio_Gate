@@ -10,14 +10,14 @@ from biomio.protocol.data_stores.storage_jobs_processor import run_storage_job
 logger = logging.getLogger(__name__)
 
 
-class BaseDataStore():
+class BaseDataStore:
     _instance = None
 
     def __init__(self):
         self._lru_redis = RedisStorage.lru_instance()
         self._persistence_redis = RedisStorage.persistence_instance()
 
-        import biomio.protocol.data_stores.storage_jobs as sj
+        import biomio.worker.storage_jobs as sj
 
         self._GET_JOB = sj.get_record_job
         self._CREATE_JOB = sj.create_record_job

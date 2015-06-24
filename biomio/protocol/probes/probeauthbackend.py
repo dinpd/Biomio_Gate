@@ -1,20 +1,16 @@
-from biomio.algorithms.algo_job_processor import run_algo_job
-from biomio.protocol.storage.probe_results_listener import ProbeResultsListener
-
 import tornado.gen
 
+from biomio.algorithms.algo_job_processor import run_algo_job
+from biomio.protocol.storage.probe_results_listener import ProbeResultsListener
 
 PICTURE_PATH_BAD_1 = "/home/alexchmykhalo/ios_screens/algorithms/yaleB11_P00A+000E+00.png"
 DATA_PATH_BAD_2 = "/home/alexchmykhalo/ios_screens/algorithms/data.json"
 PICTURE_PATH_GOOD_3 = "/home/alexchmykhalo/ios_screens/algorithms/yaleB11_P00A+000E+00.pgm"
 FOLDER_DB_PATH_GOOD_3 = "/home/alexchmykhalo/ios_screens/algorithms"
 
-from biomio.algorithms.algo_jobs import verification_job, training_job
+from biomio.worker.algo_jobs import verification_job, training_job
 import json
 import os
-from os import urandom
-from hashlib import sha1
-import binascii
 
 
 def loadSources(path):

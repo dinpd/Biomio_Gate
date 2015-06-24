@@ -13,7 +13,7 @@ import re
 logger = logging.getLogger(__name__)
 
 
-class RedisResultsListener():
+class RedisResultsListener:
     _instance = None
 
     def __init__(self):

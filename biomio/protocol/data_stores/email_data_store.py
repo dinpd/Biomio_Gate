@@ -1,6 +1,6 @@
 from biomio.constants import EMAILS_TABLE_CLASS_NAME, REDIS_EMAILS_KEY
 from biomio.protocol.data_stores.base_data_store import BaseDataStore
-from biomio.protocol.data_stores.storage_jobs import verify_email_job, generate_pgp_keys_job
+from biomio.worker.storage_jobs import verify_email_job, generate_pgp_keys_job
 from biomio.utils.biomio_decorators import inherit_docstring_from
 
 

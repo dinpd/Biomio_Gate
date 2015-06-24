@@ -1,11 +1,9 @@
 from __future__ import absolute_import
-import base64
-import json
 from requests.exceptions import HTTPError
 
 from biomio.constants import REDIS_CHANGES_CLASS_NAME, REDIS_DO_NOT_STORE_RESULT_KEY, REDIS_PARTIAL_RESULTS_KEY, \
     REDIS_RESULTS_COUNTER_KEY, EMAILS_TABLE_CLASS_NAME, USERS_TABLE_CLASS_NAME, MODULES_CLASSES_BY_TABLE_NAMES, \
-    REST_VERIFY_COMMAND, REST_CREATE_EMAIL_KEYS, REST_REGISTER_BIOMETRICS
+    REST_VERIFY_COMMAND, REST_CREATE_EMAIL_KEYS
 from biomio.mysql_storage.mysql_data_store_interface import MySQLDataStoreInterface
 from biomio.protocol.settings import settings
 from biomio.protocol.data_stores.base_data_store import BaseDataStore

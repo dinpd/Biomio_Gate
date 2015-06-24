@@ -1,13 +1,15 @@
 import ast
+from threading import Lock
 from redis.client import StrictRedis
 from biomio.constants import REDIS_CONFIG_MAX_MEMORY_OPTION_KEY, REDIS_CONFIG_MEMORY_SAMPLES_OPTION_KEY, \
     REDIS_CONFIG_EVICTION_POLICY_OPTION_KEY
 from biomio.protocol.settings import settings
 
 
-class RedisStorage():
+class RedisStorage:
     _lru_instance = None
     _persistence_instance = None
+    _lock = Lock()
 
     def __init__(self, lru_instance=True):
         if lru_instance:
@@ -35,8 +37,9 @@ class RedisStorage():
 
         :return: RedisStorage LRU instance.
         """
-        if cls._lru_instance is None:
-            cls._lru_instance = RedisStorage()
+        with cls._lock:
+            if cls._lru_instance is None:
+                cls._lru_instance = RedisStorage()
         return cls._lru_instance
 
     @classmethod
@@ -46,8 +49,9 @@ class RedisStorage():
             If it doesn't exist creates new one.
         :return: RedisStorage persistence instance.
         """
-        if cls._persistence_instance is None:
-            cls._persistence_instance = RedisStorage(lru_instance=False)
+        with cls._lock:
+            if cls._persistence_instance is None:
+                cls._persistence_instance = RedisStorage(lru_instance=False)
         return cls._persistence_instance
 
     def store_data(self, key, ex=None, **kwargs):
