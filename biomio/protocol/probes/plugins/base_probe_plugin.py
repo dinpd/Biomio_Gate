@@ -4,7 +4,11 @@ from biomio.worker.worker_interface import WorkerInterface
 
 
 class BaseProbePlugin(IPlugin):
-    _callback = None
+
+    def __init__(self):
+        self._callback = None
+        self._worker = WorkerInterface.instance()
+        super(BaseProbePlugin, self).__init__()
 
     @abc.abstractmethod
     def apply_policy(self, resources):
@@ -16,7 +20,7 @@ class BaseProbePlugin(IPlugin):
         return resources
 
     def _process_probe(self, algo_job, **kwargs):
-        WorkerInterface.instance().run_job(algo_job, callback=self._probe_callback, **kwargs)
+        self._worker.run_job(algo_job, callback=self._probe_callback, **kwargs)
 
     @abc.abstractmethod
     def run_verification(self, data, callback=None):
