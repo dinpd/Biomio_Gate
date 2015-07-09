@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 from biomio.constants import REDIS_APPLICATION_KEY, APPS_TABLE_CLASS_NAME
 from biomio.protocol.data_stores.base_data_store import BaseDataStore
-from biomio.worker.storage_jobs import assign_user_to_extension_job
 from biomio.utils.biomio_decorators import inherit_docstring_from
 
 
@@ -68,5 +67,8 @@ class ApplicationDataStore(BaseDataStore):
         return self._KEYS_TO_DELETE
 
     def assign_user_to_extension(self, app_id, email):
-        self._run_storage_job(assign_user_to_extension_job, table_class_name=self._table_class_name,
+        self._run_storage_job(self._worker.ASSIGN_USER_TO_EXTENSION_JOB, table_class_name=self._table_class_name,
                               app_id=app_id, email=email)
+
+    def register_application(self, code, app_type, callback):
+        self._run_storage_job(self._worker.VERIFY_REGISTRATION_JOB, callback, code=code, app_type=app_type)

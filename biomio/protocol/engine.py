@@ -17,9 +17,6 @@ from biomio.protocol.probes.policymanager import PolicyManager
 from biomio.protocol.probes.policies.fixedorderpolicy import FIELD_RESOURCE_TYPE, FIELD_SAMPLES_NUM
 from biomio.protocol.rpc.bioauthflow import BioauthFlow, STATE_AUTH_TRAINING_STARTED
 from biomio.protocol.probes.proberequest import ProbeRequest
-from biomio.protocol.storage.redis_results_listener import RedisResultsListener
-from biomio.protocol.data_stores.storage_jobs_processor import run_storage_job
-from biomio.worker.storage_jobs import verify_registration_job
 
 logger = logging.getLogger(__name__)
 
@@ -263,8 +260,7 @@ def registration(e):
     logger.debug('SECRET: %s' % secret)
 
     registration_callback = create_registration_callback(fsm=e.fsm, protocol_instance=e.protocol_instance, request=e.request)
-    callback_code = RedisResultsListener.instance().subscribe_callback(callback=registration_callback)
-    run_storage_job(verify_registration_job, code=secret, app_type=app_type, callback_code=callback_code)
+    ApplicationDataStore.instance().register_application(code=secret, app_type=app_type, callback=registration_callback)
 
 
 def create_registration_callback(fsm, protocol_instance, request):

@@ -1,0 +1,6 @@
+[Core]
+Name = Fingerprint Scanner Plugin
+Module = fp_scanner_plugin
+
+[Documentation]
+Description = This is fingerprint scanner plugin.

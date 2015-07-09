@@ -3,9 +3,7 @@ import ast
 import logging
 
 from biomio.constants import REDIS_JOB_RESULT_KEY
-from biomio.protocol.storage.redis_results_listener import RedisResultsListener
 from biomio.protocol.storage.redis_storage import RedisStorage
-from biomio.protocol.data_stores.storage_jobs_processor import run_storage_job
 
 logger = logging.getLogger(__name__)
 
@@ -17,15 +15,8 @@ class BaseDataStore:
         self._lru_redis = RedisStorage.lru_instance()
         self._persistence_redis = RedisStorage.persistence_instance()
 
-        import biomio.worker.storage_jobs as sj
-
-        self._GET_JOB = sj.get_record_job
-        self._CREATE_JOB = sj.create_record_job
-        self._UPDATE_JOB = sj.update_record_job
-        self._DELETE_JOB = sj.delete_record_job
-        self._SELECT_JOB = sj.select_records_by_ids_job
-        self._SELECT_PROBES = sj.get_probe_ids_by_user_email
-        self._SELECT_EXT = sj.get_extension_ids_by_probe_id
+        from biomio.worker.worker_interface import WorkerInterface
+        self._worker = WorkerInterface.instance()
 
     @classmethod
     @abc.abstractmethod
@@ -107,9 +98,10 @@ class BaseDataStore:
         """
         created = self._lru_redis.store_data(key=key, ex=ex, **kwargs)
         if created:
-            run_storage_job(self._CREATE_JOB, table_class_name=table_class_name, **kwargs)
+            self._run_storage_job(self._worker.CREATE_JOB, table_class_name=table_class_name, **kwargs)
         else:
-            run_storage_job(self._UPDATE_JOB, table_class_name=table_class_name, object_id=object_id, **kwargs)
+            self._run_storage_job(self._worker.UPDATE_JOB, table_class_name=table_class_name, object_id=object_id,
+                                  **kwargs)
 
     def _update_lru_data(self, key, table_class_name, object_id, ex=None, **kwargs):
         """
@@ -121,7 +113,7 @@ class BaseDataStore:
         :param kwargs: Key/Value parameters that must be stored in redis and after in MySQL.
         """
         self._lru_redis.store_data(key=key, ex=ex, **kwargs)
-        run_storage_job(self._UPDATE_JOB, table_class_name=table_class_name, object_id=object_id, **kwargs)
+        self._run_storage_job(self._worker.UPDATE_JOB, table_class_name=table_class_name, object_id=object_id, **kwargs)
 
     def _get_lru_data(self, key, table_class_name, object_id, callback):
         """
@@ -141,9 +133,8 @@ class BaseDataStore:
                 result = {}
             callback(result)
         else:
-            callback_code = self._subscribe_redis_callback(callback=callback)
-            self._run_storage_job(self._GET_JOB, table_class_name=table_class_name, object_id=object_id,
-                                  callback_code=callback_code)
+            self._run_storage_job(self._worker.GET_JOB, callback, table_class_name=table_class_name,
+                                  object_id=object_id)
 
     def _delete_lru_data(self, key, table_class_name, object_id):
         """
@@ -154,7 +145,7 @@ class BaseDataStore:
         :param object_id: str ID of the object to delete data from MySQL.
         """
         self._lru_redis.delete_data(key)
-        run_storage_job(self._DELETE_JOB, table_class_name=table_class_name, object_id=object_id)
+        self._run_storage_job(self._worker.DELETE_JOB, table_class_name=table_class_name, object_id=object_id)
 
     def store_job_result(self, record_key, record_dict, callback_code):
         """
@@ -203,42 +194,22 @@ class BaseDataStore:
         :param object_ids:  list of object ids to get data for.
         :param callback: function that must be executed after we got data.
         """
-        callback_code = RedisResultsListener.instance().subscribe_callback(callback)
-        run_storage_job(self._SELECT_JOB, table_class_name=table_class_name, object_ids=object_ids,
-                        callback_code=callback_code)
+        self._run_storage_job(self._worker.SELECT_JOB, callback, table_class_name=table_class_name,
+                              object_ids=object_ids)
 
-    @staticmethod
-    def _subscribe_redis_callback(callback):
-        """
-            Subscribes callback for redis results listener.
-        :param callback: callback function for subscription.
-        :return: str callback code.
-        """
-        return RedisResultsListener.instance().subscribe_callback(callback)
-
-    @staticmethod
-    def _activate_results_gatherer(results_count):
-        """
-            Activates results gatherer which will gather all jobs results and only after that will execute the callback.
-        :param results_count: Number of results that must be gathered.
-        :return: str results_code.
-        """
-        return RedisResultsListener.instance().activate_results_gatherer(results_count=results_count)
-
-    @staticmethod
-    def _run_storage_job(job_to_run, **kwargs):
+    def _run_storage_job(self, job_to_run, callback=None, kwargs_list_for_results_gatherer=None, **kwargs):
         """
             Runs given job with specified kwargs.
         :param job_to_run: storage job that we will run using worker.
         :param kwargs: iput parameters for job.
         """
-        run_storage_job(job_to_run, **kwargs)
+        self._worker.run_job(job_to_run=job_to_run, callback=callback,
+                             kwargs_list_for_results_gatherer=kwargs_list_for_results_gatherer, **kwargs)
 
     def _get_app_ids_by_app_id(self, table_class_name, object_id, callback, probes=False):
-        callback_code = RedisResultsListener.instance().subscribe_callback(callback=callback)
         if probes:
-            self._run_storage_job(self._SELECT_PROBES, table_class_name=table_class_name, email=object_id,
-                                  callback_code=callback_code)
+            self._run_storage_job(self._worker.SELECT_PROBES_BY_EXTENSION_JOB, callback,
+                                  table_class_name=table_class_name, email=object_id)
         else:
-            self._run_storage_job(self._SELECT_EXT, table_class_name=table_class_name, probe_id=object_id,
-                                  callback_code=callback_code)
+            self._run_storage_job(self._worker.SELECT_EXTENSIONS_BY_PROBE_JOB, callback,
+                                  table_class_name=table_class_name, probe_id=object_id)

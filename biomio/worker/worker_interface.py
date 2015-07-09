@@ -7,7 +7,8 @@ from hashlib import sha1
 from redis import Redis
 from rq import Queue
 from tornadoredis import Client
-from biomio.constants import REDIS_JOB_RESULT_KEY, REDIS_DO_NOT_STORE_RESULT_KEY, REDIS_RESULTS_COUNTER_KEY
+from biomio.constants import REDIS_JOB_RESULT_KEY, REDIS_DO_NOT_STORE_RESULT_KEY, REDIS_RESULTS_COUNTER_KEY, \
+    REDIS_PROBE_RESULT_KEY
 from biomio.protocol.settings import settings
 from biomio.protocol.storage.redis_storage import RedisStorage
 from logger import worker_logger
@@ -22,11 +23,14 @@ class WorkerInterface:
         self._queue = Queue(connection=Redis())
         self._subscribed_callbacks = dict()
         self._redis_client = Client(host=settings.redis_host, port=settings.redis_port)
+        self._redis_probes_client = Client(host=settings.redis_host, port=settings.redis_port)
         self._lru_redis = RedisStorage.lru_instance()
         self._persistence_redis = RedisStorage.persistence_instance()
 
         import biomio.worker.algo_jobs as aj
         import biomio.worker.storage_jobs as sj
+        import biomio.worker.engine_jobs as ej
+        import biomio.worker.extension_jobs as extj
 
         self.TRAINING_JOB = aj.training_job
         self.VERIFICATION_JOB = aj.verification_job
@@ -35,14 +39,15 @@ class WorkerInterface:
         self.SELECT_JOB = sj.select_records_by_ids_job
         self.UPDATE_JOB = sj.update_record_job
         self.DELETE_JOB = sj.delete_record_job
-        self.SELECT_PROBES_BY_EXTENSION_JOB = sj.get_probe_ids_by_user_email
-        self.SELECT_EXTENSIONS_BY_PROBE_JOB = sj.get_extension_ids_by_probe_id
-        self.GENERATE_PGP_KEYS_JOB = sj.generate_pgp_keys_job
-        self.VERIFY_EMAIL_JOB = sj.verify_email_job
-        self.VERIFY_REGISTRATION_JOB = sj.verify_registration_job
-        self.ASSIGN_USER_TO_EXTENSION_JOB = sj.assign_user_to_extension_job
+        self.SELECT_PROBES_BY_EXTENSION_JOB = ej.get_probe_ids_by_user_email
+        self.SELECT_EXTENSIONS_BY_PROBE_JOB = ej.get_extension_ids_by_probe_id
+        self.GENERATE_PGP_KEYS_JOB = extj.generate_pgp_keys_job
+        self.VERIFY_EMAIL_JOB = extj.verify_email_job
+        self.VERIFY_REGISTRATION_JOB = ej.verify_registration_job
+        self.ASSIGN_USER_TO_EXTENSION_JOB = extj.assign_user_to_extension_job
 
         self._listen_for_results()
+        self._listen_for_probe_results()
 
     @classmethod
     def instance(cls):
@@ -57,23 +62,37 @@ class WorkerInterface:
                 cls._instance = WorkerInterface()
         return cls._instance
 
-    def run_job(self, job_to_run, callback=None, results_count=0, **kwargs):
+    def run_job(self, job_to_run, callback=None, kwargs_list_for_results_gatherer=None, **kwargs):
         """
-            Adds to worker queue so it will be picked up by worker.
+            Adds job to worker's queue so it will be picked up by worker.
         :param job_to_run: Job that will be placed inside queue
         :param callback: optional callback function that will be executed after job is finished.
-        :param results_count: optional value that is used in case we need to run same job more than once and
-                                in the end it is required to collect all results and run given callback.
+        :param kwargs_list_for_results_gatherer: List of kwargs dicts that will be given to each job one by one.
         :param kwargs: Arguments to run the job with.
         """
+        worker_logger.info('Running job - %s' % job_to_run)
         if callback is not None:
             callback_code = sha1(urandom(32)).hexdigest()
             self._subscribed_callbacks.update({callback_code: callback})
             kwargs.update({'callback_code': callback_code})
-            if results_count > 0:
-                self._persistence_redis.store_counter_value(REDIS_RESULTS_COUNTER_KEY % callback_code, results_count)
-        worker_logger.info('Running job - %s' % job_to_run)
+            if kwargs_list_for_results_gatherer is not None and len(kwargs_list_for_results_gatherer) > 0:
+                self._persistence_redis.store_counter_value(REDIS_RESULTS_COUNTER_KEY % callback_code,
+                                                            len(kwargs_list_for_results_gatherer))
+                self._run_job_with_results_gatherer(job_to_run, kwargs_list_for_results_gatherer, **kwargs)
+                return
         self._queue.enqueue(job_to_run, **kwargs)
+
+    def _run_job_with_results_gatherer(self, job_to_run, kwargs_list_for_results_gatherer, **kwargs):
+        """
+            Adds multiple jobs into queue with the same callback_code. We will run the corresponding
+            callback with gather results only after all jos are done.
+        :param job_to_run:
+        :param kwargs_list_for_results_gatherer: List of kwargs dicts that will be given to each job one by one.
+        :param kwargs: Parameters that must be given to each job.
+        """
+        for kwarg in kwargs_list_for_results_gatherer:
+            kwargs.update(kwarg)
+            self._queue.enqueue(job_to_run, **kwargs)
 
     @tornado.gen.engine
     def _listen_for_results(self):
@@ -84,6 +103,16 @@ class WorkerInterface:
         self._redis_client.connect()
         yield tornado.gen.Task(self._redis_client.psubscribe, "__keyspace*:%s" % (REDIS_JOB_RESULT_KEY % ('*', '*')))
         self._redis_client.listen(self._process_results)
+
+    @tornado.gen.engine
+    def _listen_for_probe_results(self):
+        """
+            Initializes redis changes listener for given key pattern.
+
+        """
+        self._redis_probes_client.connect()
+        yield tornado.gen.Task(self._redis_probes_client.psubscribe, "__keyspace*:%s" % (REDIS_PROBE_RESULT_KEY % '*'))
+        self._redis_probes_client.listen(self._process_probe_results)
 
     def _process_results(self, msg):
         """
@@ -97,29 +126,56 @@ class WorkerInterface:
                 callback_code = re.search('.*:%s' % (REDIS_JOB_RESULT_KEY % ('(.*):.*', '.*')), msg.channel).group(1)
                 redis_result_key = re.search('.*:%s' % (REDIS_JOB_RESULT_KEY % ('.*', '(.*:.*)')), msg.channel).group(1)
 
-                result = self._persistence_redis.get_data(job_result_key)
-                try:
-                    result = ast.literal_eval(result) if result is not None else {}
-                except ValueError as e:
-                    worker_logger.exception(msg=str(e))
-                    result = {}
-                worker_logger.debug('Received result from MySQL - %s' % result)
+                callback, result = self._parse_result_get_callback(result_key=job_result_key,
+                                                                   callback_code=callback_code)
 
                 if redis_result_key != REDIS_DO_NOT_STORE_RESULT_KEY % callback_code:
                     self._lru_redis.store_data(redis_result_key, **result)
                     worker_logger.debug('Saved result into LRU Redis instance.')
 
-                callback = self._subscribed_callbacks.get(callback_code)
+                self._run_results_callback(result=result, result_key=job_result_key, callback=callback,
+                                           callback_code=callback_code)
 
-                try:
-                    worker_logger.debug('Running callback with result - %s' % result)
-                    worker_logger.debug('Callback - %s' % callback)
-                    callback(result)
-                except Exception as e:
-                    worker_logger.warning(msg=str(e))
-                finally:
-                    self._persistence_redis.delete_data(job_result_key)
-                    del self._subscribed_callbacks[callback_code]
+    def _process_probe_results(self, msg):
+        """
+            Parses redis change message and processes the result.
+        :param msg: Redis changes message.
+        """
+        if msg.kind == 'pmessage':
+            if msg.body == 'set':
+                job_result_key = re.search('.*:(%s)' % (REDIS_PROBE_RESULT_KEY % '.*'), msg.channel).group(1)
+                callback_code = re.search('.*:%s' % (REDIS_PROBE_RESULT_KEY % '(.*)'), msg.channel).group(1)
+
+                callback, result = self._parse_result_get_callback(result_key=job_result_key, algo_result=True,
+                                                                   callback_code=callback_code)
+                self._run_results_callback(result=result, result_key=job_result_key, callback=callback,
+                                           callback_code=callback_code)
+
+    def _parse_result_get_callback(self, result_key, callback_code, algo_result=False):
+        result = self._persistence_redis.get_data(result_key)
+        worker_logger.debug('Raw result - %s' % result)
+        try:
+            result = ast.literal_eval(result) if result is not None else {}
+        except ValueError as e:
+            worker_logger.exception(msg=str(e))
+            result = {}
+        if algo_result:
+            result = result.get('result', False)
+        worker_logger.debug('Result dictionary - %s' % result)
+
+        callback = self._subscribed_callbacks.get(callback_code)
+        return callback, result
+
+    def _run_results_callback(self, result, result_key, callback, callback_code):
+        try:
+            worker_logger.debug('Running callback with result - %s' % result)
+            worker_logger.debug('Callback - %s' % callback)
+            callback(result)
+        except Exception as e:
+            worker_logger.warning(msg=str(e))
+        finally:
+            self._persistence_redis.delete_data(result_key)
+            del self._subscribed_callbacks[callback_code]
 
     def queue_jobs_count(self):
         """

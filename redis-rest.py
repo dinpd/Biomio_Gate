@@ -4,11 +4,7 @@ import tornado.web
 import tornado.gen
 import greenado
 
-from biomio.constants import APPS_TABLE_CLASS_NAME
-from biomio.worker.storage_jobs import get_probe_ids_by_user_email, get_extension_ids_by_probe_id
-from biomio.protocol.data_stores.storage_jobs_processor import run_storage_job
 from biomio.protocol.data_stores.user_data_store import UserDataStore
-from biomio.protocol.storage.redis_results_listener import RedisResultsListener
 
 
 @greenado.generator
@@ -49,14 +45,15 @@ class RQTest(tornado.web.RequestHandler):
         #
         # send_push_notification(device_token=DEVICE_TOKEN_TEST, message='TEst', use_sandbox=True)
 
-        callback_code = RedisResultsListener.instance().subscribe_callback(callback=test_get_result)
-        run_storage_job(get_probe_ids_by_user_email, table_class_name=APPS_TABLE_CLASS_NAME,
-                        email='andriy.lobashchuk@vakoms.com.ua', callback_code=callback_code)
-
-        probe_id = '88b960b1c9805fb586810f270def7378'
-        callback_code = RedisResultsListener.instance().subscribe_callback(callback=test_get_result)
-        run_storage_job(get_extension_ids_by_probe_id, table_class_name=APPS_TABLE_CLASS_NAME,
-                        probe_id=probe_id, callback_code=callback_code)
+        # callback_code = RedisResultsListener.instance().subscribe_callback(callback=test_get_result)
+        # run_storage_job(get_probe_ids_by_user_email, table_class_name=APPS_TABLE_CLASS_NAME,
+        #                 email='andriy.lobashchuk@vakoms.com.ua', callback_code=callback_code)
+        #
+        # probe_id = '88b960b1c9805fb586810f270def7378'
+        # callback_code = RedisResultsListener.instance().subscribe_callback(callback=test_get_result)
+        # run_storage_job(get_extension_ids_by_probe_id, table_class_name=APPS_TABLE_CLASS_NAME,
+        #                 probe_id=probe_id, callback_code=callback_code)
+        pass
 
 
 def test_get_result(result=None):

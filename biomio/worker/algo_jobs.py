@@ -32,18 +32,17 @@ def load_sources(path):
     return dict()
 
 
-def verification_job(image, fingerprint, settings, callback_code, result_code):
+def verification_job(image, probe_id, settings, callback_code):
     """
         Runs verification for user with given image
     :param image: to run verification for
-    :param fingerprint: app_id
+    :param probe_id: app_id
     :param settings: settings with values for algoId and userID
     :param callback_code: code of the callback which should be executed after job is finished.
-    :param result_code: code of the result in case we are running job in parallel.
     """
     worker_logger.info('Running verification for user - %s, with given parameters - %s' % (settings.get('userID'),
                                                                                            settings))
-    if RedisStorage.persistence_instance().exists(key=REDIS_JOB_RESULTS_ERROR % (callback_code, result_code)):
+    if RedisStorage.persistence_instance().exists(key=REDIS_JOB_RESULTS_ERROR % callback_code):
         worker_logger.info('Job interrupted because of job_results_error key existence.')
         return
     result = False
@@ -52,7 +51,7 @@ def verification_job(image, fingerprint, settings, callback_code, result_code):
     #     database = cPickle.load(StringIO.StringIO(database.data))
     # else:
     #     database = {}
-    settings.update({'database': load_sources(os.path.join(ALGO_DB_PATH, "%s.json" % fingerprint))})
+    settings.update({'database': load_sources(os.path.join(ALGO_DB_PATH, "%s.json" % probe_id))})
     settings.update({'action': 'verification'})
     temp_image_path = tempfile.mkdtemp(dir=APP_ROOT)
     error = None
@@ -115,11 +114,11 @@ def verification_job(image, fingerprint, settings, callback_code, result_code):
         worker_logger.exception(e)
     finally:
         if error is not None or RedisStorage.persistence_instance().exists(
-                key=REDIS_JOB_RESULTS_ERROR % (callback_code, result_code)):
+                key=REDIS_JOB_RESULTS_ERROR % callback_code):
             result = dict(verified=False, error=error if error is not None else '')
-            RedisStorage.persistence_instance().store_data(key=REDIS_JOB_RESULTS_ERROR % (callback_code, result_code),
+            RedisStorage.persistence_instance().store_data(key=REDIS_JOB_RESULTS_ERROR % callback_code,
                                                            ex=300, result=result)
-            store_verification_results(result=result, callback_code=callback_code, result_code=result_code)
+            store_verification_results(result=result, callback_code=callback_code)
             if error is not None:
                 worker_logger.info('Job was finished with internal algorithm error %s ' % error)
             else:
@@ -128,7 +127,7 @@ def verification_job(image, fingerprint, settings, callback_code, result_code):
             RedisStorage.persistence_instance().append_value_to_list(key=REDIS_PARTIAL_RESULTS_KEY % callback_code,
                                                                      value=result)
             results_counter = RedisStorage.persistence_instance().decrement_int_value(REDIS_RESULTS_COUNTER_KEY %
-                                                                                      result_code)
+                                                                                      callback_code)
             if results_counter <= 0:
                 gathered_results = RedisStorage.persistence_instance().get_stored_list(REDIS_PARTIAL_RESULTS_KEY %
                                                                                        callback_code)
@@ -139,13 +138,13 @@ def verification_job(image, fingerprint, settings, callback_code, result_code):
                 else:
                     true_count = float(gathered_results.count('True'))
                     result = dict(verified=((true_count / len(gathered_results)) * 100) >= 50)
-                store_verification_results(result=result, callback_code=callback_code, result_code=result_code)
+                store_verification_results(result=result, callback_code=callback_code)
         shutil.rmtree(temp_image_path)
     worker_logger.info('Verification finished for user - %s, with result - %s' % (settings.get('userID'), result))
 
 
-def store_verification_results(result, callback_code, result_code):
-    RedisStorage.persistence_instance().delete_data(key=REDIS_RESULTS_COUNTER_KEY % result_code)
+def store_verification_results(result, callback_code):
+    RedisStorage.persistence_instance().delete_data(key=REDIS_RESULTS_COUNTER_KEY % callback_code)
     RedisStorage.persistence_instance().delete_data(key=REDIS_PARTIAL_RESULTS_KEY % callback_code)
     RedisStorage.persistence_instance().store_data(key=REDIS_PROBE_RESULT_KEY % callback_code, result=result)
 
@@ -171,11 +170,11 @@ def store_test_photo_helper(image_paths):
         shutil.copyfile(path, os.path.join(TEST_PHOTO_PATH, os.path.basename(path)))
 
 
-def training_job(images, fingerprint, settings, callback_code, try_type, ai_code):
+def training_job(images, probe_id, settings, callback_code, try_type, ai_code):
     """
         Runs education for given user with given array of images.
     :param images: array of images to run verification on.
-    :param fingerprint: current app_id
+    :param probe_id: current app_id
     :param settings: dictionary which contains information about algoId and userID
     :param callback_code: code of the callback that should be executed after job is finished
     """
@@ -228,7 +227,7 @@ def training_job(images, fingerprint, settings, callback_code, try_type, ai_code
             #
             # Need update record in algorithms database or create record for user userID and algorithm
             # algoID if it doesn't exists
-            database_path = os.path.join(ALGO_DB_PATH, "%s.json" % fingerprint)
+            database_path = os.path.join(ALGO_DB_PATH, "%s.json" % probe_id)
             database = algo_result.get('database', None)
             if database is not None:
                 # data_buffer = cPickle.dumps(database, cPickle.HIGHEST_PROTOCOL)

@@ -1,6 +1,7 @@
+from biomio.protocol.probes.probe_plugin_manager import ProbePluginManager
 from biomio.third_party.fysom import Fysom, FysomError
 from biomio.protocol.storage.auth_state_storage import AuthStateStorage
-from biomio.protocol.probes.probeauthbackend import ProbeAuthBackend
+# from biomio.protocol.probes.probeauthbackend import ProbeAuthBackend
 from biomio.protocol.rpc.app_auth_connection import AppAuthConnection
 from biomio.protocol.settings import settings
 
@@ -325,7 +326,9 @@ class BioauthFlow:
         auth_result = False
 
         for probe_type, samples_list in samples_by_probe_type.iteritems():
-            result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, probe_type, samples_list, self.app_id, False)
+            data = dict(samples=samples_list, probe_id=self.app_id)
+            result = yield tornado.gen.Task(ProbePluginManager.instance().get_plugin_object(probe_type).run_verification, data)
+            # result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, probe_type, samples_list, self.app_id, False)
             error = result.get('error')
             verified = result.get('verified')
             if error:
@@ -345,13 +348,13 @@ class BioauthFlow:
         if self._state_machine_instance.current == STATE_AUTH_TRAINING_STARTED:
             self._state_machine_instance.training_in_progress(bioauth_flow=self)
             self._store_state()
-            try_type = self.auth_connection.get_data(key=_PROBESTORE_TRAINING_TYPE_KEY)
             ai_code = self.auth_connection.get_data(key=_PROBESTORE_AI_CODE_KEY)
-
             training_result = False
-            for probe_type, samples_list in samples_by_probe_type.iteritems():
-                result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, probe_type, samples_list,
-                                                self.app_id, True, try_type, ai_code)
+            for probe_type, samples in samples_by_probe_type.iteritems():
+                data = dict(try_type=probe_type, ai_code=ai_code, samples=samples, probe_id=self.app_id)
+                result = yield tornado.gen.Task(ProbePluginManager.instance().get_plugin_object(probe_type).run_training, data)
+                # result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, probe_type, samples_list,
+                #                                 self.app_id, True, try_type, ai_code)
                 training_result = result or training_result
 
             logger.debug(msg='TRAINING RESULT: %s' % str(training_result))

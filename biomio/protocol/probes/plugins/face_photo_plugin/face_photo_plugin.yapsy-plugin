@@ -1,0 +1,6 @@
+[Core]
+Name = Face Photo Plugin
+Module = face_photo_plugin
+
+[Documentation]
+Description = This is Face recognition plugin.
