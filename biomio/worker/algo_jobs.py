@@ -178,7 +178,7 @@ def training_job(images, probe_id, settings, callback_code, try_type, ai_code):
         response = requests.post(register_biometrics_url)
         try:
             response.raise_for_status()
-            worker_logger.info('AI should now that training started with code - %s and response type - %s' %
+            worker_logger.info('AI should now know that training started with code - %s and response type - %s' %
                                (ai_code, response_type))
         except HTTPError as e:
             worker_logger.exception(e)
@@ -267,7 +267,7 @@ def training_job(images, probe_id, settings, callback_code, try_type, ai_code):
             response = requests.post(register_biometrics_url)
             try:
                 response.raise_for_status()
-                worker_logger.info('AI should now that training is finished with code - %s and response type - %s' %
+                worker_logger.info('AI should now know that training is finished with code - %s and response type - %s' %
                                    (ai_code, response_type))
             except HTTPError as e:
                 worker_logger.exception(e)

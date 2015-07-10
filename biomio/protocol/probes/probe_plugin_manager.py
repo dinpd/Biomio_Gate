@@ -28,9 +28,7 @@ class ProbePluginManager:
         self._plugins_by_probe_type = {}
 
         for plugin_info in self._plugin_manager.getAllPlugins():
-            print vars(plugin_info)
             self._plugins_by_probe_type.update({os.path.basename(plugin_info.path): plugin_info.plugin_object})
-        print self._plugins_by_probe_type
 
     def get_plugin_object(self, probe_type):
         return self._plugins_by_probe_type.get('%s_plugin' % probe_type, None)

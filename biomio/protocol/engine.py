@@ -326,6 +326,7 @@ def probe_trying(e):
                 resource_type = res.get(FIELD_RESOURCE_TYPE, None)
                 samples_number = res.get(FIELD_SAMPLES_NUM, 0)
                 if resource_type is not None and samples_number:
+                    resource_type = '_'.join(resource_type.split('-'))
                     probe_request.add_probe(probe_type=resource_type, samples=samples_number)
 
             e.protocol_instance.current_probe_request = probe_request
