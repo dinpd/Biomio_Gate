@@ -7,6 +7,7 @@ from biomio.protocol.settings import settings
 import tornado.gen
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 STATE_AUTH_READY = 'auth_ready'
@@ -63,6 +64,7 @@ def on_training_results_available(e):
     logger.debug('training results available!')
     return STATE_AUTH_TRAINING_DONE
 
+
 def on_cancel_auth(e):
     flow = e.bioauth_flow
     logger.warning('BIOMETRIC AUTH [%s, %s]: AUTH CANCELED' % (flow.app_type, flow.app_id))
@@ -78,7 +80,8 @@ def on_state_changed(e):
         if e.fsm.current == STATE_AUTH_WAIT or e.fsm.current == STATE_AUTH_VERIFICATION_STARTED:
             if flow.auth_connection.get_data():
                 next_state = STATE_AUTH_ERROR
-                logger.debug('BIOMETRIC AUTH [%s, %s]: AUTH INTERNAL ERROR - state not set' % (flow.app_type, flow.app_id))
+                logger.debug(
+                    'BIOMETRIC AUTH [%s, %s]: AUTH INTERNAL ERROR - state not set' % (flow.app_type, flow.app_id))
             else:
                 next_state = STATE_AUTH_TIMEOUT
                 logger.debug('BIOMETRIC AUTH [%s, %s]: AUTH TIMEOUT' % (flow.app_type, flow.app_id))
@@ -96,6 +99,7 @@ def on_auth_wait(e):
     if flow.is_probe_owner():
         flow.try_probe_callback(message="Authentication")
 
+
 def on_auth_training(e):
     flow = e.bioauth_flow
     if flow.is_probe_owner():
@@ -112,11 +116,13 @@ def on_auth_finished(e):
         if e.fsm.current == STATE_AUTH_CANCELED:
             flow.cancel_auth_callback()
 
+
 def on_auth_verification_started(e):
     flow = e.bioauth_flow
 
     if flow.is_extension_owner():
         flow._verification_started_callback()
+
 
 auth_states = {
     'initial': STATE_AUTH_READY,
@@ -296,8 +302,8 @@ class BioauthFlow:
         """
         Should be called for extension to request biometric authentication from probe.
         """
-        self._verification_started_callback = verification_started_callback # Store callback to call later before verification started
-        self.rpc_callback = callback # Store callback to call later in STATE_AUTH_FINISHED state
+        self._verification_started_callback = verification_started_callback  # Store callback to call later before verification started
+        self.rpc_callback = callback  # Store callback to call later in STATE_AUTH_FINISHED state
         data_dict = {
             _PROBESTORE_ON_BEHALF_OF_KEY: on_behalf_of
         }
@@ -326,8 +332,8 @@ class BioauthFlow:
 
         for probe_type, samples_list in samples_by_probe_type.iteritems():
             data = dict(samples=samples_list, probe_id=self.app_id)
-            result = yield tornado.gen.Task(ProbePluginManager.instance().get_plugin_object(probe_type).run_verification, data)
-            # result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, probe_type, samples_list, self.app_id, False)
+            result = yield tornado.gen.Task(
+                ProbePluginManager.instance().get_plugin_object(probe_type).run_verification, data)
             error = result.get('error')
             verified = result.get('verified')
             if error:
@@ -351,9 +357,8 @@ class BioauthFlow:
             training_result = False
             for probe_type, samples in samples_by_probe_type.iteritems():
                 data = dict(try_type=probe_type, ai_code=ai_code, samples=samples, probe_id=self.app_id)
-                result = yield tornado.gen.Task(ProbePluginManager.instance().get_plugin_object(probe_type).run_training, data)
-                # result = yield tornado.gen.Task(ProbeAuthBackend.instance().probe, probe_type, samples_list,
-                #                                 self.app_id, True, try_type, ai_code)
+                result = yield tornado.gen.Task(
+                    ProbePluginManager.instance().get_plugin_object(probe_type).run_training, data)
                 training_result = result or training_result
 
             logger.debug(msg='TRAINING RESULT: %s' % str(training_result))
@@ -362,7 +367,7 @@ class BioauthFlow:
             self.auth_connection.end_auth()
 
     def set_auth_results(self, result):
-        #TODO: make method private
+        # TODO: make method private
         self._state_machine_instance.results_available(bioauth_flow=self, result=result)
         self._store_state()
 
@@ -392,4 +397,3 @@ class BioauthFlow:
                 self.auth_connection.end_auth()
             self._state_machine_instance.cancel_auth(bioauth_flow=self)
             self._store_state()
-
