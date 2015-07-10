@@ -16,8 +16,7 @@ import binascii
 import json
 from logger import worker_logger
 
-APP_ROOT = os.path.dirname(os.path.abspath(__file__))
-ALGO_DB_PATH = os.path.join(APP_ROOT, '..', 'algorithms', 'algorithms', 'data')
+ALGO_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'algorithms')
 
 
 def verification_job(image, probe_id, settings, callback_code):
@@ -41,7 +40,7 @@ def verification_job(image, probe_id, settings, callback_code):
         database = {}
     settings.update({'database': database})
     settings.update({'action': 'verification'})
-    temp_image_path = tempfile.mkdtemp(dir=APP_ROOT)
+    temp_image_path = tempfile.mkdtemp(dir=ALGO_ROOT)
     error = None
     try:
         fd, temp_image = tempfile.mkstemp(dir=temp_image_path)
@@ -141,7 +140,7 @@ def store_test_photo_helper(image_paths):
     import shutil
     import os
 
-    TEST_PHOTO_PATH = os.path.join(APP_ROOT, 'algorithms', 'test_photo')
+    TEST_PHOTO_PATH = os.path.join(ALGO_ROOT, 'algorithms', 'test_photo')
 
     if not os.path.exists(TEST_PHOTO_PATH):
         os.makedirs(TEST_PHOTO_PATH)
@@ -189,7 +188,7 @@ def training_job(images, probe_id, settings, callback_code, try_type, ai_code):
     ai_response_type.update({'status': 'verified'})
     result = False
     settings.update({'action': 'education'})
-    temp_image_path = tempfile.mkdtemp(dir=APP_ROOT)
+    temp_image_path = tempfile.mkdtemp(dir=ALGO_ROOT)
     try:
         image_paths = []
         for image in images:
@@ -267,8 +266,9 @@ def training_job(images, probe_id, settings, callback_code, try_type, ai_code):
             response = requests.post(register_biometrics_url)
             try:
                 response.raise_for_status()
-                worker_logger.info('AI should now know that training is finished with code - %s and response type - %s' %
-                                   (ai_code, response_type))
+                worker_logger.info(
+                    'AI should now know that training is finished with code - %s and response type - %s' %
+                    (ai_code, response_type))
             except HTTPError as e:
                 worker_logger.exception(e)
                 worker_logger.exception('Failed to tell AI that training is finished, reason - %s' % response.reason)
