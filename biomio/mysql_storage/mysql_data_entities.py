@@ -230,7 +230,7 @@ class ChangesTable(BaseEntityClass, database.Entity):
 class TrainingData(BaseEntityClass, database.Entity):
     _table_ = MYSQL_TRAINING_DATA_TABLE_NAME
     probe_id = pny.PrimaryKey(str, auto=False)
-    data = pny.Required(buffer, lazy=False)
+    data = pny.Required(LongStr, lazy=False)
 
     @staticmethod
     @inherit_docstring_from(BaseEntityClass)

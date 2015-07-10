@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+import MySQLdb
 import StringIO
 import base64
 import requests
@@ -15,21 +16,10 @@ from biomio.protocol.settings import settings as biomio_settings
 import os
 import binascii
 import json
-from json import dumps
 from logger import worker_logger
 
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 ALGO_DB_PATH = os.path.join(APP_ROOT, '..', 'algorithms', 'algorithms', 'data')
-
-
-def load_sources(path):
-    if len(path):
-        if not os.path.exists(path):
-            return dict()
-        with open(path, "r") as data_file:
-            source = json.load(data_file)
-            return source
-    return dict()
 
 
 def verification_job(image, probe_id, settings, callback_code):
@@ -46,12 +36,12 @@ def verification_job(image, probe_id, settings, callback_code):
         worker_logger.info('Job interrupted because of job_results_error key existence.')
         return
     result = False
-    # database = MySQLDataStoreInterface.get_object(table_name=TRAINING_DATA_TABLE_CLASS_NAME, object_id=fingerprint)
-    # if database is not None:
-    #     database = cPickle.load(StringIO.StringIO(database.data))
-    # else:
-    #     database = {}
-    settings.update({'database': load_sources(os.path.join(ALGO_DB_PATH, "%s.json" % probe_id))})
+    database = MySQLDataStoreInterface.get_object(table_name=TRAINING_DATA_TABLE_CLASS_NAME, object_id=probe_id)
+    if database is not None:
+        database = cPickle.loads(base64.b64decode(database.data))
+    else:
+        database = {}
+    settings.update({'database': database})
     settings.update({'action': 'verification'})
     temp_image_path = tempfile.mkdtemp(dir=APP_ROOT)
     error = None
@@ -227,22 +217,18 @@ def training_job(images, probe_id, settings, callback_code, try_type, ai_code):
             #
             # Need update record in algorithms database or create record for user userID and algorithm
             # algoID if it doesn't exists
-            database_path = os.path.join(ALGO_DB_PATH, "%s.json" % probe_id)
             database = algo_result.get('database', None)
             if database is not None:
-                # data_buffer = cPickle.dumps(database, cPickle.HIGHEST_PROTOCOL)
-                # worker_logger.debug(fingerprint)
-                # try:
-                #     MySQLDataStoreInterface.create_data(table_name=TRAINING_DATA_TABLE_CLASS_NAME, probe_id=fingerprint,
-                #                                         data=data_buffer)
-                # except Exception as e:
-                #     worker_logger.exception(e)
-                #     if '1062 Duplicate entry' in str(e):
-                #         MySQLDataStoreInterface.update_data(table_name=TRAINING_DATA_TABLE_CLASS_NAME,
-                #                                             object_id=fingerprint, data=data_buffer)
+                training_data = base64.b64encode(cPickle.dumps(database, cPickle.HIGHEST_PROTOCOL))
+                try:
+                    MySQLDataStoreInterface.create_data(table_name=TRAINING_DATA_TABLE_CLASS_NAME, probe_id=probe_id,
+                                                        data=training_data)
+                except Exception as e:
+                    worker_logger.exception(e)
+                    if '1062 Duplicate entry' in str(e):
+                        MySQLDataStoreInterface.update_data(table_name=TRAINING_DATA_TABLE_CLASS_NAME,
+                                                            object_id=probe_id, data=training_data)
                 result = True
-                with open(database_path, 'wb') as f:
-                    f.write(dumps(database))
         elif algo_result.get('status', '') == "error":
             worker_logger.exception('Error during education - %s, %s, %s' % (algo_result.get('status'),
                                                                              algo_result.get('type'),
