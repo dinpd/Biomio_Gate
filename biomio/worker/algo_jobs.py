@@ -1,6 +1,4 @@
 from __future__ import absolute_import
-import MySQLdb
-import StringIO
 import base64
 import requests
 import shutil
