@@ -1,6 +1,0 @@
-[Core]
-Name = ExtensionPlugin
-Module = extension_plugin
-
-[Documentation]
-Description = First Test Plugin

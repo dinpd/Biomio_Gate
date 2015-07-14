@@ -19,16 +19,29 @@ class ProbePluginManager:
 
     def __init__(self):
         self._plugin_locator = PluginFileLocator()
-        self._plugin_locator.setPluginPlaces((self._PLUGIN_DIR, ))
+        self._plugin_locator.setPluginPlaces((self._PLUGIN_DIR,))
 
         self._plugin_manager = PluginManager(categories_filter={'Default': IPlugin},
                                              plugin_locator=self._plugin_locator)
         self._plugin_manager.collectPlugins()
 
-        self._plugins_by_probe_type = {}
-
         for plugin_info in self._plugin_manager.getAllPlugins():
-            self._plugins_by_probe_type.update({os.path.basename(plugin_info.path): plugin_info.plugin_object})
+            if self.is_plugin_enabled(plugin_info.name):
+                self._plugin_manager.activatePluginByName(name=plugin_info.name)
+            else:
+                self._plugin_manager.deactivatePluginByName(name=plugin_info.name)
 
-    def get_plugin_object(self, probe_type):
-        return self._plugins_by_probe_type.get('%s_plugin' % probe_type, None)
+    def _get_plugin_info_by_name(self, plugin_name):
+        plugin_info = self._plugin_manager.getPluginByName(name=plugin_name)
+        if plugin_info is None:
+            raise KeyError("No plugin found for given name - %s" % plugin_name)
+        return plugin_info
+
+    def is_plugin_enabled(self, probe_type):
+        plugin_info = self._get_plugin_info_by_name(probe_type)
+        return plugin_info.details.has_option("Documentation", "Enabled") and bool(
+            plugin_info.details.get("Documentation", "Enabled"))
+
+    def get_plugin_by_name(self, probe_type):
+        plugin_info = self._get_plugin_info_by_name(probe_type)
+        return plugin_info.plugin_object

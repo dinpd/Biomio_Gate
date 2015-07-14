@@ -1,0 +1,6 @@
+[Core]
+Name = ExtensionPlugin
+Module = pgp_extension_plugin
+
+[Documentation]
+Description = This is extension PGP plugin

@@ -4,15 +4,17 @@ import re
 from threading import Lock
 from os import urandom
 from hashlib import sha1
+
 from redis import Redis
 from rq import Queue
 from tornadoredis import Client
+import tornado.gen
+
 from biomio.constants import REDIS_JOB_RESULT_KEY, REDIS_DO_NOT_STORE_RESULT_KEY, REDIS_RESULTS_COUNTER_KEY, \
     REDIS_PROBE_RESULT_KEY
 from biomio.protocol.settings import settings
 from biomio.protocol.storage.redis_storage import RedisStorage
 from logger import worker_logger
-import tornado.gen
 
 
 class WorkerInterface:
@@ -30,7 +32,7 @@ class WorkerInterface:
         import biomio.worker.algo_jobs as aj
         import biomio.worker.storage_jobs as sj
         import biomio.worker.engine_jobs as ej
-        import biomio.worker.extension_jobs as extj
+        import biomio.protocol.rpc.plugins.pgp_extension_plugin.pgp_extension_jobs as extj
 
         self.TRAINING_JOB = aj.training_job
         self.VERIFICATION_JOB = aj.verification_job
