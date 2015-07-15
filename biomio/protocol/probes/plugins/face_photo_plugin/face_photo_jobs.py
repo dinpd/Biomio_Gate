@@ -16,7 +16,7 @@ import binascii
 import json
 from logger import worker_logger
 
-ALGO_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'algorithms')
+ALGO_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', '..', 'algorithms')
 
 
 def verification_job(image, probe_id, settings, callback_code):
