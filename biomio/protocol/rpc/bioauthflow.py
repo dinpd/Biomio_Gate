@@ -333,7 +333,7 @@ class BioauthFlow:
         for probe_type, samples_list in samples_by_probe_type.iteritems():
             data = dict(samples=samples_list, probe_id=self.app_id)
             result = yield tornado.gen.Task(
-                ProbePluginManager.instance().get_plugin_object(probe_type).run_verification, data)
+                ProbePluginManager.instance().get_plugin_by_name(probe_type).run_verification, data)
             error = result.get('error')
             verified = result.get('verified')
             if error:
@@ -358,7 +358,7 @@ class BioauthFlow:
             for probe_type, samples in samples_by_probe_type.iteritems():
                 data = dict(try_type=probe_type, ai_code=ai_code, samples=samples, probe_id=self.app_id)
                 result = yield tornado.gen.Task(
-                    ProbePluginManager.instance().get_plugin_object(probe_type).run_training, data)
+                    ProbePluginManager.instance().get_plugin_by_name(probe_type).run_training, data)
                 training_result = result or training_result
 
             logger.debug(msg='TRAINING RESULT: %s' % str(training_result))

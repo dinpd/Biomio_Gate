@@ -4,15 +4,19 @@ import re
 from threading import Lock
 from os import urandom
 from hashlib import sha1
+
 from redis import Redis
+
 from rq import Queue
+
 from tornadoredis import Client
+import tornado.gen
+
 from biomio.constants import REDIS_JOB_RESULT_KEY, REDIS_DO_NOT_STORE_RESULT_KEY, REDIS_RESULTS_COUNTER_KEY, \
     REDIS_PROBE_RESULT_KEY
 from biomio.protocol.settings import settings
 from biomio.protocol.storage.redis_storage import RedisStorage
 from logger import worker_logger
-import tornado.gen
 
 
 class WorkerInterface:
@@ -27,13 +31,9 @@ class WorkerInterface:
         self._lru_redis = RedisStorage.lru_instance()
         self._persistence_redis = RedisStorage.persistence_instance()
 
-        import biomio.worker.algo_jobs as aj
         import biomio.worker.storage_jobs as sj
         import biomio.worker.engine_jobs as ej
-        import biomio.worker.extension_jobs as extj
 
-        self.TRAINING_JOB = aj.training_job
-        self.VERIFICATION_JOB = aj.verification_job
         self.CREATE_JOB = sj.create_record_job
         self.GET_JOB = sj.get_record_job
         self.SELECT_JOB = sj.select_records_by_ids_job
@@ -41,10 +41,7 @@ class WorkerInterface:
         self.DELETE_JOB = sj.delete_record_job
         self.SELECT_PROBES_BY_EXTENSION_JOB = ej.get_probe_ids_by_user_email
         self.SELECT_EXTENSIONS_BY_PROBE_JOB = ej.get_extension_ids_by_probe_id
-        self.GENERATE_PGP_KEYS_JOB = extj.generate_pgp_keys_job
-        self.VERIFY_EMAIL_JOB = extj.verify_email_job
         self.VERIFY_REGISTRATION_JOB = ej.verify_registration_job
-        self.ASSIGN_USER_TO_EXTENSION_JOB = extj.assign_user_to_extension_job
 
         self._listen_for_results()
         self._listen_for_probe_results()

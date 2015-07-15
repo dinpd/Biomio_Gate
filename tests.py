@@ -585,7 +585,7 @@ class TestRpcCalls(BiomioTest):
         self.teardown_test()
 
     def test_rpc_call(self):
-        message = self.create_next_message(oid='rpcReq', namespace='extension_plugin', call='test_func',
+        message = self.create_next_message(oid='rpcReq', namespace='pgp_extension_plugin', call='test_func',
                                            onBehalfOf='test@test.com',
                                            data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
         response = self.send_message(websocket=self.get_curr_connection(), message=message)
@@ -609,7 +609,7 @@ class TestRpcCalls(BiomioTest):
                     results['rpcResp'] = message
                     close_connection_callback()
 
-        message = self.create_next_message(oid='rpcReq', namespace='extension_plugin', call='test_func_with_auth',
+        message = self.create_next_message(oid='rpcReq', namespace='pgp_extension_plugin', call='test_func_with_auth',
             data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
             wait_for_response=True)
@@ -642,7 +642,7 @@ class TestRpcCalls(BiomioTest):
                     results['rpcResp'] = message
                     close_connection_callback()
 
-        message = self.create_next_message(oid='rpcReq', namespace='extension_plugin', call='test_func_with_auth',
+        message = self.create_next_message(oid='rpcReq', namespace='pgp_extension_plugin', call='test_func_with_auth',
             data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
             wait_for_response=True)
@@ -675,7 +675,7 @@ class TestRpcCalls(BiomioTest):
                 if probe_results['gotTryMessage']:
                     close_connection_callback(send_bye=False)
 
-        message = self.create_next_message(oid='rpcReq', namespace='extension_plugin', call='test_func_with_auth',
+        message = self.create_next_message(oid='rpcReq', namespace='pgp_extension_plugin', call='test_func_with_auth',
             data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
             wait_for_response=True)
@@ -699,7 +699,7 @@ class TestRpcCalls(BiomioTest):
     #     def on_extension_message(test_obj, message, close_connection_callback):
     #         if str(message.msg.oid) == 'nop':
     #             if not self.rpcSent:
-    #                 message = test_obj.create_next_message(oid='rpcReq', namespace='extension_plugin', call='test_func_with_auth',
+    #                 message = test_obj.create_next_message(oid='rpcReq', namespace='pgp_extension_plugin', call='test_func_with_auth',
     #                                                    data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
     #                 test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False,
     #                                   wait_for_response=True)
@@ -814,7 +814,7 @@ class TestFaceRecognition(BiomioTest):
         self.setup_test_with_handshake(app_id=extension_app_id, app_type=extension_app_type, key=extension_key)
 
         # Send rpc call that requires auth
-        message = self.create_next_message(oid='rpcReq', namespace='extension_plugin', call='test_func_with_auth',
+        message = self.create_next_message(oid='rpcReq', namespace='pgp_extension_plugin', call='test_func_with_auth',
             data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
             wait_for_response=True)
@@ -865,7 +865,7 @@ class TestFaceRecognition(BiomioTest):
         # Make handshake, rpc call, then communicate as an extension
         self.setup_test_with_handshake(app_id=extension_app_id, app_type=extension_app_type, key=extension_key)
 
-        message = self.create_next_message(oid='rpcReq', namespace='extension_plugin', call='test_func_with_auth',
+        message = self.create_next_message(oid='rpcReq', namespace='pgp_extension_plugin', call='test_func_with_auth',
             data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
         self.send_message(websocket=self.get_curr_connection(), message=message, close_connection=False,
             wait_for_response=True)
@@ -885,7 +885,7 @@ class TestFaceRecognition(BiomioTest):
     #     def on_extension_message(test_obj, message, close_connection_callback):
     #         if str(message.msg.oid) == 'nop':
     #             if not results['rpcSent']:
-    #                 message = test_obj.create_next_message(oid='rpcReq', namespace='extension_plugin', call='test_func_with_auth',
+    #                 message = test_obj.create_next_message(oid='rpcReq', namespace='pgp_extension_plugin', call='test_func_with_auth',
     #                                                    data={'keys': ['val1', 'val2'], 'values': ['1', '2']})
     #                 test_obj.send_message(websocket=test_obj.get_curr_connection(), message=message, close_connection=False,
     #                                   wait_for_response=True)

@@ -63,25 +63,5 @@ class EmailDataStore(BaseDataStore):
         self._update_lru_data(key=self.get_data_key(email), table_class_name=self._table_class_name, object_id=email,
                               **kwargs)
 
-    def update_emails_pgp_keys(self, emails, callback):
-        """
-            Runs job to create new user with given email and generate pgp keys for him.
-        :param emails: list of emails to create users for.
-        :param callback: function that must be executed after all jobs are completed.
-        """
-        kwargs_list_for_results_gatherer = []
-        for email in emails:
-            kwargs_list_for_results_gatherer.append({'email': email})
-        self._run_storage_job(self._worker.VERIFY_EMAIL_JOB, callback,
-                              kwargs_list_for_results_gatherer=kwargs_list_for_results_gatherer,
-                              table_class_name=self._table_class_name)
-
-    def generate_pgp_keys_by_ai_request(self, email):
-        """
-            Generates PGP keys for email received from AI
-        :param email: to generate PGP key pair for.
-        """
-        self._run_storage_job(self._worker.GENERATE_PGP_KEYS_JOB, table_class_name=self._table_class_name, email=email)
-
     def get_keys_to_delete(self):
         return self._KEYS_TO_DELETE

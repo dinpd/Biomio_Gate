@@ -5,6 +5,7 @@ import tornado.gen
 import greenado
 
 from biomio.protocol.data_stores.user_data_store import UserDataStore
+from biomio.protocol.probes.probe_plugin_manager import ProbePluginManager
 
 
 @greenado.generator
@@ -53,7 +54,9 @@ class RQTest(tornado.web.RequestHandler):
         # callback_code = RedisResultsListener.instance().subscribe_callback(callback=test_get_result)
         # run_storage_job(get_extension_ids_by_probe_id, table_class_name=APPS_TABLE_CLASS_NAME,
         #                 probe_id=probe_id, callback_code=callback_code)
-        pass
+
+        plugin_manager = ProbePluginManager.instance()
+        print plugin_manager.get_plugin_by_name('fp-scanner')
 
 
 def test_get_result(result=None):

@@ -6,7 +6,7 @@ import tornado.httpserver
 import tornado.ioloop
 import tornado.gen
 import traceback
-from biomio.protocol.data_stores.email_data_store import EmailDataStore
+from biomio.protocol.rpc.plugins.pgp_extension_plugin.pgp_extension_jobs import generate_pgp_keys_job
 
 from biomio.protocol.settings import settings
 from biomio.protocol.engine import BiomioProtocol
@@ -14,6 +14,8 @@ from biomio.protocol.connectionhandler import ConnectionTimeoutHandler
 from biomio.protocol.rpc.bioauthflow import BioauthFlow
 
 import logging
+from biomio.worker.worker_interface import WorkerInterface
+
 logger = logging.getLogger(__name__)
 
 ssl_options = {
@@ -78,7 +80,7 @@ class InitialProbeRestHandler(tornado.web.RequestHandler):
 class NewEmailPGPKeysHandler(tornado.web.RequestHandler):
     def post(self, email, *args, **kwargs):
         logger.info('Received new_email request from AI with email - %s' % email)
-        EmailDataStore.instance().generate_pgp_keys_by_ai_request(email=email)
+        WorkerInterface.instance().run_job(generate_pgp_keys_job, email=email)
 
 
 class Application(tornado.web.Application):
