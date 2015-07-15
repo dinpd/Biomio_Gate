@@ -19,6 +19,7 @@ from logger import worker_logger
 
 ALGO_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'algorithms')
 
+
 def verification_job(image, probe_id, settings, callback_code):
     """
         Runs verification for user with given image
@@ -140,7 +141,7 @@ def store_test_photo_helper(image_paths):
     import shutil
     import os
 
-    TEST_PHOTO_PATH = os.path.join(ALGO_ROOT, 'algorithms', 'test_photo')
+    TEST_PHOTO_PATH = os.path.join(ALGO_ROOT, 'test_photo')
 
     if not os.path.exists(TEST_PHOTO_PATH):
         os.makedirs(TEST_PHOTO_PATH)
