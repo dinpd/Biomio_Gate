@@ -1,23 +1,23 @@
 from __future__ import absolute_import
 import base64
-import requests
 import shutil
 import tempfile
 import cPickle
+import os
+import binascii
+import json
+
+import requests
 from requests.exceptions import HTTPError
 from biomio.constants import REDIS_PROBE_RESULT_KEY, REDIS_RESULTS_COUNTER_KEY, REDIS_PARTIAL_RESULTS_KEY, \
     TRAINING_DATA_TABLE_CLASS_NAME, REDIS_JOB_RESULTS_ERROR, REST_REGISTER_BIOMETRICS, get_ai_training_response
 from biomio.mysql_storage.mysql_data_store_interface import MySQLDataStoreInterface
 from biomio.protocol.storage.redis_storage import RedisStorage
-from biomio.algorithms.algorithms_interface import AlgorithmsInterface
+from biomio.protocol.probes.plugins.face_photo_plugin.algorithms.algorithms_interface import AlgorithmsInterface
 from biomio.protocol.settings import settings as biomio_settings
-import os
-import binascii
-import json
 from logger import worker_logger
 
-ALGO_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', '..', 'algorithms')
-
+ALGO_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'algorithms')
 
 def verification_job(image, probe_id, settings, callback_code):
     """
