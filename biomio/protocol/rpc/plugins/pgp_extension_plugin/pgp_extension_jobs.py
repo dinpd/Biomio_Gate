@@ -1,7 +1,7 @@
 import requests
 from requests.exceptions import HTTPError
 from biomio.constants import REST_CREATE_EMAIL_KEYS, REDIS_PARTIAL_RESULTS_KEY, REDIS_RESULTS_COUNTER_KEY, \
-    REDIS_DO_NOT_STORE_RESULT_KEY, EMAILS_TABLE_CLASS_NAME
+    REDIS_DO_NOT_STORE_RESULT_KEY, EMAILS_TABLE_CLASS_NAME, APPS_TABLE_CLASS_NAME
 from biomio.mysql_storage.mysql_data_store_interface import MySQLDataStoreInterface
 from biomio.protocol.data_stores.base_data_store import BaseDataStore
 from biomio.protocol.settings import settings
@@ -10,7 +10,7 @@ from biomio.utils.gnugpg_generator import generate_pgp_key_pair
 from logger import worker_logger
 
 
-def verify_email_job(table_class_name, email, callback_code):
+def verify_email_job(email, callback_code):
     worker_logger.info('Started email verification, for email - %s' % email)
     result = dict(email=email)
     try:
@@ -27,7 +27,7 @@ def verify_email_job(table_class_name, email, callback_code):
             else:
                 result.update({'error': response.reason})
         if 'error' not in result:
-            result = generate_email_pgp_keys(email, table_class_name, result)
+            result = generate_email_pgp_keys(email, EMAILS_TABLE_CLASS_NAME, result)
     except Exception as e:
         worker_logger.exception(e)
         result.update({'error': 'Sorry but we were not able to generate PGP keys for email %s' % email})
@@ -50,9 +50,9 @@ def verify_email_job(table_class_name, email, callback_code):
         worker_logger.info('Finished email verification, for email - %s' % email)
 
 
-def generate_pgp_keys_job(table_class_name, email):
+def generate_pgp_keys_job(email):
     worker_logger.info('Started email PGP keys generation, email - %s' % email)
-    generate_email_pgp_keys(email=email, table_class_name=table_class_name)
+    generate_email_pgp_keys(email=email, table_class_name=EMAILS_TABLE_CLASS_NAME)
     worker_logger.info('Finished email PGP keys generation, email - %s' % email)
 
 
@@ -72,12 +72,13 @@ def generate_email_pgp_keys(email, table_class_name, result=None):
         return result
 
 
-def assign_user_to_extension_job(table_class_name, app_id, email):
+def assign_user_to_extension_job(app_id, email):
     worker_logger.info('Checking if user with email %s is assigned to application %s' % (email, app_id))
     email_data = MySQLDataStoreInterface.get_object(table_name=EMAILS_TABLE_CLASS_NAME, object_id=email,
                                                     return_dict=True)
     if email_data is not None:
-        extension = MySQLDataStoreInterface.get_object(table_name=table_class_name, object_id=app_id, return_dict=True)
+        extension = MySQLDataStoreInterface.get_object(table_name=APPS_TABLE_CLASS_NAME, object_id=app_id,
+                                                       return_dict=True)
         email_user = email_data.get('user')
         extension_users = extension.get('users')
         if email_user in extension_users:

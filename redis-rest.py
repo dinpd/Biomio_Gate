@@ -56,6 +56,7 @@ class RQTest(tornado.web.RequestHandler):
         #                 probe_id=probe_id, callback_code=callback_code)
 
         plugin_manager = ProbePluginManager.instance()
+        print plugin_manager.get_plugin_by_name('fp-scanner')
 
 
 def test_get_result(result=None):

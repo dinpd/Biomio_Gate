@@ -1,10 +1,11 @@
 import ast
 from yapsy.IPlugin import IPlugin
-from biomio.protocol.data_stores.application_data_store import ApplicationDataStore
 from biomio.protocol.data_stores.email_data_store import EmailDataStore
+from biomio.protocol.rpc.plugins.pgp_extension_plugin.pgp_extension_jobs import assign_user_to_extension_job, \
+    verify_email_job
 
 from biomio.protocol.rpc.rpcutils import rpc_call_with_auth, rpc_call, get_store_data, select_store_data, \
-    verify_emails_ai, assign_user_to_extension, parse_email_data
+    parse_email_data, run_async_job, run_sync_job
 import logging
 
 logger = logging.getLogger(__name__)
@@ -35,7 +36,7 @@ class ExtensionPlugin(IPlugin):
 
     @rpc_call
     def get_users_public_pgp_keys(self, user_id, emails, app_id):
-        assign_user_to_extension(ApplicationDataStore.instance(), app_id=app_id, email=user_id)
+        run_async_job(assign_user_to_extension_job, app_id=app_id, email=parse_email_data(user_id))
         emails = parse_email_data(emails).split(',')
         emails_store_instance = EmailDataStore.instance()
         public_pgp_keys = []
@@ -47,7 +48,11 @@ class ExtensionPlugin(IPlugin):
                 emails.remove(key)
                 public_pgp_keys.append(email_data.get(EmailDataStore.PUBLIC_PGP_KEY_ATTR))
         if len(emails):
-            new_emails_data = verify_emails_ai(EmailDataStore.instance(), emails)
+            kwargs_list_for_results_gatherer = []
+            for email in emails:
+                kwargs_list_for_results_gatherer.append({'email': email})
+            new_emails_data = run_sync_job(verify_email_job,
+                                           kwargs_list_for_results_gatherer=kwargs_list_for_results_gatherer)
             if new_emails_data is not None:
                 new_emails_data = new_emails_data.get('result', [])
                 for email_data in new_emails_data:

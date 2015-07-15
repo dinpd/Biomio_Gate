@@ -1,9 +1,9 @@
 import biomio.protocol.probes.plugins.base_probe_plugin as base_probe_plugin
+from biomio.protocol.probes.plugins.face_photo_plugin.face_photo_jobs import training_job, verification_job
 from biomio.utils.biomio_decorators import inherit_docstring_from
 
 
 class FacePhotoPlugin(base_probe_plugin.BaseProbePlugin):
-
     _settings = dict(algoID="001002", userID="0000000000000")
 
     @inherit_docstring_from(base_probe_plugin.BaseProbePlugin)
@@ -13,7 +13,7 @@ class FacePhotoPlugin(base_probe_plugin.BaseProbePlugin):
         normalized_images = [str(image) for image in data.get('samples')]
         del data['samples']
         data.update({'images': normalized_images, 'settings': self._settings})
-        self._process_probe(self._worker.TRAINING_JOB, **data)
+        self._process_probe(training_job, **data)
 
     @inherit_docstring_from(base_probe_plugin.BaseProbePlugin)
     def run_verification(self, data, callback=None):
@@ -24,7 +24,7 @@ class FacePhotoPlugin(base_probe_plugin.BaseProbePlugin):
         for image in data.get('samples'):
             kwargs_list_for_results_gatherer.append({'image': str(image)})
         del data['samples']
-        self._process_probe(self._worker.VERIFICATION_JOB,
+        self._process_probe(verification_job,
                             kwargs_list_for_results_gatherer=kwargs_list_for_results_gatherer, **data)
 
     @inherit_docstring_from(base_probe_plugin.BaseProbePlugin)

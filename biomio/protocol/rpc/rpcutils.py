@@ -9,6 +9,8 @@ from biomio.protocol.data_stores.application_data_store import ApplicationDataSt
 from biomio.protocol.rpc import bioauthflow
 
 import logging
+from biomio.protocol.rpc.plugins.pgp_extension_plugin.pgp_extension_jobs import assign_user_to_extension_job
+from biomio.worker.worker_interface import WorkerInterface
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +80,9 @@ def rpc_call(rpc_func):
 def get_verification_started_callback(callback):
     def verification_started_callback_func():
         callback(result={"msg": 'Verification in progress...'}, status='inprogress')
+
     return verification_started_callback_func
+
 
 def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
     """
@@ -92,10 +96,11 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
     wait_callback = callable_kwargs.get(WAIT_CALLBACK_ARG, None)
     callback = callable_kwargs.get(CALLBACK_ARG, None)
     bioauth_flow = callable_kwargs.get(BIOAUTH_FLOW_INSTANCE_ARG, None)
-    
+
     if app_id is not None and bioauth_flow is not None and bioauth_flow.app_type == 'extension':
-        assign_user_to_extension(ApplicationDataStore.instance(), app_id=app_id, email=user_id)
-    
+        email = parse_email_data(user_id)
+        run_async_job(assign_user_to_extension_job, app_id=app_id, email=email)
+
     # Send RPC message with inprogress state
     try:
         wait_callback()
@@ -157,14 +162,17 @@ def create_rpc_final_callback(rpc_result_callback):
         callback = rpc_result_callback
         if future.exception():
             info = future.exc_info()
-            logger.exception(msg='Error during next message processing: %s' % ''.join(traceback.format_exception(*info)))
+            logger.exception(
+                msg='Error during next message processing: %s' % ''.join(traceback.format_exception(*info)))
             error_msg = 'Exception raised from RPC method'
             callback(result={"error": error_msg}, status='fail')
         else:
             result = future.result()
             callback(result=result, status='complete')
             logger.debug(msg='--- RPC call processed successfully')
+
     return message_processed
+
 
 @greenado.groutine
 def run_callback(callback, callable_args, kwargs):
@@ -217,17 +225,18 @@ def select_store_data(data_store_instance, object_ids):
 
 
 @greenado.generator
-def verify_emails_ai(data_store_instance, emails):
+def run_sync_job(job_to_run, **kwargs):
     result = None
     try:
-        result = yield  tornado.gen.Task(data_store_instance.update_emails_pgp_keys, emails)
+        result = yield tornado.gen.Task(WorkerInterface.instance().run_job, job_to_run, **kwargs)
     except Exception as e:
         logger.exception(e)
     raise tornado.gen.Return(result)
 
-def assign_user_to_extension(data_store_instance, app_id, email):
-    email = parse_email_data(email)
-    data_store_instance.assign_user_to_extension(app_id=app_id, email=email)
+
+def run_async_job(job_to_run, **kwargs):
+    WorkerInterface.instance().run_job(job_to_run=job_to_run, **kwargs)
+
 
 def parse_email_data(emails):
     for rep in ['<', '>']:
