@@ -26,6 +26,7 @@ STATE_AUTH_TRAINING_STARTED = 'auth_training'
 STATE_AUTH_TRAINING_INPROGRESS = 'auth_training_inprogress'
 STATE_AUTH_TRAINING_DONE = 'auth_training_done'
 STATE_AUTH_TRAINING_FAILED = 'auth_training_failed'
+STATE_AUTH_RESULTS_AVAILABLE = 'results_available'
 
 # Event callbacks
 def on_reset(e):
@@ -144,7 +145,7 @@ auth_states = {
         },
         {
             'name': 'retry',
-            'src': [STATE_AUTH_VERIFICATION_STARTED],
+            'src': [STATE_AUTH_VERIFICATION_STARTED, STATE_AUTH_RESULTS_AVAILABLE],
             'dst': STATE_AUTH_WAIT
         },
         {

@@ -222,10 +222,12 @@ def training_job(images, probe_id, settings, callback_code, try_type, ai_code):
                     MySQLDataStoreInterface.create_data(table_name=TRAINING_DATA_TABLE_CLASS_NAME, probe_id=probe_id,
                                                         data=training_data)
                 except Exception as e:
-                    worker_logger.exception(e)
                     if '1062 Duplicate entry' in str(e):
+                        worker_logger.info('Training data already exists, updating the record.')
                         MySQLDataStoreInterface.update_data(table_name=TRAINING_DATA_TABLE_CLASS_NAME,
                                                             object_id=probe_id, data=training_data)
+                    else:
+                        worker_logger.exception(e)
                 result = True
         elif algo_result.get('status', '') == "error":
             worker_logger.exception('Error during education - %s, %s, %s' % (algo_result.get('status'),
