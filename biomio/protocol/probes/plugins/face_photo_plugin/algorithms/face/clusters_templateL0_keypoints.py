@@ -56,6 +56,7 @@ class ClustersTemplateL0MatchingDetector(ClustersMatchingDetector):
         except Exception as e:
             logger.algo_logger.exception(e)
             self._prob = sys.maxint
+        return self._prob > self.kodsettings.probability
 
     def importSources(self, source):
         logger.algo_logger.debug("Database loading started...")
