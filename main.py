@@ -19,8 +19,8 @@ from biomio.worker.worker_interface import WorkerInterface
 logger = logging.getLogger(__name__)
 
 ssl_options = {
-        "certfile": "server.crt",
-        "keyfile": "server.key"
+        "certfile": "prod_certs/biom.io.crt",
+        "keyfile": "prod_certs/biom.io.key"
 }
 
 

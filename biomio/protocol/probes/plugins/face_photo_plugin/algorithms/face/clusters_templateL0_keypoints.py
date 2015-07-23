@@ -47,8 +47,14 @@ class ClustersTemplateL0MatchingDetector(ClustersMatchingDetector):
 
     def update_database(self):
         try:
-            self._prob = min(self._database, key=self.verify_template_L0)
-        except:
+            self._prob = 100
+            for data in self._database:
+                temp_prob = self.verify_template_L0(data)
+                if temp_prob < self._prob:
+                    self._prob = temp_prob
+            logger.algo_logger.debug('Database threshold: %s' % self._prob)
+        except Exception as e:
+            logger.algo_logger.exception(e)
             self._prob = sys.maxint
 
     def importSources(self, source):
@@ -97,8 +103,7 @@ class ClustersTemplateL0MatchingDetector(ClustersMatchingDetector):
         prob = 0
         logger.algo_logger.debug("Image: " + data['path'])
         logger.algo_logger.debug("Template size: ")
-        summ = sum(itertools.imap(lambda x: len(x) if x is not None and x.any() else 0, self._etalon))
-        logger.algo_logger.debug(summ)
+        summ = sum(itertools.imap(lambda x: len(x) if x is not None else 0, self._etalon))
         for index, et_cluster in enumerate(self._etalon):
             dt_cluster = data['clusters'][index]
             if et_cluster is None:
