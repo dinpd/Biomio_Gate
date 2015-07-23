@@ -55,35 +55,38 @@ class ClustersTemplateL0MatchingDetector(ClustersMatchingDetector):
         logger.algo_logger.debug("Database loading started...")
         self.importSources_L0Template(source.get('data', dict()))
         self._prob = source.get('threshold', 100)
+        logger.algo_logger.info('Dynamic threshold: %f' % self._prob)
         logger.algo_logger.debug("Database loading finished.")
 
     def importSources_L0Template(self, source):
-        self._etalon = [[] for key in source.keys()]
-        for c_num, cluster in source.iteritems():
-            etalon_cluster = [listToNumpy_ndarray(descriptor) for d_num, descriptor in cluster.iteritems()]
-            self._etalon[int(c_num)] = etalon_cluster
+
+        def _values(d, key=None):
+            l = sorted(d, key=key)
+            for e in l:
+                yield d[e]
+
+        self._etalon = [
+            [
+                listToNumpy_ndarray(descriptor) for descriptor in _values(cluster)
+            ] for cluster in _values(source, key=int)
+        ]
 
     def exportSources(self):
         data = self.exportSources_L0Template()
-        source = dict()
         if len(data.keys()) > 0:
-            source = dict()
-            source['data'] = data
-            source['threshold'] = self._prob
-        return source
+            return {
+                'data': data,
+                'threshold': self._prob
+            }
+        else:
+            return {}
 
     def exportSources_L0Template(self):
-        sources = dict()
-        for index, cluster in enumerate(self._etalon):
-            cluster_dict = dict()
-            i_desc = 0
-            if cluster is None:
-                cluster = []
-            for descriptor in cluster:
-                cluster_dict[i_desc] = numpy_ndarrayToList(descriptor)
-                i_desc += 1
-            sources[str(index)] = cluster_dict
-        return sources
+        return {
+            str(index): {} if cluster is None else {
+                i: numpy_ndarrayToList(descriptor) for i, descriptor in enumerate(cluster)
+                } for index, cluster in enumerate(self._etalon)
+            }
 
     @verifying
     def verify(self, data):
@@ -94,7 +97,8 @@ class ClustersTemplateL0MatchingDetector(ClustersMatchingDetector):
         prob = 0
         logger.algo_logger.debug("Image: " + data['path'])
         logger.algo_logger.debug("Template size: ")
-        summ = sum(itertools.imap(lambda x: len(x) if x else 0, self._etalon))
+        summ = sum(itertools.imap(lambda x: len(x) if x is not None and x.any() else 0, self._etalon))
+        logger.algo_logger.debug(summ)
         for index, et_cluster in enumerate(self._etalon):
             dt_cluster = data['clusters'][index]
             if et_cluster is None:
@@ -111,13 +115,13 @@ class ClustersTemplateL0MatchingDetector(ClustersMatchingDetector):
                                             listToNumpy_ndarray(dt_cluster, numpy.uint8), k=2)
                 matches2 = matcher.knnMatch(listToNumpy_ndarray(dt_cluster, numpy.uint8),
                                             listToNumpy_ndarray(et_cluster, numpy.uint8), k=2)
-                ms = map(
-                    lambda(x, _): x, itertools.ifilter(
+                ms = [
+                    x for (x, _) in itertools.ifilter(
                         lambda(m, n): m.queryIdx == n.trainIdx and m.trainIdx == n.queryIdx, itertools.product(
                             itertools.chain(*matches1), itertools.chain(*matches2)
                         )
                     )
-                )
+                ]
                 val = (len(ms) / (1.0 * len(et_cluster))) * 100
                 logger.algo_logger.debug("Cluster #" + str(index + 1) + ": " + str(len(et_cluster))
                                          + " Positive: " + str(len(ms)) + " Probability: " + str(val) +
