@@ -37,11 +37,11 @@ class ClustersMatchingDetector(KeypointsObjectDetector):
         return False
 
     def exportSettings(self):
-        info = dict()
-        info['KODSettings'] = self.kodsettings.exportSettings()
-        info['Face Cascade Detector'] = self._cascadeROI.exportSettings()
-        info['Eye Cascade Detector'] = self._eyeROI.exportSettings()
-        return info
+        return {
+            'KODSettings': self.kodsettings.exportSettings(),
+            'Face Cascade Detector': self._cascadeROI.exportSettings(),
+            'Eye Cascade Detector': self._eyeROI.exportSettings()
+        }
 
     def _detect(self, data, detector):
         # ROI detection
@@ -61,7 +61,7 @@ class ClustersMatchingDetector(KeypointsObjectDetector):
         centers = [lefteye, righteye, centereye, centernose, leftmouth, rightmouth]
         self.filter_keypoints(data)
 
-        clusters = KMeans(data['keypoints'], 0, centers, 3)
+        clusters = KMeans(data['keypoints'], 0, centers)
         data['true_clusters'] = clusters
         descriptors = []
         active_clusters = 0
@@ -83,9 +83,6 @@ class ClustersMatchingDetector(KeypointsObjectDetector):
         keypoints = []
         for cluster in clusters:
             p = len(cluster['items']) / (1.0 * len(data['keypoints']))
-            img = dict()
-            img['data'] = data['roi']
-            img['keypoints'] = cluster['items']
             if p > 0.02:
                 keypoints += [item for item in cluster['items']]
         data['keypoints'] = keypoints
