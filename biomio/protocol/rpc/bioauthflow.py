@@ -349,7 +349,6 @@ class BioauthFlow:
 
         self.set_auth_results(result=auth_result)
         self._store_state()
-        self.auth_connection.end_auth()
 
     @tornado.gen.engine
     def set_auth_training_results(self, samples_by_probe_type):
