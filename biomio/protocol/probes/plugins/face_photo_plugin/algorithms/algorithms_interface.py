@@ -122,7 +122,16 @@ class AlgorithmsInterface:
                     logger.algo_logger.info('Error::%s::%s' % (record['type'], details['message']))
                     return record
                 algorithm.addSource(imgobj)
-            algorithm.update_database()
+            res = algorithm.update_database()
+            if not res:
+                record['status'] = "error"
+                record['type'] = "Internal Training Error"
+                details = dict()
+                details['param'] = 'data'
+                details['message'] = "Problem with updating of the dynamic threshold."
+                record['details'] = details
+                logger.algo_logger.info("Problem with updating of the dynamic threshold.")
+                return record
             sources = algorithm.exportSources()
             record['status'] = "update"
             record['algoID'] = kwargs['algoID']
