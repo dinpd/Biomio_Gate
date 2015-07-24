@@ -39,8 +39,10 @@ class AppConnectionManager:
         :param current_app_id: Application to store list for
         :param app_id_to_add: to add to the list of application's active apps
         """
-        self._persistence_redis.append_value_to_list(key=REDIS_ACTIVE_DEVICES_KEY % current_app_id,
-                                                     value=app_id_to_add, append_to_head=True)
+        existing_active_apps = self.get_active_apps(current_app_id)
+        if app_id_to_add not in existing_active_apps:
+            self._persistence_redis.append_value_to_list(key=REDIS_ACTIVE_DEVICES_KEY % current_app_id,
+                                                         value=app_id_to_add, append_to_head=True)
 
     def remove_active_app(self, current_app_id, app_id_to_remove):
         """
@@ -60,4 +62,4 @@ class AppConnectionManager:
         return self._persistence_redis.get_stored_list(key=REDIS_ACTIVE_DEVICES_KEY % current_app_id)
 
     def delete_active_apps_list(self, current_app_id):
-        self._persistence_redis.remove_keys([current_app_id])
+        self._persistence_redis.delete_data(REDIS_ACTIVE_DEVICES_KEY % current_app_id)

@@ -236,7 +236,7 @@ class BioauthFlow:
         self._verification_started_callback = None
 
         self._resources_list = []
-
+        self._on_behalf_of = None
         self.auth_connection = AppAuthConnection(app_id=app_id, app_type=app_type)
 
         if auto_initialize:
@@ -254,7 +254,7 @@ class BioauthFlow:
         else:
             self.cancel_auth()
             self._store_state()
-        self.auth_connection.set_app_disconnected()
+        self.auth_connection.set_app_disconnected(on_behalf_of=self._on_behalf_of)
 
     def _get_state_machine_logger_callback(self):
         def _state_machine_logger(e):
@@ -303,6 +303,7 @@ class BioauthFlow:
         """
         Should be called for extension to request biometric authentication from probe.
         """
+        self._on_behalf_of = on_behalf_of
         self._verification_started_callback = verification_started_callback  # Store callback to call later before verification started
         self.rpc_callback = callback  # Store callback to call later in STATE_AUTH_FINISHED state
         data_dict = {
@@ -348,6 +349,7 @@ class BioauthFlow:
 
         self.set_auth_results(result=auth_result)
         self._store_state()
+        self.auth_connection.end_auth()
 
     @tornado.gen.engine
     def set_auth_training_results(self, samples_by_probe_type):

@@ -54,6 +54,17 @@ class AppAuthConnection():
             AppConnectionManager.instance().add_active_app(connected_apps[0], self._app_id)
             if self.is_probe_owner():
                 self._app_key = self._listener.auth_key(extension_id=connected_apps[0], probe_id=self._app_id)
+                app_key_pattern = AppConnectionListener.app_key_pattern(app_id=self._app_id, app_type=self._app_type)
+                existing_keys = AuthStateStorage.instance().get_matching_keys(pattern=app_key_pattern)
+                if self._app_key in existing_keys:
+                    existing_keys.remove(self._app_key)
+                AuthStateStorage.instance().remove_keys(keys=existing_keys)
+                extension_id = AppConnectionListener.extension_id(redis_auth_key=self._app_key)
+                pattern = AppConnectionListener.app_key_pattern(app_id=extension_id, app_type='extension')
+                keys_to_remove = AuthStateStorage.instance().get_matching_keys(pattern)
+                if self._app_key in keys_to_remove:
+                    keys_to_remove.remove(self._app_key)
+                AuthStateStorage.instance().remove_keys(keys=keys_to_remove)
             else:
                 self._app_key = self._listener.auth_key(extension_id=self._app_id, probe_id=connected_apps[0])
             self.extension_keys = [self._app_key]
@@ -65,8 +76,16 @@ class AppAuthConnection():
 
     def _get_keys_for_connected_apps_callback(self):
         def _set_keys_for_connected_app_callback(app_ids):
-            app_ids = app_ids.get('results') if app_ids else []
+            app_ids = app_ids.get('result') if app_ids else []
             for app_id in app_ids:
+                if not self.is_probe_owner():
+                    existing_active_device = AppConnectionManager.instance().get_active_apps(app_id)
+                    if len(existing_active_device):
+                        AppConnectionManager.instance().add_active_app(app_id, self._app_id)
+                        self._app_key = self._listener.auth_key(extension_id=self._app_id, probe_id=app_id)
+                        self.extension_keys = [self._app_key]
+                        self.store_data(state='auth_wait')
+                        break
                 AppConnectionManager.instance().add_active_app(app_id, self._app_id)
         return _set_keys_for_connected_app_callback
 
@@ -108,11 +127,11 @@ class AppAuthConnection():
     #             keys_to_remove.remove(self._app_key)
     #         AuthStateStorage.instance().remove_keys(keys=keys_to_remove)
 
-    def set_app_disconnected(self):
+    def set_app_disconnected(self, on_behalf_of=None):
         """
         Unsubscribes app from auth status key changes.
         """
-        self._remove_disconnected_app_keys()
+        self._remove_disconnected_app_keys(on_behalf_of)
         self._listener.unsubscribe()
 
     def start_auth(self, on_behalf_of):
@@ -161,8 +180,9 @@ class AppAuthConnection():
             probe_id=self._app_id if self.is_probe_owner() else other_id
         )
 
-    def _remove_disconnected_app_keys(self):
-        AppConnectionManager.get_connected_apps(app_id=self._app_id, device=self.is_probe_owner(),
+    def _remove_disconnected_app_keys(self, on_behalf_of=None):
+        app_id = self._app_id if on_behalf_of is None else on_behalf_of
+        AppConnectionManager.get_connected_apps(app_id=app_id, device=self.is_probe_owner(),
                                                 callback=self._get_disconnect_apps_callback())
 
     def _get_disconnect_apps_callback(self):
@@ -172,6 +192,13 @@ class AppAuthConnection():
             for app_id in app_ids:
                 AppConnectionManager.instance().remove_active_app(app_id, self._app_id)
             AppConnectionManager.instance().delete_active_apps_list(self._app_id)
+            if self.is_probe_owner() and self._app_key:
+                extension_id = AppConnectionListener.extension_id(redis_auth_key=self._app_key)
+                pattern = AppConnectionListener.app_key_pattern(app_id=extension_id, app_type='extension')
+                keys_to_remove = AuthStateStorage.instance().get_matching_keys(pattern)
+                if self._app_key in keys_to_remove:
+                    keys_to_remove.remove(self._app_key)
+                AuthStateStorage.instance().remove_keys(keys=keys_to_remove)
         return _disconnect_apps
 
     def _on_connection_data(self, connected_extension_id, connected_probe_id):
@@ -184,8 +211,8 @@ class AppAuthConnection():
         if self._app_key is None or self._app_key != key:
             if AuthStateStorage.instance().probe_data_exists(id=key):
                 self._app_key = key
-                # if self.is_probe_owner():
-                #     self._remove_disconnected_app_keys()
+                if self.is_probe_owner():
+                    self._remove_disconnected_app_keys()
                 # else:
                 #     self.extension_keys = []
 
