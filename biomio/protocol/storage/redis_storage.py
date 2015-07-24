@@ -107,7 +107,7 @@ class RedisStorage:
         """
         self._redis.set(name=key, value=counter)
 
-    def append_value_to_list(self, key, value):
+    def append_value_to_list(self, key, value, append_to_head=False):
         """
             Appends value to the tail of the list which is under specified key.
             If list doesn't exists it should create new one.
@@ -115,7 +115,18 @@ class RedisStorage:
         :param value: value that should be appended to the list.
         :return: int length of the list.
         """
+        if append_to_head:
+            return self._redis.lpush(key, value)
         return self._redis.rpush(key, value)
+
+    def remove_value_from_list(self, key, value):
+        """
+            Removes all elements that are equal to value from the list stored at the given key
+        :param key: stored list key
+        :param value: to delete from the list
+        :return: int number of removed elements
+        """
+        return self._redis.lrem(name=key, count=0, value=value)
 
     def get_stored_list(self, key):
         """
