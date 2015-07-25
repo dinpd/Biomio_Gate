@@ -8,7 +8,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class AppAuthConnection():
+class AppAuthConnection:
     """
     AppAuthConnection class is responsible for connection between probe and extension during the auth.
     """
@@ -34,20 +34,6 @@ class AppAuthConnection():
         """
         return self._app_type.lower().startswith('extension')
 
-    def _find_connected_extension(self, callback):
-        """
-        Finds if any extension is connected to server.
-        :return: Connected extension id.
-        """
-
-        if self._app_id and self.is_probe_owner():
-            AppConnectionManager.instance().get_connected_apps(self._app_id, callback=callback)
-
-    # def _set_keys_for_connected_probes(self, extension_id, on_behalf_of):
-    #     self.extension_id = extension_id
-    #     AppConnectionManager.instance().get_connected_apps(app_id=on_behalf_of, extension=True,
-    #                                                        callback=self.get_set_keys_for_connected_probes_callback())
-
     def _set_keys_for_connected_app(self, on_behalf_of=None):
         connected_apps = AppConnectionManager.instance().get_active_apps(self._app_id)
         if len(connected_apps):
@@ -60,10 +46,8 @@ class AppAuthConnection():
                 self.remove_extension_keys_that_are_not_connected()
                 self._app_key = new_app_key
                 self.extension_keys = []
-            if on_behalf_of is not None:
-                if not len(self.extension_keys):
-                    self.extension_keys = [self._app_key]
-                self.store_data(state='auth_wait')
+            self.extension_keys = [self._app_key]
+            self.store_data(state='auth_wait')
         else:
             app_id = self._app_id if on_behalf_of is None else on_behalf_of
             AppConnectionManager.get_connected_apps(app_id=app_id, device=self.is_probe_owner(),
@@ -73,27 +57,8 @@ class AppAuthConnection():
         def _set_keys_for_connected_app_callback(app_ids):
             app_ids = app_ids.get('result') if app_ids else []
             for app_id in app_ids:
-                if not self.is_probe_owner():
-                    existing_active_device = AppConnectionManager.instance().get_active_apps(app_id)
-                    if len(existing_active_device):
-                        AppConnectionManager.instance().add_active_app(app_id, self._app_id)
-                        self._app_key = self._listener.auth_key(extension_id=self._app_id, probe_id=app_id)
-                        self.extension_keys = [self._app_key]
-                        self.store_data(state='auth_wait')
-                        break
                 AppConnectionManager.instance().add_active_app(app_id, self._app_id)
         return _set_keys_for_connected_app_callback
-
-    # def get_set_keys_for_connected_probes_callback(self):
-    #     def _set_keys_for_connected_probes_callback(probes_list):
-    #         probes_list = probes_list.get('result') if probes_list is not None else []
-    #         for probe_id in probes_list:
-    #             key = self._listener.auth_key(extension_id=self.extension_id, probe_id=probe_id)
-    #             self.extension_keys.append(key)
-    #         if self.extension_keys:
-    #             #TODO: refactor
-    #             self.store_data(state='auth_wait')
-    #     return _set_keys_for_connected_probes_callback
 
     def set_app_connected(self, app_auth_data_callback):
         """
@@ -101,8 +66,9 @@ class AppAuthConnection():
         :param app_auth_data_callback: Callback will be called when auth data is available.
         """
         # Start listen to auth data changes
-        self._app_auth_data_callback = app_auth_data_callback
-        self._listener.subscribe(callback=self._on_connection_data)
+        if self._app_auth_data_callback is None:
+            self._app_auth_data_callback = app_auth_data_callback
+            self._listener.subscribe(callback=self._on_connection_data)
         if self.is_probe_owner():
             self._set_keys_for_connected_app()
             app_key_pattern = AppConnectionListener.app_key_pattern(app_id=self._app_id, app_type=self._app_type)
