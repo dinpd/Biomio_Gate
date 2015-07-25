@@ -76,7 +76,7 @@ class AppAuthConnection:
             self._set_keys_for_connected_app()
             app_key_pattern = AppConnectionListener.app_key_pattern(app_id=self._app_id, app_type=self._app_type)
             existing_keys = AuthStateStorage.instance().get_matching_keys(pattern=app_key_pattern)
-            if 'code_' in existing_keys[0]:
+            if len(existing_keys) and 'code_' in existing_keys[0]:
                 self._app_key = existing_keys[0]
             if self._app_key in existing_keys:
                 existing_keys.remove(self._app_key)
