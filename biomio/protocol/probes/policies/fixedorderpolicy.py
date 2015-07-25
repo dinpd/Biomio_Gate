@@ -30,7 +30,7 @@ class FixedOrderPolicy(IPolicy):
                 samples_num = props.get(FIELD_SAMPLES_NUM, None)
                 resource_item_list.append(create_resource_item(type_str=resource_item_type, samples=samples_num))
         #TODO: fixme
-        resource_item_list.append(create_resource_item('face-photo', 1))
+        resource_item_list.append(create_resource_item('face-photo', 3))
 
         return resource_item_list
 

@@ -99,6 +99,8 @@ class AppAuthConnection:
             self._set_keys_for_connected_app(on_behalf_of=on_behalf_of)
 
     def end_auth(self):
+        self._remove_disconnected_app_keys(clear_related_keys=False)
+        self.remove_extension_keys_that_are_not_connected()
         key_to_remove = self._app_key
         self._app_key = None
         AuthStateStorage.instance().remove_probe_data(key_to_remove)

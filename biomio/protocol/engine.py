@@ -209,6 +209,12 @@ class MessageHandler:
                 if current_probe_request.has_pending_probes():
                     next_state = STATE_GETTING_PROBES
                 else:
+                    message = e.protocol_instance.create_next_message(
+                        request_seq=e.request.header.seq,
+                        oid='probe',
+                        probeStatus='received'
+                    )
+                    e.protocol_instance.send_message(responce=message)
                     flow.set_probe_results(samples_by_probe_type=current_probe_request.get_samples_by_probe_type())
                     next_state = STATE_READY
                     e.protocol_instance.current_probe_request = None
