@@ -145,8 +145,7 @@ auth_states = {
         },
         {
             'name': 'retry',
-            'src': [STATE_AUTH_VERIFICATION_STARTED, STATE_AUTH_RESULTS_AVAILABLE, STATE_AUTH_TRAINING_STARTED,
-                    STATE_AUTH_TRAINING_INPROGRESS],
+            'src': [STATE_AUTH_VERIFICATION_STARTED, STATE_AUTH_RESULTS_AVAILABLE],
             'dst': STATE_AUTH_WAIT
         },
         {
@@ -365,18 +364,17 @@ class BioauthFlow:
                     ProbePluginManager.instance().get_plugin_by_name(probe_type).run_training, data)
                 if not isinstance(result, bool):
                     error = result.get('error')
-                    result = result.get(result)
+                    result = result.get('result')
                 if not result and error is not None:
-                    self._state_machine_instance.retry(bioauth_flow=self)
-                    self._store_state()
+                    self.start_training(self.app_id, ai_code)
                     break
                 else:
                     training_result = result or training_result
 
             logger.debug(msg='TRAINING RESULT: %s' % str(training_result))
-            self._state_machine_instance.training_results_available()
-            self._store_state()
             if error is None:
+                self._state_machine_instance.training_results_available()
+                self._store_state()
                 self.auth_connection.end_auth()
 
     def set_auth_results(self, result):
