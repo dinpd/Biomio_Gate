@@ -37,6 +37,9 @@ class AppAuthConnection:
     def _set_keys_for_connected_app(self, on_behalf_of=None):
         connected_apps = AppConnectionManager.instance().get_active_apps(self._app_id)
         if len(connected_apps):
+            existing_connected_app_apps = AppConnectionManager.instance().get_active_apps(connected_apps[0])
+            for connected_app in existing_connected_app_apps:
+                AppConnectionManager.instance().remove_active_app(connected_app, connected_apps[0])
             AppConnectionManager.instance().add_active_app(connected_apps[0], self._app_id)
             if self.is_probe_owner():
                 new_app_key = self._listener.auth_key(extension_id=connected_apps[0], probe_id=self._app_id)
@@ -73,6 +76,8 @@ class AppAuthConnection:
             self._set_keys_for_connected_app()
             app_key_pattern = AppConnectionListener.app_key_pattern(app_id=self._app_id, app_type=self._app_type)
             existing_keys = AuthStateStorage.instance().get_matching_keys(pattern=app_key_pattern)
+            if 'code_' in existing_keys[0]:
+                self._app_key = existing_keys[0]
             if self._app_key in existing_keys:
                 existing_keys.remove(self._app_key)
             AuthStateStorage.instance().remove_keys(keys=existing_keys)

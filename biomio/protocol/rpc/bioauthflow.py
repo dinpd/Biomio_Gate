@@ -145,7 +145,8 @@ auth_states = {
         },
         {
             'name': 'retry',
-            'src': [STATE_AUTH_VERIFICATION_STARTED, STATE_AUTH_RESULTS_AVAILABLE],
+            'src': [STATE_AUTH_VERIFICATION_STARTED, STATE_AUTH_RESULTS_AVAILABLE, STATE_AUTH_TRAINING_STARTED,
+                    STATE_AUTH_TRAINING_INPROGRESS],
             'dst': STATE_AUTH_WAIT
         },
         {
@@ -357,16 +358,26 @@ class BioauthFlow:
             self._store_state()
             ai_code = self.auth_connection.get_data(key=_PROBESTORE_AI_CODE_KEY)
             training_result = False
+            error = None
             for probe_type, samples in samples_by_probe_type.iteritems():
                 data = dict(try_type=probe_type, ai_code=ai_code, samples=samples, probe_id=self.app_id)
                 result = yield tornado.gen.Task(
                     ProbePluginManager.instance().get_plugin_by_name(probe_type).run_training, data)
-                training_result = result or training_result
+                if not isinstance(result, bool):
+                    error = result.get('error')
+                    result = result.get(result)
+                if not result and error is not None:
+                    self._state_machine_instance.retry(bioauth_flow=self)
+                    self._store_state()
+                    break
+                else:
+                    training_result = result or training_result
 
             logger.debug(msg='TRAINING RESULT: %s' % str(training_result))
             self._state_machine_instance.training_results_available()
             self._store_state()
-            self.auth_connection.end_auth()
+            if error is None:
+                self.auth_connection.end_auth()
 
     def set_auth_results(self, result):
         # TODO: make method private
