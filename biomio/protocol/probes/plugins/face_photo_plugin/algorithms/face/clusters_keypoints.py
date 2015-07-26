@@ -12,7 +12,7 @@ class ClustersMatchingDetector(KeypointsObjectDetector):
         self._database = []
         self._etalon = []
         self._prob = 100
-        self._coff = 0.75
+        self._coff = 0.70
 
     def threshold(self):
         return self.kodsettings.probability

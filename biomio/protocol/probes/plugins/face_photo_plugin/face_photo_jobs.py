@@ -147,13 +147,14 @@ def store_test_photo_helper(image_paths):
     if not os.path.exists(TEST_PHOTO_PATH):
         os.makedirs(TEST_PHOTO_PATH)
     else:
-        for the_file in os.listdir(TEST_PHOTO_PATH):
-            file_path = os.path.join(TEST_PHOTO_PATH, the_file)
-            try:
-                if os.path.isfile(file_path):
-                    os.unlink(file_path)
-            except Exception, e:
-                print e
+        pass
+        # for the_file in os.listdir(TEST_PHOTO_PATH):
+        #     file_path = os.path.join(TEST_PHOTO_PATH, the_file)
+        #     try:
+        #         if os.path.isfile(file_path):
+        #             os.unlink(file_path)
+        #     except Exception, e:
+        #         print e
 
     for path in image_paths:
         shutil.copyfile(path, os.path.join(TEST_PHOTO_PATH, os.path.basename(path)))

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Biomio Policy Try Type</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+</head>
+<body>
+<div>
+    <br><br>
+    <input type="button" class="try_type_button" data-try-type="face-photo" value="Switch to Face recognition"><br><br>
+    <input type="button" class="try_type_button" data-try-type="fp-scanner" value="Switch to Finger recognition"><br>
+    <div id="info_area" hidden></div>
+</div>
+<script>
+    $('.try_type_button').on('click', function(e){
+        e.preventDefault();
+        var info_area = $('#info_area');
+        info_area.hide();
+        var try_type = $(e.currentTarget).attr('data-try-type');
+        $.ajax({
+            url: 'http://gate.biom.io/set_try_type/' + try_type,
+            type: 'post',
+            data:{},
+            success: function(){
+                info_area.text('Try type successfully changed.');
+                info_area.show();
+            },
+            error: function(error){
+                if(error.responseText.length == 0){
+                    info_area.text('Try type successfully changed.');
+                }else{
+                    info_area.html(error.responseText);
+                }
+                info_area.show();
+            }
+        });
+    });
+</script>
+</body>
+</html>
