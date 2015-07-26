@@ -87,7 +87,7 @@ class SetTryTypeHandler(tornado.web.RequestHandler):
     def post(self, try_type, *args, **kwargs):
         logger.info('Received new try_type - %s' % try_type)
         from biomio.protocol.settings import settings
-        settings.policy_try_type = try_type
+        settings.policy_try_type = str(try_type)
 
 
 class Application(tornado.web.Application):
