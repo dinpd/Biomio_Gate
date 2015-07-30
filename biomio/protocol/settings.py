@@ -21,6 +21,8 @@ DEFAULT_REDIS_MAX_MEMORY = '100000000'
 DEFAULT_REDIS_MEMORY_SAMPLES = '5'
 DEFAULT_REDIS_EVICTION_POLICY = 'allkeys-lru'
 
+DEFAULT_KEYPOINTS_COFF = 0.70
+
 APNS_PRODUCTION_PEM = os.path.join(APP_ROOT, 'push_prod.pem')
 APNS_DEV_PEM = os.path.join(APP_ROOT, 'push_dev.pem')
 
@@ -56,6 +58,8 @@ define('redis_max_memory_samples', default=DEFAULT_REDIS_MEMORY_SAMPLES, help='R
 define('redis_eviction_policy', default=DEFAULT_REDIS_EVICTION_POLICY, help='Data eviction policy.')
 
 define('policy_try_type', default=DEFAULT_POLICY_TRY_TYPE, help='Probe policy try type.')
+
+define('keypoints_coff', default=DEFAULT_KEYPOINTS_COFF, help='Keypoints coff.')
 
 
 # Setting REST client options
