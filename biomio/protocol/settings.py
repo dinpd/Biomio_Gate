@@ -21,7 +21,7 @@ DEFAULT_REDIS_MAX_MEMORY = '100000000'
 DEFAULT_REDIS_MEMORY_SAMPLES = '5'
 DEFAULT_REDIS_EVICTION_POLICY = 'allkeys-lru'
 
-DEFAULT_KEYPOINTS_COFF = 0.70
+DEFAULT_KEYPOINTS_COFF = '0.70'
 
 APNS_PRODUCTION_PEM = os.path.join(APP_ROOT, 'push_prod.pem')
 APNS_DEV_PEM = os.path.join(APP_ROOT, 'push_dev.pem')
@@ -67,5 +67,6 @@ define('ai_rest_url', default=DEFAULT_AI_REST_URL, help='REST url to communicate
 
 # options.logging = None
 parse_config_file(path=os.path.join(APP_ROOT, 'biomio.conf'))
+parse_config_file(path=os.path.join(APP_ROOT, 'keypoints.conf'))
 settings = options
 

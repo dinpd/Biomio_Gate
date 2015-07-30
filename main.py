@@ -95,6 +95,8 @@ class SetKeypointsCoffHandler(tornado.web.RequestHandler):
         logger.info('Received new keypoints coff - %s' % coff)
         from biomio.protocol.settings import settings
         settings.keypoints_coff = str(coff)
+        with open('keypoints.conf', 'w') as f:
+            f.write('keypoints_coff=%s' % str(coff))
 
 
 class Application(tornado.web.Application):
