@@ -93,10 +93,8 @@ class SetTryTypeHandler(tornado.web.RequestHandler):
 class SetKeypointsCoffHandler(tornado.web.RequestHandler):
     def post(self, coff, *args, **kwargs):
         logger.info('Received new keypoints coff - %s' % coff)
-        from biomio.protocol.settings import settings
-        settings.keypoints_coff = str(coff)
         with open('keypoints.conf', 'w') as f:
-            f.write('keypoints_coff=%s' % str(coff))
+            f.write(str(coff))
 
 
 class Application(tornado.web.Application):
@@ -113,7 +111,7 @@ class HttpApplication(tornado.web.Application):
             (r'/training.*', InitialProbeRestHandler),
             (r'/new_email/(?P<email>[\w.%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4})', NewEmailPGPKeysHandler),
             (r'/set_try_type/(?P<try_type>[\w\-]+)', SetTryTypeHandler),
-            (r'/set_keypoints_coff/(?P<coff>[\w\-]+)', SetKeypointsCoffHandler)
+            (r'/set_keypoints_coff/(?P<coff>\d+\.\d{2})', SetKeypointsCoffHandler)
         ]
         tornado.web.Application.__init__(self, handlers)
 

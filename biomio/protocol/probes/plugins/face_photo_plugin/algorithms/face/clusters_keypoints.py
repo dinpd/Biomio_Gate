@@ -4,7 +4,6 @@ from biomio.algorithms.algorithms.clustering.forel import FOREL
 from biomio.algorithms.algorithms.clustering.kmeans import KMeans
 from biomio.algorithms.algorithms.cascades.classifiers import CascadeROIDetector
 from biomio.algorithms.algorithms.recognition.keypoints import KeypointsObjectDetector
-from biomio.protocol.settings import settings
 
 
 class ClustersMatchingDetector(KeypointsObjectDetector):
@@ -13,7 +12,8 @@ class ClustersMatchingDetector(KeypointsObjectDetector):
         self._database = []
         self._etalon = []
         self._prob = 100
-        self._coff = float(settings.keypoints_coff)
+        with open('keypoints.conf', 'r') as f:
+            self._coff = f.read().replace('\n', '')
 
     def threshold(self):
         return self.kodsettings.probability
