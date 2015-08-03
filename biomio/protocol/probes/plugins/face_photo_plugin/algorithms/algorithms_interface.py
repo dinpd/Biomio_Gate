@@ -118,7 +118,7 @@ class AlgorithmsInterface:
                     record['type'] = "Invalid algorithm settings"
                     details = dict()
                     details['param'] = 'data'
-                    details['message'] = "Such data %s doesn't exists." % kwargs['data']
+                    details['message'] = "Such data %s doesn't exists." % image_path
                     record['details'] = details
                     logger.algo_logger.info('Error::%s::%s' % (record['type'], details['message']))
                     return record
@@ -132,7 +132,7 @@ class AlgorithmsInterface:
                 details['param'] = 'data'
                 details['message'] = "Problem with training images detection."
                 record['details'] = details
-                logger.algo_logger.info("Problem with training images detection.")
+                logger.algo_logger.info("Internal Training Error::Problem with training images detection.")
                 result_list.append(record)
             res = algorithm.update_database()
             if not res:
@@ -142,17 +142,18 @@ class AlgorithmsInterface:
                 details['param'] = 'data'
                 details['message'] = "Problem with updating of the dynamic threshold."
                 record['details'] = details
-                logger.algo_logger.info("Problem with updating of the dynamic threshold.")
+                logger.algo_logger.info("Internal Training Error::Problem with updating of the dynamic threshold.")
                 return record
             sources = algorithm.exportSources()
-            record['status'] = "update"
-            record['algoID'] = kwargs['algoID']
-            record['userID'] = kwargs['userID']
-            record['database'] = sources
+            res_record = dict()
+            res_record['status'] = "update"
+            res_record['algoID'] = kwargs['algoID']
+            res_record['userID'] = kwargs['userID']
+            res_record['database'] = sources
             logger.algo_logger.info('Status::The database updated.')
             if len(result_list) == 0:
-                return record
-            result_list.append(record)
+                return res_record
+            result_list.append(res_record)
             return result_list
         elif kwargs['action'] == 'verification':
             if not kwargs.get('database', None):
