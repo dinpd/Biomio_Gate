@@ -110,6 +110,7 @@ class AlgorithmsInterface:
         if kwargs['action'] == 'education':
             if kwargs.get('database', None):
                 algorithm.importSources(kwargs['database'])
+            count = 0
             for image_path in kwargs['data']:
                 imgobj = loadImageObject(image_path)
                 if not imgobj:
@@ -121,7 +122,19 @@ class AlgorithmsInterface:
                     record['details'] = details
                     logger.algo_logger.info('Error::%s::%s' % (record['type'], details['message']))
                     return record
-                algorithm.addSource(imgobj)
+                res = algorithm.addSource(imgobj)
+                if res:
+                    count += 1
+            result_list = []
+            if count < len(kwargs['data']) / 2.0:
+                record['status'] = "error"
+                record['type'] = "Internal Training Error"
+                details = dict()
+                details['param'] = 'data'
+                details['message'] = "Problem with training images detection."
+                record['details'] = details
+                logger.algo_logger.info("Problem with training images detection.")
+                result_list.append(record)
             res = algorithm.update_database()
             if not res:
                 record['status'] = "error"
@@ -138,7 +151,10 @@ class AlgorithmsInterface:
             record['userID'] = kwargs['userID']
             record['database'] = sources
             logger.algo_logger.info('Status::The database updated.')
-            return record
+            if len(result_list) == 0:
+                return record
+            result_list.append(record)
+            return result_list
         elif kwargs['action'] == 'verification':
             if not kwargs.get('database', None):
                 record['status'] = "data_request"
