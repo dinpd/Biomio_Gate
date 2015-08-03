@@ -21,12 +21,15 @@ DEFAULT_REDIS_MAX_MEMORY = '100000000'
 DEFAULT_REDIS_MEMORY_SAMPLES = '5'
 DEFAULT_REDIS_EVICTION_POLICY = 'allkeys-lru'
 
+
 APNS_PRODUCTION_PEM = os.path.join(APP_ROOT, 'push_prod.pem')
 APNS_DEV_PEM = os.path.join(APP_ROOT, 'push_dev.pem')
 
 DEFAULT_AI_REST_URL = 'http://biom.io/backups/beta2/php/commands.php/%s'
 
 DEFAULT_REST_PORT = 8888
+
+DEFAULT_POLICY_TRY_TYPE = 'face-photo'
 
 # Setting Tornado options
 define('connection_timeout', default=DEFAULT_CONNECTION_TTL,
@@ -52,6 +55,8 @@ define('redis_max_memory', default=DEFAULT_REDIS_MAX_MEMORY, help='Redis max mem
 define('redis_max_memory_samples', default=DEFAULT_REDIS_MEMORY_SAMPLES, help='Redis number of samples to check '
                                                                               'for every eviction.')
 define('redis_eviction_policy', default=DEFAULT_REDIS_EVICTION_POLICY, help='Data eviction policy.')
+
+define('policy_try_type', default=DEFAULT_POLICY_TRY_TYPE, help='Probe policy try type.')
 
 
 # Setting REST client options

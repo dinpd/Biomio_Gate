@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Biomio Policy Try Type</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+</head>
+<body>
+<div>
+    <br><br>
+    <input type="button" class="try_type_button" data-try-type="face-photo" value="Switch to Face recognition"><br><br>
+    <input type="button" class="try_type_button" data-try-type="fp-scanner"
+           value="Switch to Finger recognition"><br><br>
+    <input type="text" size="10" id="keypoints_coff_val" placeholder="E.g. 0.70"><br>
+    <input type="button" id="set_keypoints_coff_btn" value="Set Keypoints Coff Value"><br><br>
+
+    <div id="info_area" hidden></div>
+</div>
+<script>
+    $('.try_type_button').on('click', function (e) {
+        e.preventDefault();
+        var info_area = $('#info_area');
+        info_area.hide();
+        var try_type = $(e.currentTarget).attr('data-try-type');
+        $.ajax({
+            url: 'http://gate.biom.io/set_try_type/' + try_type,
+            type: 'post',
+            data: {},
+            success: function () {
+                info_area.text('Try type successfully changed.');
+                info_area.show();
+            },
+            error: function (error) {
+                if (error.responseText.length == 0) {
+                    info_area.text('Try type successfully changed.');
+                } else {
+                    info_area.html(error.responseText);
+                }
+                info_area.show();
+            }
+        });
+    });
+    $('#set_keypoints_coff_btn').on('click', function (e) {
+        e.preventDefault();
+        var coff_val = $('#keypoints_coff_val').val();
+        var info_area = $('#info_area');
+        info_area.hide();
+        $.ajax({
+            url: 'http://gate.biom.io/set_keypoints_coff/' + coff_val,
+            type: 'post',
+            data: {},
+            success: function () {
+                info_area.text('Keypoints Coff successfully changed.');
+                info_area.show();
+            },
+            error: function (error) {
+                if (error.responseText.length == 0) {
+                    info_area.text('Keypoints Coff successfully changed.');
+                } else {
+                    info_area.html(error.responseText);
+                }
+                info_area.show();
+            }
+        });
+    });
+</script>
+</body>
+</html>

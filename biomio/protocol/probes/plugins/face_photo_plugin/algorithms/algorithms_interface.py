@@ -123,7 +123,17 @@ class AlgorithmsInterface:
                     logger.algo_logger.info('Error::%s::%s' % (record['type'], details['message']))
                     return record
                 img_list.append(imgobj)
-            algorithm.addSources(img_list)
+            count = algorithm.addSources(img_list)
+            result_list = []
+            if count < len(kwargs['data']) / 2.0:
+                record['status'] = "error"
+                record['type'] = "Internal Training Error"
+                details = dict()
+                details['param'] = 'data'
+                details['message'] = "Problem with training images detection."
+                record['details'] = details
+                logger.algo_logger.info("Problem with training images detection.")
+                result_list.append(record)
             res = algorithm.update_database()
             if not res:
                 record['status'] = "error"
@@ -140,7 +150,10 @@ class AlgorithmsInterface:
             record['userID'] = kwargs['userID']
             record['database'] = sources
             logger.algo_logger.info('Status::The database updated.')
-            return record
+            if len(result_list) == 0:
+                return record
+            result_list.append(record)
+            return result_list
         elif kwargs['action'] == 'verification':
             if not kwargs.get('database', None):
                 record['status'] = "data_request"

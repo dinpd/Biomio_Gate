@@ -10,7 +10,8 @@ import json
 import requests
 from requests.exceptions import HTTPError
 from biomio.constants import REDIS_PROBE_RESULT_KEY, REDIS_RESULTS_COUNTER_KEY, REDIS_PARTIAL_RESULTS_KEY, \
-    TRAINING_DATA_TABLE_CLASS_NAME, REDIS_JOB_RESULTS_ERROR, REST_REGISTER_BIOMETRICS, get_ai_training_response
+    TRAINING_DATA_TABLE_CLASS_NAME, REDIS_JOB_RESULTS_ERROR, REST_REGISTER_BIOMETRICS, get_ai_training_response, \
+    REDIS_UPDATE_TRAINING_KEY
 from biomio.mysql_storage.mysql_data_store_interface import MySQLDataStoreInterface
 from biomio.protocol.storage.redis_storage import RedisStorage
 from biomio.protocol.probes.plugins.face_photo_plugin.algorithms.algorithms_interface import AlgorithmsInterface
@@ -34,11 +35,7 @@ def verification_job(image, probe_id, settings, callback_code):
         worker_logger.info('Job interrupted because of job_results_error key existence.')
         return
     result = False
-    database = MySQLDataStoreInterface.get_object(table_name=TRAINING_DATA_TABLE_CLASS_NAME, object_id=probe_id)
-    if database is not None:
-        database = cPickle.loads(base64.b64decode(database.data))
-    else:
-        database = {}
+    database = _get_algo_db(probe_id=probe_id)
     settings.update({'database': database})
     settings.update({'action': 'verification'})
     temp_image_path = tempfile.mkdtemp(dir=ALGO_ROOT)
@@ -138,6 +135,11 @@ def store_verification_results(result, callback_code):
     RedisStorage.persistence_instance().store_data(key=REDIS_PROBE_RESULT_KEY % callback_code, result=result)
 
 
+def _get_algo_db(probe_id):
+    database = MySQLDataStoreInterface.get_object(table_name=TRAINING_DATA_TABLE_CLASS_NAME, object_id=probe_id)
+    return cPickle.loads(base64.b64decode(database.data)) if database is not None else {}
+
+
 def store_test_photo_helper(image_paths):
     import shutil
     import os
@@ -147,13 +149,14 @@ def store_test_photo_helper(image_paths):
     if not os.path.exists(TEST_PHOTO_PATH):
         os.makedirs(TEST_PHOTO_PATH)
     else:
-        for the_file in os.listdir(TEST_PHOTO_PATH):
-            file_path = os.path.join(TEST_PHOTO_PATH, the_file)
-            try:
-                if os.path.isfile(file_path):
-                    os.unlink(file_path)
-            except Exception, e:
-                print e
+        pass
+        # for the_file in os.listdir(TEST_PHOTO_PATH):
+        #     file_path = os.path.join(TEST_PHOTO_PATH, the_file)
+        #     try:
+        #         if os.path.isfile(file_path):
+        #             os.unlink(file_path)
+        #     except Exception, e:
+        #         print e
 
     for path in image_paths:
         shutil.copyfile(path, os.path.join(TEST_PHOTO_PATH, os.path.basename(path)))
@@ -191,6 +194,9 @@ def training_job(images, probe_id, settings, callback_code, try_type, ai_code):
     result = False
     error = None
     settings.update({'action': 'education'})
+    if RedisStorage.persistence_instance().exists(key=REDIS_UPDATE_TRAINING_KEY % probe_id):
+        settings.update({'database': _get_algo_db(probe_id=probe_id)})
+        RedisStorage.persistence_instance().delete_data(key=REDIS_UPDATE_TRAINING_KEY % probe_id)
     temp_image_path = tempfile.mkdtemp(dir=ALGO_ROOT)
     try:
         image_paths = []
@@ -261,7 +267,8 @@ def training_job(images, probe_id, settings, callback_code, try_type, ai_code):
         worker_logger.exception(e)
     finally:
         shutil.rmtree(temp_image_path)
-        if error is not None :
+        if error is not None:
+            RedisStorage.persistence_instance().store_data(key=REDIS_UPDATE_TRAINING_KEY % probe_id, error=error)
             result = dict(result=False, error=error if error is not None else '')
             RedisStorage.persistence_instance().store_data(key=REDIS_PROBE_RESULT_KEY % callback_code, result=result)
             worker_logger.info('Job was finished with internal algorithm error %s ' % error)
