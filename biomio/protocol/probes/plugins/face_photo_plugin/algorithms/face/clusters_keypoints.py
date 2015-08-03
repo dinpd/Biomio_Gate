@@ -13,7 +13,7 @@ class ClustersMatchingDetector(KeypointsObjectDetector):
         self._etalon = []
         self._prob = 100
         with open('keypoints.conf', 'r') as f:
-            self._coff = f.read().replace('\n', '')
+            self._coff = float(f.read().replace('\n', ''))
 
     def threshold(self):
         return self.kodsettings.probability
