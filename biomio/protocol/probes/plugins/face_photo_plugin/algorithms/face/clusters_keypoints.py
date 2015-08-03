@@ -67,7 +67,7 @@ class ClustersMatchingDetector(KeypointsObjectDetector):
         descriptors = []
         active_clusters = 0
         for cluster in clusters:
-            desc = detector.computeImage(data['roi'], cluster['items'])
+            desc = detector.compute(data['roi'], cluster['items'])
             curr_cluster = desc['descriptors']
             descriptors.append(curr_cluster)
             if curr_cluster is not None and len(curr_cluster) > 0:
