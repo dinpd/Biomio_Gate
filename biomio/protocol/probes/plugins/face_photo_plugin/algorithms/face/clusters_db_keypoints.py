@@ -1,12 +1,11 @@
 from __future__ import absolute_import
-
-import itertools
-import numpy
-import logger
-from biomio.algorithms.algorithms.features.matchers import Matcher, BruteForceMatcherType
 from biomio.protocol.probes.plugins.face_photo_plugin.algorithms.face.clusters_keypoints import ClustersMatchingDetector
 from biomio.algorithms.algorithms.cvtools.types import listToNumpy_ndarray, numpy_ndarrayToList
+from biomio.algorithms.algorithms.features import matcherForDetector, dtypeForDetector
 from biomio.algorithms.algorithms.recognition.keypoints import verifying
+from biomio.algorithms.algorithms.features.matchers import Matcher
+import itertools
+import logger
 
 
 class ClustersDBMatchingDetector(ClustersMatchingDetector):
@@ -62,8 +61,9 @@ class ClustersDBMatchingDetector(ClustersMatchingDetector):
             }
 
     def _probability(self, matcher, source, test):
-        matches = matcher.knnMatch(listToNumpy_ndarray(test, numpy.uint8),
-                                   listToNumpy_ndarray(source, numpy.uint8), k=1)
+        dtype = dtypeForDetector(self.kodsettings.detector_type)
+        matches = matcher.knnMatch(listToNumpy_ndarray(test, dtype),
+                                   listToNumpy_ndarray(source, dtype), k=1)
         ms = sum(
             itertools.imap(
                 lambda v: len(v) >= 1 and v[0].distance < self.kodsettings.neighbours_distance, matches
@@ -73,7 +73,7 @@ class ClustersDBMatchingDetector(ClustersMatchingDetector):
 
     @verifying
     def verify(self, data):
-        matcher = Matcher(BruteForceMatcherType)
+        matcher = Matcher(matcherForDetector(self.kodsettings.detector_type))
         tprob = 0
         for d in self._database:
             prob = [0, 0]

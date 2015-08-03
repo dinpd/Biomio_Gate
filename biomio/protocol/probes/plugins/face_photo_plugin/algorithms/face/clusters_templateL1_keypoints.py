@@ -1,11 +1,12 @@
 from __future__ import absolute_import
-import itertools
-import numpy
-import logger
-from biomio.algorithms.algorithms.features.matchers import Matcher, BruteForceMatcherType
 from biomio.protocol.probes.plugins.face_photo_plugin.algorithms.face.clusters_keypoints import ClustersMatchingDetector
 from biomio.algorithms.algorithms.cvtools.types import listToNumpy_ndarray, numpy_ndarrayToList
+from biomio.algorithms.algorithms.features import matcherForDetector, dtypeForDetector
 from biomio.algorithms.algorithms.recognition.keypoints import verifying
+from biomio.algorithms.algorithms.features.matchers import Matcher
+import itertools
+import logger
+import numpy
 
 
 class ClustersTemplateL1MatchingDetector(ClustersMatchingDetector):
@@ -34,7 +35,7 @@ class ClustersTemplateL1MatchingDetector(ClustersMatchingDetector):
             self._etalon = [[] if cluster is None else [(desc, 1) for desc in cluster]
                             for cluster in data['clusters']]
         else:
-            matcher = Matcher(BruteForceMatcherType)
+            matcher = Matcher(matcherForDetector(self.kodsettings.detector_type))
 
             for index, et_cluster in enumerate(self._etalon):
                 dt_cluster = data['clusters'][index]
@@ -49,8 +50,9 @@ class ClustersTemplateL1MatchingDetector(ClustersMatchingDetector):
                     if ob_cluster is None or len(ob_cluster) == 0:
                         continue
 
-                    matches1 = matcher.knnMatch(listToNumpy_ndarray(dt_cluster),
-                                                listToNumpy_ndarray(ob_cluster), k=5)
+                    dtype = dtypeForDetector(self.kodsettings.detector_type)
+                    matches1 = matcher.knnMatch(listToNumpy_ndarray(dt_cluster, dtype),
+                                                listToNumpy_ndarray(ob_cluster, dtype), k=5)
 
                     for v in matches1:
                         if len(v) >= 1:
@@ -126,7 +128,7 @@ class ClustersTemplateL1MatchingDetector(ClustersMatchingDetector):
         return self.verify_template_L1(data)
 
     def verify_template_L1(self, data):
-        matcher = Matcher(BruteForceMatcherType)
+        matcher = Matcher(matcherForDetector(self.kodsettings.detector_type))
         count = 0
         prob = 0
         logger.algo_logger.debug("Image: " + data['path'])
@@ -142,10 +144,11 @@ class ClustersTemplateL1MatchingDetector(ClustersMatchingDetector):
                 continue
 
             if len(et_cluster) > 0 and len(dt_cluster) > 0:
-                matches1 = matcher.knnMatch(listToNumpy_ndarray(et_cluster, numpy.uint8),
-                                            listToNumpy_ndarray(dt_cluster, numpy.uint8), k=2)
-                matches2 = matcher.knnMatch(listToNumpy_ndarray(dt_cluster, numpy.uint8),
-                                            listToNumpy_ndarray(et_cluster, numpy.uint8), k=2)
+                dtype = dtypeForDetector(self.kodsettings.detector_type)
+                matches1 = matcher.knnMatch(listToNumpy_ndarray(et_cluster, dtype),
+                                            listToNumpy_ndarray(dt_cluster, dtype), k=2)
+                matches2 = matcher.knnMatch(listToNumpy_ndarray(dt_cluster, dtype),
+                                            listToNumpy_ndarray(et_cluster, dtype), k=2)
 
                 ms = [et_cluster[x.queryIdx] for x in itertools.ifilter(
                         lambda (m, n): m.queryIdx == n.trainIdx and m.trainIdx == n.queryIdx, itertools.product(

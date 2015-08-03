@@ -1,12 +1,12 @@
 from __future__ import absolute_import
-import itertools
-import sys
-import numpy
-import logger
-from biomio.algorithms.algorithms.features.matchers import Matcher, BruteForceMatcherType
 from biomio.protocol.probes.plugins.face_photo_plugin.algorithms.face.clusters_keypoints import ClustersMatchingDetector
 from biomio.algorithms.algorithms.cvtools.types import listToNumpy_ndarray, numpy_ndarrayToList
+from biomio.algorithms.algorithms.features import matcherForDetector, dtypeForDetector
 from biomio.algorithms.algorithms.recognition.keypoints import verifying
+from biomio.algorithms.algorithms.features.matchers import Matcher
+import itertools
+import logger
+import sys
 
 
 class ClustersTemplateL0MatchingDetector(ClustersMatchingDetector):
@@ -26,7 +26,7 @@ class ClustersTemplateL0MatchingDetector(ClustersMatchingDetector):
         if len(self._etalon) == 0:
             self._etalon = data['clusters']
         else:
-            matcher = Matcher(BruteForceMatcherType)
+            matcher = Matcher(matcherForDetector(self.kodsettings.detector_type))
             for index, et_cluster in enumerate(self._etalon):
                 dt_cluster = data['clusters'][index]
                 if et_cluster is None or len(et_cluster) == 0:
@@ -34,8 +34,11 @@ class ClustersTemplateL0MatchingDetector(ClustersMatchingDetector):
                 elif dt_cluster is None or len(dt_cluster) == 0:
                     self._etalon[index] = et_cluster
                 else:
-                    matches1 = matcher.knnMatch(et_cluster, dt_cluster, k=3)
-                    matches2 = matcher.knnMatch(dt_cluster, et_cluster, k=3)
+                    dtype = dtypeForDetector(self.kodsettings.detector_type)
+                    matches1 = matcher.knnMatch(listToNumpy_ndarray(et_cluster, dtype),
+                                                listToNumpy_ndarray(dt_cluster, dtype), k=3)
+                    matches2 = matcher.knnMatch(listToNumpy_ndarray(dt_cluster, dtype),
+                                                listToNumpy_ndarray(et_cluster, dtype), k=3)
                     good = list(itertools.chain.from_iterable(itertools.imap(
                         lambda(x, _): (et_cluster[x.queryIdx], dt_cluster[x.trainIdx]), itertools.ifilter(
                             lambda(m, n): m.queryIdx == n.trainIdx and m.trainIdx == n.queryIdx, itertools.product(
@@ -100,7 +103,7 @@ class ClustersTemplateL0MatchingDetector(ClustersMatchingDetector):
         return self.verify_template_L0(data)
 
     def verify_template_L0(self, data):
-        matcher = Matcher(BruteForceMatcherType)
+        matcher = Matcher(matcherForDetector(self.kodsettings.detector_type))
         prob = 0
         logger.algo_logger.debug("Image: " + data['path'])
         logger.algo_logger.debug("Template size: ")
@@ -117,10 +120,11 @@ class ClustersTemplateL0MatchingDetector(ClustersMatchingDetector):
                                          str(len(et_cluster) / (1.0 * summ)) + ")")
                 continue
             if len(et_cluster) > 0 and len(dt_cluster) > 0:
-                matches1 = matcher.knnMatch(listToNumpy_ndarray(et_cluster, numpy.uint8),
-                                            listToNumpy_ndarray(dt_cluster, numpy.uint8), k=2)
-                matches2 = matcher.knnMatch(listToNumpy_ndarray(dt_cluster, numpy.uint8),
-                                            listToNumpy_ndarray(et_cluster, numpy.uint8), k=2)
+                dtype = dtypeForDetector(self.kodsettings.detector_type)
+                matches1 = matcher.knnMatch(listToNumpy_ndarray(et_cluster, dtype),
+                                            listToNumpy_ndarray(dt_cluster, dtype), k=2)
+                matches2 = matcher.knnMatch(listToNumpy_ndarray(dt_cluster, dtype),
+                                            listToNumpy_ndarray(et_cluster, dtype), k=2)
                 ms = [
                     x for (x, _) in itertools.ifilter(
                         lambda(m, n): m.queryIdx == n.trainIdx and m.trainIdx == n.queryIdx, itertools.product(

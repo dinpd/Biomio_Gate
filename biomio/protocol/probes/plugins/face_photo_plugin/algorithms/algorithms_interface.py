@@ -110,6 +110,7 @@ class AlgorithmsInterface:
         if kwargs['action'] == 'education':
             if kwargs.get('database', None):
                 algorithm.importSources(kwargs['database'])
+            img_list = []
             for image_path in kwargs['data']:
                 imgobj = loadImageObject(image_path)
                 if not imgobj:
@@ -121,7 +122,8 @@ class AlgorithmsInterface:
                     record['details'] = details
                     logger.algo_logger.info('Error::%s::%s' % (record['type'], details['message']))
                     return record
-                algorithm.addSource(imgobj)
+                img_list.append(imgobj)
+            algorithm.addSources(img_list)
             res = algorithm.update_database()
             if not res:
                 record['status'] = "error"
