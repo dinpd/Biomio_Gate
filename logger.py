@@ -16,33 +16,48 @@ logging.basicConfig(
 
 log_formatter = logging.Formatter('[%(asctime)s - %(name)s - %(levelname)s] - %(message).250s')
 
-worker_file_handler = logging.FileHandler(os.path.join(BIOMIO_LOGS_PATH, WORKER_LOG_NAME))
-worker_file_handler.setFormatter(log_formatter)
-
-console_handler = logging.StreamHandler()
-console_handler.setFormatter(log_formatter)
 
 worker_logger = logging.getLogger('worker')
 worker_logger.setLevel(settings.logging)
-worker_logger.addHandler(worker_file_handler)
-worker_logger.addHandler(console_handler)
-
-pony_orm_file_handler = logging.FileHandler(os.path.join(BIOMIO_LOGS_PATH, PONY_LOG_NAME))
-pony_orm_file_handler.setFormatter(log_formatter)
 
 pony_orm_logger = logging.getLogger('pony.orm')
 pony_orm_logger.setLevel(logging.INFO)
-pony_orm_logger.addHandler(pony_orm_file_handler)
-pony_orm_logger.addHandler(console_handler)
 
 pony_sql_logger = logging.getLogger('pony.orm.sql')
 pony_sql_logger.setLevel(logging.INFO)
-pony_sql_logger.addHandler(pony_orm_file_handler)
-pony_sql_logger.addHandler(console_handler)
-
-algo_file_handler = logging.FileHandler(os.path.join(BIOMIO_LOGS_PATH, ALGO_LOG_NAME))
-algo_file_handler.setFormatter(log_formatter)
 
 algo_logger = logging.getLogger('algorithms')
 algo_logger.setLevel(settings.logging)
-algo_logger.addHandler(algo_file_handler)
+
+if os.environ.get('SUPERVISOR_ENABLED') is not None:
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(log_formatter)
+    worker_logger.addHandler(console_handler)
+    pony_orm_logger.addHandler(console_handler)
+    pony_sql_logger.addHandler(console_handler)
+    algo_logger.addHandler(console_handler)
+else:
+    worker_file_handler = logging.FileHandler(os.path.join(BIOMIO_LOGS_PATH, WORKER_LOG_NAME))
+    worker_file_handler.setFormatter(log_formatter)
+    worker_logger.addHandler(worker_file_handler)
+
+    pony_orm_file_handler = logging.FileHandler(os.path.join(BIOMIO_LOGS_PATH, PONY_LOG_NAME))
+    pony_orm_file_handler.setFormatter(log_formatter)
+    pony_orm_logger.addHandler(pony_orm_file_handler)
+
+    pony_sql_logger.addHandler(pony_orm_file_handler)
+
+    algo_file_handler = logging.FileHandler(os.path.join(BIOMIO_LOGS_PATH, ALGO_LOG_NAME))
+    algo_file_handler.setFormatter(log_formatter)
+
+    algo_logger.addHandler(algo_file_handler)
+
+
+
+
+
+
+
+
+
+
