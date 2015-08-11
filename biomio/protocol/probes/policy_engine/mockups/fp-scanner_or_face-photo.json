@@ -1,0 +1,86 @@
+[
+  {
+    "conditions": {
+      "all": [
+        {
+          "name": "available_device_resources",
+          "operator": "contains_all",
+          "value": [
+            "fp-scanner"
+          ]
+        },
+        {
+          "name": "max_attempts",
+          "operator": "greater_than",
+          "value": 3
+        },
+        {
+          "name": "max_authentication_time",
+          "operator": "greater_than",
+          "value": 60
+        },
+        {
+          "name": "max_re_auth_time",
+          "operator": "less_than",
+          "value": 30
+        },
+        {
+          "name": "max_cer",
+          "operator": "greater_than",
+          "value": 1
+        }
+      ]
+    },
+    "actions": [
+      {
+        "name": "valid_plugins_found",
+        "params": {
+          "valid_plugins": "fp-scanner"
+        }
+      }
+    ]
+  },
+  {
+    "conditions": {
+      "all": [
+        {
+          "name": "available_device_resources",
+          "operator": "contains_all",
+          "value": [
+            "photo-cam",
+            "1024x768",
+            "2048x1536"
+          ]
+        },
+        {
+          "name": "max_attempts",
+          "operator": "greater_than",
+          "value": 1
+        },
+        {
+          "name": "max_authentication_time",
+          "operator": "greater_than",
+          "value": 15
+        },
+        {
+          "name": "max_re_auth_time",
+          "operator": "less_than",
+          "value": 60
+        },
+        {
+          "name": "max_cer",
+          "operator": "greater_than",
+          "value": 0
+        }
+      ]
+    },
+    "actions": [
+      {
+        "name": "valid_plugins_found",
+        "params": {
+          "valid_plugins": "face-photo"
+        }
+      }
+    ]
+  }
+]

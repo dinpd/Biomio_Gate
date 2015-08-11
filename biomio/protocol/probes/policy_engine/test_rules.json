@@ -1,0 +1,263 @@
+// "a & b & c"
+
+[
+  {
+    "conditions": {
+      "all": [
+        {
+          "name": "available_device_resources",
+          "operator": "contains_all",
+          "value": "<PLUGIN_A_RESOURCES_LIST>"
+        },
+        {
+          "name": "available_device_resources",
+          "operator": "contains_all",
+          "value": "<PLUGIN_B_RESOURCES_LIST>"
+        },
+        {
+          "name": "available_device_resources",
+          "operator": "contains_all",
+          "value": "<PLUGIN_C_RESOURCES_LIST>"
+        },
+        {
+          "name": "max_attempts",
+          "operator": "greater_than",
+          "value": "<PLUGIN_A_B_C_ATTEMPTS_COUNT>"
+        },
+        {
+          "name": "max_authentication_time",
+          "operator": "greater_than",
+          "value": "<PLUGIN_A_B_C__AUTH_TIME>"
+        },
+        {
+          "name": "max_re_auth_time",
+          "operator": "less_than",
+          "value": "<PLUGIN_A_B_C__LAST_AUTH_TIME>"
+        },
+        {
+          "name": "max_cer",
+          "operator": "greater_than",
+          "value": "<PLUGIN_A_B_C__CER>"
+        }
+      ]
+    },
+    "actions": [
+      {
+        "name": "valid_plugins_found",
+        "params": {
+          "valid_plugins": "PLUGIN_A_NAME, PLUGIN_B_NAME, PLUGIN_C_NAME"
+        }
+      }
+    ]
+  },
+  // (a | b) & c
+  // First a & c
+  {
+    "conditions": {
+      "all": [
+        {
+          "name": "available_device_resources",
+          "operator": "contains_all",
+          "value": "<PLUGIN_A_RESOURCES_LIST>"
+        },
+        {
+          "name": "available_device_resources",
+          "operator": "contains_all",
+          "value": "<PLUGIN_C_RESOURCES_LIST>"
+        },
+        {
+          "name": "max_attempts",
+          "operator": "greater_than",
+          "value": "<PLUGIN_A_C_ATTEMPTS_COUNT>"
+        },
+        {
+          "name": "max_authentication_time",
+          "operator": "greater_than",
+          "value": "<PLUGIN_A_C_AUTH_TIME>"
+        },
+        {
+          "name": "max_re_auth_time",
+          "operator": "less_than",
+          "value": "<PLUGIN_A_C_LAST_AUTH_TIME>"
+        },
+        {
+          "name": "max_cer",
+          "operator": "greater_than",
+          "value": "<PLUGIN_A_C_CER>"
+        }
+      ]
+    },
+    "actions": [
+      {
+        "name": "valid_plugins_found",
+        "params": {
+          "valid_plugins": "PLUGIN_A_NAME, PLUGIN_C_NAME"
+        }
+      }
+    ]
+  },
+  // Second b & c
+  {
+    "conditions": {
+      "all": [
+        {
+          "name": "available_device_resources",
+          "operator": "contains_all",
+          "value": "<PLUGIN_B_RESOURCES_LIST>"
+        },
+        {
+          "name": "available_device_resources",
+          "operator": "contains_all",
+          "value": "<PLUGIN_C_RESOURCES_LIST>"
+        },
+        {
+          "name": "max_attempts",
+          "operator": "greater_than",
+          "value": "<PLUGIN_B_C_ATTEMPTS_COUNT>"
+        },
+        {
+          "name": "max_authentication_time",
+          "operator": "greater_than",
+          "value": "<PLUGIN_B_C_AUTH_TIME>"
+        },
+        {
+          "name": "max_re_auth_time",
+          "operator": "less_than",
+          "value": "<PLUGIN_B_C_LAST_AUTH_TIME>"
+        },
+        {
+          "name": "max_cer",
+          "operator": "greater_than",
+          "value": "<PLUGIN_B_C_CER>"
+        }
+      ]
+    },
+    "actions": [
+      {
+        "name": "valid_plugins_found",
+        "params": {
+          "valid_plugins": "PLUGIN_B_NAME, PLUGIN_C_NAME"
+        }
+      }
+    ]
+  },
+  // a | b | c
+  // Separate rules...
+  {
+    "conditions": {
+      "all": [
+        {
+          "name": "available_device_resources",
+          "operator": "contains_all",
+          "value": "<PLUGIN_A_RESOURCES_LIST>"
+        },
+        {
+          "name": "max_attempts",
+          "operator": "greater_than",
+          "value": "<PLUGIN_A_ATTEMPTS_COUNT>"
+        },
+        {
+          "name": "max_authentication_time",
+          "operator": "greater_than",
+          "value": "<PLUGIN_A_AUTH_TIME>"
+        },
+        {
+          "name": "max_re_auth_time",
+          "operator": "less_than",
+          "value": "<PLUGIN_A_LAST_AUTH_TIME>"
+        },
+        {
+          "name": "max_cer",
+          "operator": "greater_than",
+          "value": "<PLUGIN_A_CER>"
+        }
+      ]
+    },
+    "actions": [
+      {
+        "name": "valid_plugins_found",
+        "params": {
+          "valid_plugins": "PLUGIN_A_NAME"
+        }
+      }
+    ]
+  },
+  {
+    "conditions": {
+      "all": [
+        {
+          "name": "available_device_resources",
+          "operator": "contains_all",
+          "value": "<PLUGIN_B_RESOURCES_LIST>"
+        },
+        {
+          "name": "max_attempts",
+          "operator": "greater_than",
+          "value": "<PLUGIN_B_ATTEMPTS_COUNT>"
+        },
+        {
+          "name": "max_authentication_time",
+          "operator": "greater_than",
+          "value": "<PLUGIN_B_AUTH_TIME>"
+        },
+        {
+          "name": "max_re_auth_time",
+          "operator": "less_than",
+          "value": "<PLUGIN_B_LAST_AUTH_TIME>"
+        },
+        {
+          "name": "max_cer",
+          "operator": "greater_than",
+          "value": "<PLUGIN_B_CER>"
+        }
+      ]
+    },
+    "actions": [
+      {
+        "name": "valid_plugins_found",
+        "params": {
+          "valid_plugins": "PLUGIN_B_NAME"
+        }
+      }
+    ]
+  },
+  {
+    "conditions": {
+      "all": [
+        {
+          "name": "available_device_resources",
+          "operator": "contains_all",
+          "value": "<PLUGIN_C_RESOURCES_LIST>"
+        },
+        {
+          "name": "max_attempts",
+          "operator": "greater_than",
+          "value": "<PLUGIN_C_ATTEMPTS_COUNT>"
+        },
+        {
+          "name": "max_authentication_time",
+          "operator": "greater_than",
+          "value": "<PLUGIN_C_AUTH_TIME>"
+        },
+        {
+          "name": "max_re_auth_time",
+          "operator": "less_than",
+          "value": "<PLUGIN_C_LAST_AUTH_TIME>"
+        },
+        {
+          "name": "max_cer",
+          "operator": "greater_than",
+          "value": "<PLUGIN_C_CER>"
+        }
+      ]
+    },
+    "actions": [
+      {
+        "name": "valid_plugins_found",
+        "params": {
+          "valid_plugins": "PLUGIN_C_NAME"
+        }
+      }
+    ]
+  }
+]

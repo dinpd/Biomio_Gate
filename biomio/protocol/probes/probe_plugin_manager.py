@@ -24,10 +24,12 @@ class ProbePluginManager:
         self._plugin_manager = PluginManager(categories_filter={'Default': IPlugin},
                                              plugin_locator=self._plugin_locator)
         self._plugin_manager.collectPlugins()
+        self._enabled_plugin_types = []
 
         for plugin_info in self._plugin_manager.getAllPlugins():
             if self.is_plugin_enabled(plugin_info.name):
                 self._plugin_manager.activatePluginByName(name=plugin_info.name)
+                self._enabled_plugin_types.append(plugin_info.name)
             else:
                 self._plugin_manager.deactivatePluginByName(name=plugin_info.name)
 
@@ -45,3 +47,6 @@ class ProbePluginManager:
     def get_plugin_by_name(self, probe_type):
         plugin_info = self._get_plugin_info_by_name(probe_type)
         return plugin_info.plugin_object
+
+    def get_enabled_plugin_types(self):
+        return self._enabled_plugin_types
