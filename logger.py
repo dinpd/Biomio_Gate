@@ -1,5 +1,6 @@
 import logging
 import os
+from logging.handlers import TimedRotatingFileHandler
 from biomio.protocol.settings import settings
 
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -32,22 +33,26 @@ algo_logger.setLevel(settings.logging)
 if os.environ.get('SUPERVISOR_ENABLED') is not None:
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(log_formatter)
+
     worker_logger.addHandler(console_handler)
     pony_orm_logger.addHandler(console_handler)
     pony_sql_logger.addHandler(console_handler)
     algo_logger.addHandler(console_handler)
 else:
-    worker_file_handler = logging.FileHandler(os.path.join(BIOMIO_LOGS_PATH, WORKER_LOG_NAME))
+    worker_file_handler = TimedRotatingFileHandler(filename=os.path.join(BIOMIO_LOGS_PATH, WORKER_LOG_NAME),
+                                                   when='d', interval=7, backupCount=3)
     worker_file_handler.setFormatter(log_formatter)
     worker_logger.addHandler(worker_file_handler)
 
-    pony_orm_file_handler = logging.FileHandler(os.path.join(BIOMIO_LOGS_PATH, PONY_LOG_NAME))
+    pony_orm_file_handler = TimedRotatingFileHandler(filename=os.path.join(BIOMIO_LOGS_PATH, PONY_LOG_NAME),
+                                                     when='d', interval=7, backupCount=3)
     pony_orm_file_handler.setFormatter(log_formatter)
     pony_orm_logger.addHandler(pony_orm_file_handler)
 
     pony_sql_logger.addHandler(pony_orm_file_handler)
 
-    algo_file_handler = logging.FileHandler(os.path.join(BIOMIO_LOGS_PATH, ALGO_LOG_NAME))
+    algo_file_handler = TimedRotatingFileHandler(filename=os.path.join(BIOMIO_LOGS_PATH, ALGO_LOG_NAME),
+                                                 when='d', interval=7, backupCount=3)
     algo_file_handler.setFormatter(log_formatter)
 
     algo_logger.addHandler(algo_file_handler)
