@@ -29,6 +29,7 @@ REDIS_PARTIAL_RESULTS_KEY = 'job_results_gatherer:%s'
 REDIS_JOB_RESULTS_ERROR = 'job_results_error:%s'
 REDIS_ACTIVE_DEVICES_KEY = 'active_devices:%s'
 REDIS_UPDATE_TRAINING_KEY = 'update_training:%s'
+REDIS_RESOURCES_KEY = 'device_resources:%s'
 
 # Other constants
 REDIS_CONFIG_MAX_MEMORY_OPTION_KEY = 'maxmemory'

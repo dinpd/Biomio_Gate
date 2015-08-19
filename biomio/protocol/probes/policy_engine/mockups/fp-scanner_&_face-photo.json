@@ -1,0 +1,14 @@
+[
+  {
+    "conditions": {
+      "all": [
+        {
+          "name": "aggregated_cer",
+          "operator": "less_than",
+          "value": 3
+        }
+      ]
+    },
+    "actions": []
+  }
+  ]

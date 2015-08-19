@@ -5,6 +5,7 @@ import logging
 from jsonschema import ValidationError
 import tornado.gen
 import greenado
+from biomio.protocol.data_stores.device_resources_store import DeviceResourcesDataStore
 
 from biomio.protocol.message import BiomioMessageBuilder
 from biomio.third_party.fysom import Fysom, FysomError
@@ -142,7 +143,7 @@ class MessageHandler:
     @staticmethod
     @verify_header
     def on_ack_message(e):
-        return STATE_READY
+        return STATE_GETTING_RESOURCES
 
     @staticmethod
     @verify_header
@@ -173,7 +174,7 @@ class MessageHandler:
 
         if Crypto.check_digest(key=key, data=header_str, digest=str(e.request.msg.key)):
             protocol_connection_established(protocol_instance=e.protocol_instance, app_id=app_id)
-            return STATE_READY
+            return STATE_GETTING_RESOURCES
 
         e.status = 'Handshake failed. Invalid signature.'
         return STATE_DISCONNECTED
@@ -227,11 +228,13 @@ class MessageHandler:
     @staticmethod
     @verify_header
     def on_resources(e):
+        resources_dict = {}
         for item in e.request.msg.data:
-            resource_type = str(item.rType)
-            logger.debug(msg='RESOURCES: %s available' % resource_type)
-            e.protocol_instance.available_resources.append(resource_type)
-        return STATE_REGISTRATION
+            resources_dict.update({str(item.rType):str(item.rProperties)})
+        logger.debug(msg='RESOURCES: %s available' % resources_dict)
+        e.protocol_instance.available_resources = resources_dict
+        DeviceResourcesDataStore.store_data(device_id=str(e.request.header.appId), **resources_dict)
+        return STATE_READY
 
 
 def handshake(e):
@@ -356,8 +359,17 @@ def getting_probe(e):
 
 
 def getting_resouces(e):
-    pass
-
+    app_id = str(e.request.header.appId)
+    existing_resources = DeviceResourcesDataStore.instance().get_data(device_id=app_id)
+    if existing_resources is not None:
+        e.protocol_instance.available_resources = existing_resources
+        return STATE_READY
+    else:
+        message = e.protocol_instance.create_next_message(
+            request_seq=e.request.header.seq,
+            oid='getResources'
+        )
+        e.protocol_instance.send_message(responce=message)
 
 def disconnect(e):
     # If status parameter passed to state change method
@@ -384,13 +396,13 @@ biomio_states = {
         {
             'name': 'clientHello',
             'src': STATE_CONNECTED,
-            'dst': [STATE_HANDSHAKE, STATE_REGISTRATION, STATE_GETTING_RESOURCES, STATE_DISCONNECTED],
+            'dst': [STATE_HANDSHAKE, STATE_REGISTRATION, STATE_DISCONNECTED],
             'decision': MessageHandler.on_client_hello_message
         },
         {
             'name': 'ack',
             'src': STATE_APP_REGISTERED,
-            'dst': [STATE_READY, STATE_DISCONNECTED],
+            'dst': [STATE_GETTING_RESOURCES, STATE_DISCONNECTED],
             'decision': MessageHandler.on_ack_message
         },
         {
@@ -402,7 +414,7 @@ biomio_states = {
         {
             'name': 'resources',
             'src': STATE_GETTING_RESOURCES,
-            'dst': [STATE_REGISTRATION, STATE_DISCONNECTED],
+            'dst': [STATE_READY, STATE_DISCONNECTED],
             'decision': MessageHandler.on_resources
         },
         {
@@ -420,7 +432,7 @@ biomio_states = {
         {
             'name': 'auth',
             'src': STATE_HANDSHAKE,
-            'dst': [STATE_READY, STATE_DISCONNECTED],
+            'dst': [STATE_GETTING_RESOURCES, STATE_DISCONNECTED],
             'decision': MessageHandler.on_auth_message
         },
         {
@@ -444,7 +456,7 @@ biomio_states = {
         'onready': ready,
         'onprobetrying': probe_trying,
         'onprobegetting': getting_probe,
-        'resourceget': getting_resouces,
+        'onresourceget': getting_resouces,
         'onchangestate': print_state_change
     }
 }
@@ -488,9 +500,7 @@ class BiomioProtocol:
         self.policy = None
         self.bioauth_flow = None
         self.current_probe_request = None
-        # self.available_resources = []
-        #TODO: resources hardcoded temporarely
-        self.available_resources = ["fp-scanner"]
+        self.available_resources = {}
 
         self.auth_items = []
 
