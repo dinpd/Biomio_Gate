@@ -70,14 +70,15 @@ BIOMIO_protocol_json_schema = {
             "type": "object",
             "required": ["rType", "rProperties"],
             "properties": {
-                "rType": {"enum": ["fp-scanner", "mic", "face-photo", "palm-photo"]},
+                "rType": {"enum": ["fp-scanner", "mic", "front-cam", "back-cam"]},
                 "rProperties": {"type": "string"}
             }
         },
         "resourceItem": {
             "type": "object",
-            "required": ["rType", "samples"],
+            "required": ["tType", "resource", "samples"],
             "properties": {
+                "tType": {"enum": ["fp", "face", "palm", "voice"]},
                 "resource": {"$ref": "#/definitions/resource"},
                 "samples": {"type": "number"}
             }
