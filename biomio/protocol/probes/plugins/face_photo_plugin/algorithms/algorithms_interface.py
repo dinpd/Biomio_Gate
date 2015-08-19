@@ -23,22 +23,44 @@ class AlgorithmsInterface:
 
         :param algoID: Unique algorithm identificator
                 001     - Verification algorithms
-                001001  - Clustering Matching Verification algorithm
+                00101   - Clustering Matching Verification algorithm
                             without creating template
-                001002  - Clustering Matching Verification algorithm
+                        001011 - ... based on openCV BRISK Features Detector
+                        001012 - ... based on openCV ORB Features Detector
+                        001013 - ... based on openCV SURF Features Detector
+                        001014 - ... based on mahotas SURF Features Detector
+                00102   - Clustering Matching Verification algorithm
                             with creating L0-layer template
-                001003  - Clustering Matching Verification algorithm
+                        001021 - ... based on openCV BRISK Features Detector
+                        001022 - ... based on openCV ORB Features Detector    (Default)
+                        001023 - ... based on openCV SURF Features Detector
+                        001024 - ... based on mahotas SURF Features Detector
+                00103   - Clustering Matching Verification algorithm
                             with creating L1-layer template
+                        001031 - ... based on openCV BRISK Features Detector
+                        001032 - ... based on openCV ORB Features Detector
+                        001033 - ... based on openCV SURF Features Detector
+                        001034 - ... based on mahotas SURF Features Detector
                 002     - Identification algorithms
         :return: Algorithm object instance
         """
         if algoID and len(algoID) == 6:
-            algorithms = {"001001": getClustersMatchingDetectorWithoutTemplate,
-                          "001002": getClustersMatchingDetectorWithL0Template,
-                          "001003": getClustersMatchingDetectorWithL1Template}
+            algorithms = {"001011": (getClustersMatchingDetectorWithoutTemplate, 'BRISK'),
+                          "001012": (getClustersMatchingDetectorWithoutTemplate, 'ORB'),
+                          "001013": (getClustersMatchingDetectorWithoutTemplate, 'SURF'),
+                          "001014": (getClustersMatchingDetectorWithoutTemplate, 'mSURF'),
+                          "001021": (getClustersMatchingDetectorWithL0Template, 'BRISK'),
+                          "001022": (getClustersMatchingDetectorWithL0Template, 'ORB'),
+                          "001023": (getClustersMatchingDetectorWithL0Template, 'SURF'),
+                          "001024": (getClustersMatchingDetectorWithL0Template, 'mSURF'),
+                          "001031": (getClustersMatchingDetectorWithL1Template, 'BRISK'),
+                          "001032": (getClustersMatchingDetectorWithL1Template, 'ORB'),
+                          "001033": (getClustersMatchingDetectorWithL1Template, 'SURF'),
+                          "001034": (getClustersMatchingDetectorWithL1Template, 'mSURF')
+                          }
             if algorithms.keys().__contains__(algoID):
-                return algorithms[algoID]()
-        return None
+                return algorithms[algoID][0](), algorithms[algoID][1]
+        return None, ''
 
     @staticmethod
     def verification(**kwargs):
@@ -71,7 +93,7 @@ class AlgorithmsInterface:
             logger.algo_logger.info('Error::%s::%s' % (record['type'], details['message']))
             return record
         logger.algo_logger.info('Algorithm ID: %s' % kwargs['algoID'])
-        algorithm = AlgorithmsInterface.getAlgorithm(kwargs['algoID'])
+        algorithm, prefix = AlgorithmsInterface.getAlgorithm(kwargs['algoID'])
         if not algorithm:
             record['status'] = "error"
             record['type'] = "Invalid algorithm settings"
@@ -90,7 +112,7 @@ class AlgorithmsInterface:
             record['details'] = details
             logger.algo_logger.info('Error::%s::%s' % (record['type'], details['message']))
             return record
-        if not algorithm.importSettings(AlgorithmsInterface.loadSettings(kwargs['algoID'])):
+        if not algorithm.importSettings(AlgorithmsInterface.loadSettings(kwargs['algoID'], prefix)):
             record['status'] = "error"
             record['type'] = "Invalid algorithm settings"
             details = dict()
@@ -110,6 +132,7 @@ class AlgorithmsInterface:
         if kwargs['action'] == 'education':
             if kwargs.get('database', None):
                 algorithm.importSources(kwargs['database'])
+            img_list = []
             for image_path in kwargs['data']:
                 imgobj = loadImageObject(image_path)
                 if not imgobj:
@@ -117,11 +140,22 @@ class AlgorithmsInterface:
                     record['type'] = "Invalid algorithm settings"
                     details = dict()
                     details['param'] = 'data'
-                    details['message'] = "Such data %s doesn't exists." % kwargs['data']
+                    details['message'] = "Such data %s doesn't exists." % image_path
                     record['details'] = details
                     logger.algo_logger.info('Error::%s::%s' % (record['type'], details['message']))
                     return record
-                algorithm.addSource(imgobj)
+                img_list.append(imgobj)
+            count = algorithm.addSources(img_list)
+            result_list = []
+            if count < len(kwargs['data']) / 2.0:
+                record['status'] = "error"
+                record['type'] = "Internal Training Error"
+                details = dict()
+                details['param'] = 'data'
+                details['message'] = "Problem with training images detection."
+                record['details'] = details
+                logger.algo_logger.info("Internal Training Error::Problem with training images detection.")
+                result_list.append(record)
             res = algorithm.update_database()
             if not res:
                 record['status'] = "error"
@@ -130,15 +164,19 @@ class AlgorithmsInterface:
                 details['param'] = 'data'
                 details['message'] = "Problem with updating of the dynamic threshold."
                 record['details'] = details
-                logger.algo_logger.info("Problem with updating of the dynamic threshold.")
+                logger.algo_logger.info("Internal Training Error::Problem with updating of the dynamic threshold.")
                 return record
             sources = algorithm.exportSources()
-            record['status'] = "update"
-            record['algoID'] = kwargs['algoID']
-            record['userID'] = kwargs['userID']
-            record['database'] = sources
+            res_record = dict()
+            res_record['status'] = "update"
+            res_record['algoID'] = kwargs['algoID']
+            res_record['userID'] = kwargs['userID']
+            res_record['database'] = sources
             logger.algo_logger.info('Status::The database updated.')
-            return record
+            if len(result_list) == 0:
+                return res_record
+            result_list.append(res_record)
+            return result_list
         elif kwargs['action'] == 'verification':
             if not kwargs.get('database', None):
                 record['status'] = "data_request"
@@ -184,8 +222,8 @@ class AlgorithmsInterface:
             return record
 
     @staticmethod
-    def loadSettings(algoID):
-        settings_path = os.path.join(SETTINGS_DIR, "info" + algoID + ".json")
+    def loadSettings(algoID, prefix):
+        settings_path = os.path.join(SETTINGS_DIR, prefix, "info" + algoID + ".json")
         if not os.path.exists(settings_path):
             return dict()
         with open(settings_path, "r") as data_file:

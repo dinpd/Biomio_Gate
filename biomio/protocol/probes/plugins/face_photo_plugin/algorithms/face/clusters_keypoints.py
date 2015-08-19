@@ -1,9 +1,9 @@
 from __future__ import absolute_import
-import logger
-from biomio.algorithms.algorithms.clustering.forel import FOREL
-from biomio.algorithms.algorithms.clustering.kmeans import KMeans
-from biomio.algorithms.algorithms.cascades.classifiers import CascadeROIDetector
 from biomio.algorithms.algorithms.recognition.keypoints import KeypointsObjectDetector
+from biomio.algorithms.algorithms.cascades.classifiers import CascadeROIDetector
+from biomio.algorithms.algorithms.clustering.kmeans import KMeans
+from biomio.algorithms.algorithms.clustering.forel import FOREL
+import logger
 
 
 class ClustersMatchingDetector(KeypointsObjectDetector):
@@ -12,7 +12,8 @@ class ClustersMatchingDetector(KeypointsObjectDetector):
         self._database = []
         self._etalon = []
         self._prob = 100
-        self._coff = 0.70
+        with open('keypoints.conf', 'r') as f:
+            self._coff = float(f.read().replace('\n', ''))
 
     def threshold(self):
         return self.kodsettings.probability
@@ -66,7 +67,7 @@ class ClustersMatchingDetector(KeypointsObjectDetector):
         descriptors = []
         active_clusters = 0
         for cluster in clusters:
-            desc = detector.computeImage(data['roi'], cluster['items'])
+            desc = detector.compute(data['roi'], cluster['items'])
             curr_cluster = desc['descriptors']
             descriptors.append(curr_cluster)
             if curr_cluster is not None and len(curr_cluster) > 0:

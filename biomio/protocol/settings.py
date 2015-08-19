@@ -21,6 +21,7 @@ DEFAULT_REDIS_MAX_MEMORY = '100000000'
 DEFAULT_REDIS_MEMORY_SAMPLES = '5'
 DEFAULT_REDIS_EVICTION_POLICY = 'allkeys-lru'
 
+
 APNS_PRODUCTION_PEM = os.path.join(APP_ROOT, 'push_prod.pem')
 APNS_DEV_PEM = os.path.join(APP_ROOT, 'push_dev.pem')
 

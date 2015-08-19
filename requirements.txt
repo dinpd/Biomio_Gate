@@ -1,3 +1,4 @@
+mahotas
 tornado==4.0.2
 Yapsy==1.10.423
 Tornado-JSON==0.41

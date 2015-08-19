@@ -8,13 +8,16 @@ from biomio.utils.utils import import_module_class
 from logger import worker_logger
 
 
-def create_record_job(table_class_name, **kwargs):
+def create_record_job(table_class_name, object_id, **kwargs):
     worker_logger.info('Creating record for table - %s, with given values - %s' % (table_class_name, kwargs))
     try:
         MySQLDataStoreInterface.create_data(table_name=table_class_name, **kwargs)
         worker_logger.info('Created record for table - %s, with given values - %s' % (table_class_name, kwargs))
     except Exception as e:
-        worker_logger.exception(msg=str(e))
+        if '1062 Duplicate entry' in str(e):
+            update_record_job(table_class_name=table_class_name, object_id=object_id, **kwargs)
+        else:
+            worker_logger.exception(msg=str(e))
 
 
 def delete_record_job(table_class_name, object_id):

@@ -98,7 +98,8 @@ class BaseDataStore:
         """
         created = self._lru_redis.store_data(key=key, ex=ex, **kwargs)
         if created:
-            self._run_storage_job(self._worker.CREATE_JOB, table_class_name=table_class_name, **kwargs)
+            self._run_storage_job(self._worker.CREATE_JOB, table_class_name=table_class_name, object_id=object_id,
+                                  **kwargs)
         else:
             self._run_storage_job(self._worker.UPDATE_JOB, table_class_name=table_class_name, object_id=object_id,
                                   **kwargs)
@@ -185,7 +186,14 @@ class BaseDataStore:
             Internal method which gets data from persistence redis instance by given key.
         :param key: Generated redis key.
         """
-        return self._persistence_redis.get_data(key)
+        result = self._persistence_redis.get_data(key)
+        if result is not None:
+            try:
+                result = ast.literal_eval(result)
+            except ValueError as e:
+                logger.exception(e)
+                result = None
+        return result
 
     def _select_data_by_ids(self, table_class_name, object_ids, callback):
         """
