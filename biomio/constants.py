@@ -7,12 +7,14 @@ USERS_TABLE_CLASS_NAME = 'UserInformation'
 EMAILS_TABLE_CLASS_NAME = 'EmailsData'
 REDIS_CHANGES_CLASS_NAME = 'ChangesTable'
 TRAINING_DATA_TABLE_CLASS_NAME = 'TrainingData'
+POLICY_DATA_TABLE_CLASS_NAME = 'Policy'
 
 MYSQL_APPS_TABLE_NAME = 'Applications'
 MYSQL_EMAILS_TABLE_NAME = 'EmailsData'
 MYSQL_USERS_TABLE_NAME = 'Profiles'
 MYSQL_TRAINING_DATA_TABLE_NAME = 'TrainingData'
 MYSQL_CHANGES_TABLE_NAME = 'UILog'
+MYSQL_POLICIES_TABLE_NAME = 'Policies'
 
 # Redis Constants
 REDIS_APP_AUTH_KEY = 'auth:%s'
@@ -30,6 +32,7 @@ REDIS_JOB_RESULTS_ERROR = 'job_results_error:%s'
 REDIS_ACTIVE_DEVICES_KEY = 'active_devices:%s'
 REDIS_UPDATE_TRAINING_KEY = 'update_training:%s'
 REDIS_RESOURCES_KEY = 'device_resources:%s'
+REDIS_USER_POLICY_KEY = 'policy:%s'
 
 # Other constants
 REDIS_CONFIG_MAX_MEMORY_OPTION_KEY = 'maxmemory'

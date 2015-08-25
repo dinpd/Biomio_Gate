@@ -32,7 +32,8 @@ BIOMIO_protocol_json_schema = {
                 {"$ref": "#/definitions/rpcEnumCallsResp"},
                 {"$ref": "#/definitions/serverHello"},
                 {"$ref": "#/definitions/try"},
-                {"$ref": "#/definitions/data"}
+                {"$ref": "#/definitions/data"},
+                {"$ref": "#/definitions/getResources"}
             ]
         },
         "status": { "type": "string" }
@@ -112,6 +113,7 @@ BIOMIO_protocol_json_schema = {
             "properties": {
                 "oid": { "enum": ["try"] },
                 "authTimeout": {"type": "number"},
+                "condition": {"type": "string"},
                 "resource": {
                     "type": "array",
                     "items": {"$ref": "#/definitions/resourceItem"}

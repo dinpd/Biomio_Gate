@@ -4,7 +4,8 @@ import pony.orm as pny
 import abc
 from pony.orm.ormtypes import LongStr
 from biomio.constants import REDIS_USER_KEY, REDIS_EMAILS_KEY, REDIS_APPLICATION_KEY, MYSQL_APPS_TABLE_NAME, \
-    MYSQL_EMAILS_TABLE_NAME, MYSQL_USERS_TABLE_NAME, MYSQL_TRAINING_DATA_TABLE_NAME, MYSQL_CHANGES_TABLE_NAME
+    MYSQL_EMAILS_TABLE_NAME, MYSQL_USERS_TABLE_NAME, MYSQL_TRAINING_DATA_TABLE_NAME, MYSQL_CHANGES_TABLE_NAME, \
+    MYSQL_POLICIES_TABLE_NAME, REDIS_USER_POLICY_KEY
 from biomio.utils.biomio_decorators import inherit_docstring_from
 
 database = pny.Database()
@@ -261,3 +262,47 @@ class TrainingData(BaseEntityClass, database.Entity):
             if not hasattr(training_data, key):
                 continue
             setattr(training_data, key, value)
+
+
+class Policy(BaseEntityClass, database.Entity):
+    _table_ = MYSQL_POLICIES_TABLE_NAME
+    owner = pny.Required(int, unique=True)
+    name = pny.Required(str, default='No name')
+    bioAuth = pny.Required(str, default='')
+    minAuth = pny.Required(int, default=0)
+    maxAuth = pny.Required(int, default=0)
+    matchCertainty = pny.Required(int, default=0)
+    geoRestriction = pny.Required(str, default='')
+    timeRestriction = pny.Required(str, default='')
+    dateCreated = pny.Required(datetime.datetime, default=lambda: datetime.datetime.now(), lazy=True)
+    dateModified = pny.Required(datetime.datetime, default=lambda: datetime.datetime.now(), auto=True, lazy=True)
+
+    @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
+    def get_table_name():
+        return MYSQL_POLICIES_TABLE_NAME
+
+    @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
+    def create_record(**kwargs):
+        Policy(**kwargs)
+
+    @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
+    def update_record(record_id, **kwargs):
+        search_query = {Policy.get_unique_search_attribute(): record_id}
+        policy_data = Policy.get(**search_query)
+
+        for key, value in kwargs.iteritems():
+            if not hasattr(policy_data, key):
+                continue
+            setattr(policy_data, key, value)
+
+    @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
+    def get_unique_search_attribute():
+        return 'owner'
+
+    @inherit_docstring_from
+    def get_redis_key(self):
+        return REDIS_USER_POLICY_KEY % self.owner

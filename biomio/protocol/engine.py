@@ -150,7 +150,7 @@ class MessageHandler:
     def on_nop_message(e):
         if e.src == STATE_READY \
                 or e.src == STATE_PROBE_TRYING\
-                or e.src == STATE_GETTING_PROBES:
+                or e.src == STATE_GETTING_PROBES or e.src == STATE_GETTING_RESOURCES:
             message = e.protocol_instance.create_next_message(
                 request_seq=e.request.header.seq,
                 oid='nop'
@@ -233,7 +233,7 @@ class MessageHandler:
             resources_dict.update({str(item.rType):str(item.rProperties)})
         logger.debug(msg='RESOURCES: %s available' % resources_dict)
         e.protocol_instance.available_resources = resources_dict
-        DeviceResourcesDataStore.store_data(device_id=str(e.request.header.appId), **resources_dict)
+        DeviceResourcesDataStore.instance().store_data(device_id=str(e.request.header.appId), **resources_dict)
         return STATE_READY
 
 
@@ -419,13 +419,14 @@ biomio_states = {
         },
         {
             'name': 'nop',
-            'src': [STATE_READY, STATE_PROBE_TRYING, STATE_GETTING_PROBES],
-            'dst': [STATE_READY, STATE_PROBE_TRYING, STATE_GETTING_PROBES, STATE_DISCONNECTED],
+            'src': [STATE_READY, STATE_PROBE_TRYING, STATE_GETTING_PROBES, STATE_GETTING_RESOURCES],
+            'dst': [STATE_READY, STATE_PROBE_TRYING, STATE_GETTING_PROBES, STATE_DISCONNECTED, STATE_GETTING_RESOURCES],
             'decision': MessageHandler.on_nop_message
         },
         {
             'name': 'bye',
-            'src': [STATE_CONNECTED, STATE_HANDSHAKE, STATE_READY, STATE_PROBE_TRYING, STATE_GETTING_PROBES],
+            'src': [STATE_CONNECTED, STATE_HANDSHAKE, STATE_READY, STATE_PROBE_TRYING, STATE_GETTING_PROBES,
+                    STATE_GETTING_RESOURCES],
             'dst': STATE_DISCONNECTED,
             'decision': MessageHandler.on_bye_message
         },
