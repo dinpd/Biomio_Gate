@@ -268,12 +268,12 @@ class Policy(BaseEntityClass, database.Entity):
     _table_ = MYSQL_POLICIES_TABLE_NAME
     owner = pny.Required(int, unique=True)
     name = pny.Required(str, default='No name')
-    bioAuth = pny.Required(str, default='')
+    bioAuth = pny.Optional(str)
     minAuth = pny.Required(int, default=0)
     maxAuth = pny.Required(int, default=0)
     matchCertainty = pny.Required(int, default=0)
-    geoRestriction = pny.Required(str, default='')
-    timeRestriction = pny.Required(str, default='')
+    geoRestriction = pny.Optional(str)
+    timeRestriction = pny.Optional(str)
     dateCreated = pny.Required(datetime.datetime, default=lambda: datetime.datetime.now(), lazy=True)
     dateModified = pny.Required(datetime.datetime, default=lambda: datetime.datetime.now(), auto=True, lazy=True)
 
