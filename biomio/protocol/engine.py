@@ -145,6 +145,13 @@ class MessageHandler:
     @staticmethod
     @verify_header
     def on_ack_message(e):
+        if(str(e.request.header.appType) == 'extension'):
+            return STATE_READY
+        app_id = str(e.request.header.appId)
+        existing_resources = DeviceResourcesDataStore.instance().get_data(device_id=app_id)
+        if existing_resources is not None:
+            e.protocol_instance.available_resources = existing_resources
+            return STATE_READY
         return STATE_GETTING_RESOURCES
 
     @staticmethod
@@ -370,19 +377,11 @@ def getting_probe(e):
 
 
 def getting_resouces(e):
-    if(str(e.request.header.appType) == 'extension'):
-        return STATE_READY
-    app_id = str(e.request.header.appId)
-    existing_resources = DeviceResourcesDataStore.instance().get_data(device_id=app_id)
-    if existing_resources is not None:
-        e.protocol_instance.available_resources = existing_resources
-        return STATE_READY
-    else:
-        message = e.protocol_instance.create_next_message(
-            request_seq=e.request.header.seq,
-            oid='getResources'
-        )
-        e.protocol_instance.send_message(responce=message)
+    message = e.protocol_instance.create_next_message(
+        request_seq=e.request.header.seq,
+        oid='getResources'
+    )
+    e.protocol_instance.send_message(responce=message)
 
 
 def disconnect(e):
