@@ -42,14 +42,15 @@ class PolicyEngineManager:
                 max_cer=1
             )
         run_all(self._fp_scanner_or_face_photo_rule, defined_variables=PolicyVariables(policy_data=policy_variables),
-                defined_actions=PolicyActions(callback=test_callback), stop_on_first_trigger=True)
+                defined_actions=PolicyActions(callback=None), stop_on_first_trigger=True)
 
-
-def test_callback(data):
-    print 'I was executed.'
-    print data
-
-
-if __name__ == '__main__':
-    policy_manager = PolicyEngineManager.instance()
-    policy_manager.run_rules()
+    def generate_try_resources(self, device_resources, auth_types, **kwargs):
+        try_resource_items = []
+        for auth_type in auth_types:
+            plugin_config = self._plugin_manager.get_plugin_auth_config(auth_type=auth_type)
+            r_resource = self._plugin_manager.get_plugin_by_auth_type(auth_type=auth_type).check_resources(
+                resources=device_resources, plugin_auth_config=plugin_config, **kwargs)
+            if r_resource is not None:
+                r_resource.update({'tType': auth_type})
+                try_resource_items.append(r_resource)
+        return try_resource_items

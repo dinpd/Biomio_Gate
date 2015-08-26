@@ -28,9 +28,25 @@ class FacePhotoPlugin(base_probe_plugin.BaseProbePlugin):
                             kwargs_list_for_results_gatherer=kwargs_list_for_results_gatherer, **data)
 
     @inherit_docstring_from(base_probe_plugin.BaseProbePlugin)
-    def apply_policy(self, resources):
-        # TODO: run policy evaluation on resources.
-        return resources
+    def check_resources(self, resources, plugin_auth_config, training=False):
+        plugin_auth_resources = plugin_auth_config.get(self._AUTH_CONFIG_RESOURCES_ATTR, {})
+
+        plugin_r_type = plugin_auth_resources.get(self._AUTH_CONFIG_R_TYPE_ATTR, '')
+        device_resource_properties = resources.get(plugin_r_type)
+
+        if device_resource_properties is not None:
+            resolutions = plugin_auth_resources.get(self._AUTH_CONFIG_RESOLUTIONS_ATTR, [])
+            for resolution in resolutions:
+                if resolution in device_resource_properties:
+                    resource = {self._AUTH_CONFIG_R_TYPE_ATTR: plugin_r_type,
+                                self._AUTH_CONFIG_PROPERTIES_ATTR: resolution}
+                    samples = plugin_auth_resources.get(self._AUTH_CONFIG_SAMPLES_ATTR, {})
+                    if training:
+                        samples = samples.get('training', 5)
+                    else:
+                        samples = samples.get('verification', 1)
+                    return dict(resource=resource, samples=samples)
+        return None
 
     @staticmethod
     def _data_validator(data):

@@ -8,6 +8,7 @@ import greenado
 from biomio.protocol.data_stores.device_resources_store import DeviceResourcesDataStore
 
 from biomio.protocol.message import BiomioMessageBuilder
+from biomio.protocol.probes.policy_engine.policy_engine_manager import PolicyEngineManager
 from biomio.third_party.fysom import Fysom, FysomError
 from biomio.protocol.sessionmanager import SessionManager
 from biomio.protocol.settings import settings
@@ -15,7 +16,7 @@ from biomio.protocol.crypt import Crypto
 from biomio.protocol.rpc.rpchandler import RpcHandler
 from biomio.protocol.data_stores.application_data_store import ApplicationDataStore
 from biomio.protocol.probes.policymanager import PolicyManager
-from biomio.protocol.probes.policies.fixedorderpolicy import FIELD_RESOURCE_TYPE, FIELD_SAMPLES_NUM
+from biomio.protocol.probes.policies.fixedorderpolicy import FIELD_AUTH_TYPE, FIELD_SAMPLES_NUM
 from biomio.protocol.rpc.bioauthflow import BioauthFlow, STATE_AUTH_TRAINING_STARTED
 from biomio.protocol.probes.proberequest import ProbeRequest
 
@@ -67,6 +68,7 @@ def verify_header(verify_func):
 
     return wraps(verify_func)(_decorator)
 
+
 @greenado.generator
 def get_app_data_helper(app_id, key=None):
     value = None
@@ -83,6 +85,7 @@ def get_app_data_helper(app_id, key=None):
 
     raise tornado.gen.Return(value=value)
 
+
 @greenado.generator
 def get_app_keys_helper(app_id, extension=False):
     value = None
@@ -96,7 +99,6 @@ def get_app_keys_helper(app_id, extension=False):
     except Exception as e:
         logger.exception(e)
     raise tornado.gen.Return(value=value)
-
 
 
 class MessageHandler:
@@ -149,7 +151,7 @@ class MessageHandler:
     @verify_header
     def on_nop_message(e):
         if e.src == STATE_READY \
-                or e.src == STATE_PROBE_TRYING\
+                or e.src == STATE_PROBE_TRYING \
                 or e.src == STATE_GETTING_PROBES or e.src == STATE_GETTING_RESOURCES:
             message = e.protocol_instance.create_next_message(
                 request_seq=e.request.header.seq,
@@ -206,7 +208,8 @@ class MessageHandler:
             e.protocol_instance.current_probe_request = None
         else:
             current_probe_request = e.protocol_instance.current_probe_request
-            if current_probe_request.add_next_sample(probe_id=e.request.msg.probeId, samples_list=e.request.msg.probeData.samples):
+            if current_probe_request.add_next_sample(probe_id=e.request.msg.probeId,
+                                                     samples_list=e.request.msg.probeData.samples):
                 if current_probe_request.has_pending_probes():
                     next_state = STATE_GETTING_PROBES
                 else:
@@ -230,7 +233,7 @@ class MessageHandler:
     def on_resources(e):
         resources_dict = {}
         for item in e.request.msg.data:
-            resources_dict.update({str(item.rType):str(item.rProperties)})
+            resources_dict.update({str(item.rType): str(item.rProperties)})
         logger.debug(msg='RESOURCES: %s available' % resources_dict)
         e.protocol_instance.available_resources = resources_dict
         DeviceResourcesDataStore.instance().store_data(device_id=str(e.request.header.appId), **resources_dict)
@@ -268,7 +271,8 @@ def registration(e):
     secret = str(e.request.msg.secret)
     logger.debug('SECRET: %s' % secret)
 
-    registration_callback = create_registration_callback(fsm=e.fsm, protocol_instance=e.protocol_instance, request=e.request)
+    registration_callback = create_registration_callback(fsm=e.fsm, protocol_instance=e.protocol_instance,
+                                                         request=e.request)
     ApplicationDataStore.instance().register_application(code=secret, app_type=app_type, callback=registration_callback)
 
 
@@ -279,7 +283,8 @@ def create_registration_callback(fsm, protocol_instance, request):
         fingerprint = result.get('app_id')
         error = result.get('error')
         logger.info("REGISTRATION RESULTS: verified: %s, fingerprint: %s, error: %s", verified, fingerprint, error)
-        fsm.registered(protocol_instance=protocol_instance, request=request, verified=verified, key=key, fingerprint=fingerprint, error=error)
+        fsm.registered(protocol_instance=protocol_instance, request=request, verified=verified, key=key,
+                       fingerprint=fingerprint, error=error)
 
     return registration_callback
 
@@ -318,24 +323,29 @@ def ready(e):
 
         e.protocol_instance.bioauth_flow.initialize()
 
+
 def probe_trying(e):
     if not e.src == STATE_PROBE_TRYING:
         flow = e.protocol_instance.bioauth_flow
         resources = None
+        temp_auth_types = ['fp', 'face']
+        temp_condition = 'any'
         if flow.is_current_state(STATE_AUTH_TRAINING_STARTED):
-            resources = e.protocol_instance.policy.get_resources_list_for_training(available_resources=e.protocol_instance.available_resources)
+            resources = PolicyEngineManager.instance().generate_try_resources(
+                device_resources=e.protocol_instance.available_resources, auth_types=temp_auth_types, training=True)
         else:
-            resources = e.protocol_instance.policy.get_resources_list_for_try(available_resources=e.protocol_instance.available_resources)
+            resources = PolicyEngineManager.instance().generate_try_resources(
+                device_resources=e.protocol_instance.available_resources, auth_types=temp_auth_types)
             flow.auth_started(resource_list=e.protocol_instance.available_resources)
 
         if resources:
             probe_request = ProbeRequest()
 
             for res in resources:
-                resource_type = res.get(FIELD_RESOURCE_TYPE, None)
+                auth_type = res.get(FIELD_AUTH_TYPE, None)
                 samples_number = res.get(FIELD_SAMPLES_NUM, 0)
-                if resource_type is not None and samples_number:
-                    probe_request.add_probe(probe_type=resource_type, samples=samples_number)
+                if auth_type is not None and samples_number:
+                    probe_request.add_probe(probe_type=auth_type, samples=samples_number)
 
             e.protocol_instance.current_probe_request = probe_request
 
@@ -348,6 +358,7 @@ def probe_trying(e):
                 request_seq=e.request.header.seq,
                 oid='try',
                 resource=resources,
+                condition=temp_condition,
                 authTimeout=settings.bioauth_timeout,
                 message=try_message_str
             )
@@ -371,6 +382,7 @@ def getting_resouces(e):
         )
         e.protocol_instance.send_message(responce=message)
 
+
 def disconnect(e):
     # If status parameter passed to state change method
     # we will add it as a status for message
@@ -389,6 +401,7 @@ def print_state_change(e):
 def protocol_connection_established(protocol_instance, app_id):
     # TODO: make separate method for
     pass
+
 
 biomio_states = {
     'initial': STATE_CONNECTED,
@@ -461,7 +474,6 @@ biomio_states = {
         'onchangestate': print_state_change
     }
 }
-
 
 
 class BiomioProtocol:
@@ -704,7 +716,7 @@ class BiomioProtocol:
         if message_id == 'rpcReq':
             data = {}
             if input_msg.msg.data:
-                for k,v in izip(list(input_msg.msg.data.keys), list(input_msg.msg.data.values)):
+                for k, v in izip(list(input_msg.msg.data.keys), list(input_msg.msg.data.values)):
                     data[str(k)] = str(v)
 
             user_id = ''
@@ -725,7 +737,8 @@ class BiomioProtocol:
             )
         elif message_id == 'rpcEnumNsReq':
             namespaces = self._rpc_handler.get_available_namespaces()
-            message = self.create_next_message(request_seq=input_msg.header.seq, oid='rpcEnumNsReq', namespaces=namespaces)
+            message = self.create_next_message(request_seq=input_msg.header.seq, oid='rpcEnumNsReq',
+                                               namespaces=namespaces)
             self.send_message(responce=message)
         elif message_id == 'rpcEnumCallsReq':
             self._rpc_handler.get_available_calls(namespace=input_msg.msg.namespace)
@@ -760,7 +773,6 @@ class BiomioProtocol:
 
         return process_rpc_result
 
-
     def send_in_progress_responce(self):
         # Should be last RPC request
         input_msg = self._last_received_message
@@ -772,10 +784,10 @@ class BiomioProtocol:
         res_values = []
 
         res_params = {
-                'oid': 'rpcResp',
-                'namespace': str(input_msg.msg.namespace),
-                'call': str(input_msg.msg.call),
-                'rpcStatus': 'inprogress'
+            'oid': 'rpcResp',
+            'namespace': str(input_msg.msg.namespace),
+            'call': str(input_msg.msg.call),
+            'rpcStatus': 'inprogress'
         }
 
         result = {'msg': wait_message, 'timeout': settings.bioauth_timeout}
@@ -793,7 +805,8 @@ class BiomioProtocol:
 
     def try_probe(self, **kwargs):
         message = kwargs.get('message', None)
-        self._state_machine_instance.probetry(request=self._last_received_message, protocol_instance=self, message=message)
+        self._state_machine_instance.probetry(request=self._last_received_message, protocol_instance=self,
+                                              message=message)
 
     def cancel_auth(self, **kwargs):
         self._state_machine_instance.current = STATE_READY
