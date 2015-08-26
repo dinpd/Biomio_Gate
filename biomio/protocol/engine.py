@@ -370,6 +370,8 @@ def getting_probe(e):
 
 
 def getting_resouces(e):
+    if(str(e.request.header.appType) == 'extension'):
+        return STATE_READY
     app_id = str(e.request.header.appId)
     existing_resources = DeviceResourcesDataStore.instance().get_data(device_id=app_id)
     if existing_resources is not None:
