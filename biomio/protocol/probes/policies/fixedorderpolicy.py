@@ -14,7 +14,7 @@ def create_resource_item(type_str, samples):
     return {FIELD_AUTH_TYPE: type_str, FIELD_SAMPLES_NUM: samples}
 
 
-class FixedOrdergPolicy(IPolicy):
+class FixedOrderPolicy(IPolicy):
     def __init__(self, config_str):
         self._set_config(config_str)
         self.resource_items_ordered_dict = {}
