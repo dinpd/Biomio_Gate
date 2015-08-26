@@ -68,11 +68,12 @@ class ProbePluginManager:
         plugin_extra_config = {}
         for extra_config_attr in self._AVAILABLE_EXTRA_CONFIG_ATTR:
             if plugin_info.details.has_option("Documentation", extra_config_attr):
-                extra_config = plugin_info.details.get("Documentation", extra_config_attr)
+                extra_config = str(plugin_info.details.get("Documentation", extra_config_attr))
                 try:
                     extra_config = ast.literal_eval(extra_config)
                 except ValueError as e:
                     logger.exception(e)
-                    extra_config = {}
+                    logger.debug(extra_config)
                 plugin_extra_config.update({extra_config_attr: extra_config})
+        logger.debug('EXTRA PLUGIN CONFIG: %s ==== %s' % (plugin_info.name, plugin_extra_config))
         return plugin_extra_config
