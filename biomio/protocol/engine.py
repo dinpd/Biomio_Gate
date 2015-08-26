@@ -183,6 +183,12 @@ class MessageHandler:
 
         if Crypto.check_digest(key=key, data=header_str, digest=str(e.request.msg.key)):
             protocol_connection_established(protocol_instance=e.protocol_instance, app_id=app_id)
+            if str(e.request.header.appType) == 'extension':
+                return STATE_READY
+            existing_resources = DeviceResourcesDataStore.instance().get_data(device_id=app_id)
+            if existing_resources is not None:
+                e.protocol_instance.available_resources = existing_resources
+                return STATE_READY
             return STATE_GETTING_RESOURCES
 
         e.status = 'Handshake failed. Invalid signature.'
