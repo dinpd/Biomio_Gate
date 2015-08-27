@@ -42,13 +42,20 @@ def update_record_job(table_class_name, object_id, **kwargs):
         worker_logger.exception(msg=str(e))
 
 
-def get_record_job(table_class_name, object_id, callback_code):
+def get_record_job(table_class_name, object_id, callback_code, to_dict):
     worker_logger.info('Getting record for table class - %s, with object_id - %s' % (table_class_name, object_id))
     try:
-        record = MySQLDataStoreInterface.get_object(table_name=table_class_name, object_id=object_id)
-        worker_logger.debug('Data: %s' % record.to_dict())
-        BaseDataStore.instance().store_job_result(record_key=record.get_redis_key(),
-                                                  record_dict=record.to_dict(),
+        record = MySQLDataStoreInterface.get_object(table_name=table_class_name, object_id=object_id,
+                                                    return_dict=to_dict)
+        if not to_dict:
+            redis_key = record.get_redis_key()
+            record = record.to_dict()
+        else:
+            redis_key = record.get('redis_key')
+            del record['redis_key']
+        worker_logger.debug('Data: %s' % record)
+        BaseDataStore.instance().store_job_result(record_key=redis_key,
+                                                  record_dict=record,
                                                   callback_code=callback_code)
     except Exception as e:
         worker_logger.exception(e)

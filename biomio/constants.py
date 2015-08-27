@@ -33,6 +33,7 @@ REDIS_ACTIVE_DEVICES_KEY = 'active_devices:%s'
 REDIS_UPDATE_TRAINING_KEY = 'update_training:%s'
 REDIS_RESOURCES_KEY = 'device_resources:%s'
 REDIS_USER_POLICY_KEY = 'policy:%s'
+REDIS_USER_CONDITION_KEY = 'auth_condition:%s'
 
 # Other constants
 REDIS_CONFIG_MAX_MEMORY_OPTION_KEY = 'maxmemory'

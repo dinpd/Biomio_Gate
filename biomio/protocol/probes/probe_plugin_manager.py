@@ -72,8 +72,11 @@ class ProbePluginManager:
                 try:
                     extra_config = ast.literal_eval(extra_config)
                 except ValueError as e:
-                    logger.exception(e)
+                    logger.warning(e)
                     logger.debug(extra_config)
                 plugin_extra_config.update({extra_config_attr: extra_config})
         logger.debug('EXTRA PLUGIN CONFIG: %s ==== %s' % (plugin_info.name, plugin_extra_config))
         return plugin_extra_config
+
+    def get_available_auth_types(self):
+        return self._plugins_data_by_auth_type.keys()

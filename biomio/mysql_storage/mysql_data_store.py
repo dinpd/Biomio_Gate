@@ -47,7 +47,10 @@ class MySQLDataStore():
         search_query = {table_class.get_unique_search_attribute(): object_id}
         result = table_class.get(**search_query)
         if return_dict and result is not None:
-            return result.to_dict(with_collections=True)
+            result_redis_key = result.get_redis_key()
+            result = result.to_dict(with_collections=True)
+            result.update({'redis_key': result_redis_key})
+            return result
         return result
 
     @pny.db_session
