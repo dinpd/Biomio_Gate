@@ -134,7 +134,7 @@ class MessageHandler:
                             e.status = "Regular handshake is inappropriate. It is required to run registration handshake first."
                             return STATE_DISCONNECTED
                         if str(e.request.header.appType) == 'probe':
-                            e.protocol_instances.app_users = app_data.get('users')
+                            e.protocol_instance.app_users = app_data.get('users')
                         real_fingerprint = Crypto.get_public_rsa_fingerprint(pub_key)
                         logger.debug("PUBLIC KEY: %s" % pub_key)
                         logger.debug("FINGERPRINT: %s" % real_fingerprint)
@@ -190,7 +190,7 @@ class MessageHandler:
             protocol_connection_established(protocol_instance=e.protocol_instance, app_id=app_id)
             if str(e.request.header.appType) == 'extension':
                 return STATE_READY
-            e.protocol_instances.app_users = app_data.get('users')
+            e.protocol_instance.app_users = app_data.get('users')
             existing_resources = DeviceResourcesDataStore.instance().get_data(device_id=app_id)
             if existing_resources is not None:
                 e.protocol_instance.available_resources = existing_resources
