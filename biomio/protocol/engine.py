@@ -80,11 +80,12 @@ def get_app_data_helper(app_id, key=None):
             app_data = {}
 
         if key is not None:
-            value = app_data.get(key, None)
+            app_data = app_data.get(key, None)
+
     except Exception as e:
         logger.exception(e)
 
-    raise tornado.gen.Return(value=value)
+    raise tornado.gen.Return(value=app_data)
 
 
 @greenado.generator
