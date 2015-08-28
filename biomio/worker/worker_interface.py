@@ -172,7 +172,10 @@ class WorkerInterface:
             worker_logger.warning(msg=str(e))
         finally:
             self._persistence_redis.delete_data(result_key)
-            del self._subscribed_callbacks[callback_code]
+            try:
+                del self._subscribed_callbacks[callback_code]
+            except KeyError as e:
+                worker_logger.warning(e)
 
     def queue_jobs_count(self):
         """
