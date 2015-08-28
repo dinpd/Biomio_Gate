@@ -128,7 +128,7 @@ class MessageHandler:
                             and e.request.header.appId:
                         fingerprint = str(e.request.header.appId)
                         app_data = get_app_data_helper(app_id=fingerprint)
-                        pub_key = app_data.get('public_key')
+                        pub_key = app_data.get('public_key') if app_data is not None else None
                         if pub_key is None:
                             e.status = "Regular handshake is inappropriate. It is required to run registration handshake first."
                             return STATE_DISCONNECTED
