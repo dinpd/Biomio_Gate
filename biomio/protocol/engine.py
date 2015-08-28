@@ -127,10 +127,13 @@ class MessageHandler:
                     if hasattr(e.request.header, "appId") \
                             and e.request.header.appId:
                         fingerprint = str(e.request.header.appId)
-                        pub_key = get_app_data_helper(app_id=fingerprint, key='public_key')
+                        app_data = get_app_data_helper(app_id=fingerprint)
+                        pub_key = app_data.get('public_key')
                         if pub_key is None:
                             e.status = "Regular handshake is inappropriate. It is required to run registration handshake first."
                             return STATE_DISCONNECTED
+                        if str(e.request.header.appType) == 'probe':
+                            e.protocol_instances.app_users = app_data.get('users')
                         real_fingerprint = Crypto.get_public_rsa_fingerprint(pub_key)
                         logger.debug("PUBLIC KEY: %s" % pub_key)
                         logger.debug("FINGERPRINT: %s" % real_fingerprint)
@@ -178,14 +181,15 @@ class MessageHandler:
     @verify_header
     def on_auth_message(e):
         app_id = str(e.request.header.appId)
-        key = get_app_data_helper(app_id=app_id, key='public_key')
-
+        app_data = get_app_data_helper(app_id=app_id)
+        key = app_data.get('public_key')
         header_str = BiomioMessageBuilder.header_from_message(e.request)
 
         if Crypto.check_digest(key=key, data=header_str, digest=str(e.request.msg.key)):
             protocol_connection_established(protocol_instance=e.protocol_instance, app_id=app_id)
             if str(e.request.header.appType) == 'extension':
                 return STATE_READY
+            e.protocol_instances.app_users = app_data.get('users')
             existing_resources = DeviceResourcesDataStore.instance().get_data(device_id=app_id)
             if existing_resources is not None:
                 e.protocol_instance.available_resources = existing_resources
@@ -342,19 +346,14 @@ def probe_trying(e):
     if not e.src == STATE_PROBE_TRYING:
         flow = e.protocol_instance.bioauth_flow
         resources = None
-        device_data = get_app_data_helper(str(e.request.header.appId))
         auth_types = ['fp', 'face']
         condition = 'any'
-        if device_data.get('error') is not None:
-            logger.warning('Error while getting data for device id - %s' % str(e.request.header.appId))
+        condition_data = ConditionDataStore.instance().get_data(user_id=e.protocol_instance.app_users[0])
+        if condition_data is None:
+            logger.warning('No conditions set for user - %s' % e.protocol_instance.app_users[0])
         else:
-            logger.debug('Device data - %s' % device_data)
-            condition_data = ConditionDataStore.instance().get_data(user_id=device_data.get('users')[0])
-            if condition_data is None:
-                logger.warning('No conditions set for user - %s' % device_data.get('users')[0])
-            else:
-                condition = condition_data.get(ConditionDataStore.CONDITION_ATTR)
-                auth_types = condition_data.get(ConditionDataStore.AUTH_TYPES_ATTR)
+            condition = condition_data.get(ConditionDataStore.CONDITION_ATTR)
+            auth_types = condition_data.get(ConditionDataStore.AUTH_TYPES_ATTR)
         if flow.is_current_state(STATE_AUTH_TRAINING_STARTED):
             condition = 'all'
             auth_types = ['face']
@@ -536,6 +535,7 @@ class BiomioProtocol:
         self.current_probe_request = None
         self.available_resources = {}
         self.auth_condition = ''
+        self.app_users = []
 
         self.auth_items = []
 
