@@ -5,6 +5,7 @@ import logging
 from jsonschema import ValidationError
 import tornado.gen
 import greenado
+from biomio.protocol.data_stores.condition_data_store import ConditionDataStore
 from biomio.protocol.data_stores.device_resources_store import DeviceResourcesDataStore
 
 from biomio.protocol.message import BiomioMessageBuilder
@@ -145,7 +146,7 @@ class MessageHandler:
     @staticmethod
     @verify_header
     def on_ack_message(e):
-        if(str(e.request.header.appType) == 'extension'):
+        if (str(e.request.header.appType) == 'extension'):
             return STATE_READY
         app_id = str(e.request.header.appId)
         existing_resources = DeviceResourcesDataStore.instance().get_data(device_id=app_id)
@@ -223,7 +224,7 @@ class MessageHandler:
             current_probe_request = e.protocol_instance.current_probe_request
             if current_probe_request.add_next_sample(probe_id=e.request.msg.probeId,
                                                      samples_list=e.request.msg.probeData.samples):
-                if current_probe_request.has_pending_probes():
+                if current_probe_request.has_pending_probes() and not e.protocol_instance.is_condition_any():
                     next_state = STATE_GETTING_PROBES
                 else:
                     message = e.protocol_instance.create_next_message(
@@ -341,16 +342,29 @@ def probe_trying(e):
     if not e.src == STATE_PROBE_TRYING:
         flow = e.protocol_instance.bioauth_flow
         resources = None
-        temp_auth_types = ['fp', 'face']
-        temp_condition = 'any'
+        device_data = get_app_data_helper(str(e.request.header.appId))
+        auth_types = ['fp', 'face']
+        condition = 'any'
+        if device_data.get('error') is not None:
+            logger.warning('Error while getting data for device id - %s' % str(e.request.header.appId))
+        else:
+            logger.debug('Device data - %s' % device_data)
+            condition_data = ConditionDataStore.instance().get_data(user_id=device_data.get('users')[0])
+            if condition_data is None:
+                logger.warning('No conditions set for user - %s' % device_data.get('users')[0])
+            else:
+                condition = condition_data.get(ConditionDataStore.CONDITION_ATTR)
+                auth_types = condition_data.get(ConditionDataStore.AUTH_TYPES_ATTR)
         if flow.is_current_state(STATE_AUTH_TRAINING_STARTED):
+            condition = 'all'
+            auth_types = ['face']
             resources = PolicyEngineManager.instance().generate_try_resources(
-                device_resources=e.protocol_instance.available_resources, auth_types=temp_auth_types, training=True)
+                device_resources=e.protocol_instance.available_resources, auth_types=auth_types, training=True)
         else:
             resources = PolicyEngineManager.instance().generate_try_resources(
-                device_resources=e.protocol_instance.available_resources, auth_types=temp_auth_types)
+                device_resources=e.protocol_instance.available_resources, auth_types=auth_types)
             flow.auth_started(resource_list=e.protocol_instance.available_resources)
-
+        e.protocol_instance.auth_condition = condition
         if resources:
             probe_request = ProbeRequest()
 
@@ -371,7 +385,7 @@ def probe_trying(e):
                 request_seq=e.request.header.seq,
                 oid='try',
                 resource=resources,
-                condition=temp_condition,
+                condition=condition,
                 authTimeout=settings.bioauth_timeout,
                 message=try_message_str
             )
@@ -521,10 +535,14 @@ class BiomioProtocol:
         self.bioauth_flow = None
         self.current_probe_request = None
         self.available_resources = {}
+        self.auth_condition = ''
 
         self.auth_items = []
 
         logger.debug(' --------- ')  # helpful to separate output when auto tests is running
+
+    def is_condition_any(self):
+        return self.auth_condition == 'any'
 
     @greenado.groutine
     def process_next(self, msg_string):

@@ -330,7 +330,7 @@ class BioauthFlow:
         self._state_machine_instance.verification_started(bioauth_flow=self)
         self._store_state()
 
-        auth_result = False
+        auth_result = True
 
         for probe_type, samples_list in samples_by_probe_type.iteritems():
             data = dict(samples=samples_list, probe_id=self.app_id)
@@ -345,7 +345,7 @@ class BioauthFlow:
                 break
             else:
                 logger.debug(msg='SET NEXT AUTH RESULT: %s' % verified)
-                auth_result = verified or auth_result
+                auth_result = verified and auth_result
 
         self.set_auth_results(result=auth_result)
         self._store_state()

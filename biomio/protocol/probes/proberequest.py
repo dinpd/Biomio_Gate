@@ -1,11 +1,13 @@
-
 import logging
+
 logger = logging.getLogger(__name__)
+
 
 class ProbeRequest:
     """
     Class ProbeRequest is responsible for checking and counting probes and samples for each probe.
     """
+
     def __init__(self):
         self.probe_list = []
         self.sample_count_by_probe_type = {}
@@ -37,7 +39,8 @@ class ProbeRequest:
     def has_pending_probes(self):
         if self.probe_list:
             for probe_type in self.probe_list:
-                if not len(self.sample_data_by_probe_type.get(probe_type, [])) == self.sample_count_by_probe_type.get(probe_type, 0):
+                if not len(self.sample_data_by_probe_type.get(probe_type, [])) == self.sample_count_by_probe_type.get(
+                        probe_type, 0):
                     return True
 
         return False
