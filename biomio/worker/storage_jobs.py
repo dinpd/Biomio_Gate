@@ -42,7 +42,7 @@ def update_record_job(table_class_name, object_id, **kwargs):
         worker_logger.exception(msg=str(e))
 
 
-def get_record_job(table_class_name, object_id, callback_code, to_dict):
+def get_record_job(table_class_name, object_id, callback_code, to_dict=False):
     worker_logger.info('Getting record for table class - %s, with object_id - %s' % (table_class_name, object_id))
     try:
         record = MySQLDataStoreInterface.get_object(table_name=table_class_name, object_id=object_id,
