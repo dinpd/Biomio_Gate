@@ -9,7 +9,7 @@ from logger import worker_logger
 
 if __name__ == '__main__':
     # Tell rq what Redis connection to use
-    with Connection():
+    with Connection(connection=StrictRedis(host=settings.redis_host, port=settings.redis_port)):
         q = Queue(connection=StrictRedis(host=settings.redis_host, port=settings.redis_port))
         gevent_worker = GeventWorker(q)
         gevent_worker.log = worker_logger
