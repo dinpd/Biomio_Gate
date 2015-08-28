@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+from threading import Lock
 from biomio.constants import REDIS_APP_CONNECTION_KEY
 from biomio.protocol.data_stores.base_data_store import BaseDataStore
 from biomio.utils.biomio_decorators import inherit_docstring_from
@@ -6,6 +7,7 @@ from biomio.utils.biomio_decorators import inherit_docstring_from
 
 class AppConnectionStore(BaseDataStore):
     _instance = None
+    _lock = Lock()
 
     def __init__(self):
         BaseDataStore.__init__(self)
@@ -13,8 +15,9 @@ class AppConnectionStore(BaseDataStore):
     @classmethod
     @inherit_docstring_from(BaseDataStore)
     def instance(cls):
-        if cls._instance is None:
-            cls._instance = AppConnectionStore()
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = AppConnectionStore()
         return cls._instance
 
     @staticmethod

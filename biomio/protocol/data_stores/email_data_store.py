@@ -1,3 +1,4 @@
+from threading import Lock
 from biomio.constants import EMAILS_TABLE_CLASS_NAME, REDIS_EMAILS_KEY
 from biomio.protocol.data_stores.base_data_store import BaseDataStore
 from biomio.utils.biomio_decorators import inherit_docstring_from
@@ -6,6 +7,7 @@ from biomio.utils.biomio_decorators import inherit_docstring_from
 class EmailDataStore(BaseDataStore):
     _instance = None
     _table_class_name = EMAILS_TABLE_CLASS_NAME
+    _lock = Lock()
 
     # Names of attributes of the corresponding Entity class.
     PASS_PHRASE_ATTR = 'pass_phrase'
@@ -21,8 +23,9 @@ class EmailDataStore(BaseDataStore):
     @classmethod
     @inherit_docstring_from(BaseDataStore)
     def instance(cls):
-        if cls._instance is None:
-            cls._instance = EmailDataStore()
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = EmailDataStore()
         return cls._instance
 
     @staticmethod

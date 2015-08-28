@@ -13,7 +13,7 @@ EXTENSION_SUBSCRIBE_PATTERN = '{extension_id}:*'
 PROBE_SUBSCRIBE_PATTERN = '*:{probe_id}'
 
 
-class AppConnectionListener():
+class AppConnectionListener:
 
     def __init__(self, app_id, app_type):
         redis_key_pattern = AppConnectionListener.app_key_pattern(app_id=app_id, app_type=app_type)

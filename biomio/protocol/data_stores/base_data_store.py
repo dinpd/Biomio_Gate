@@ -1,6 +1,7 @@
 import abc
 import ast
 import logging
+from threading import Lock
 
 from biomio.constants import REDIS_JOB_RESULT_KEY
 from biomio.protocol.storage.redis_storage import RedisStorage
@@ -10,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 class BaseDataStore:
     _instance = None
+    _lock = Lock()
 
     def __init__(self):
         self._lru_redis = RedisStorage.lru_instance()
@@ -27,8 +29,9 @@ class BaseDataStore:
 
         :return: BaseDataStore instance.
         """
-        if cls._instance is None:
-            cls._instance = BaseDataStore()
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = BaseDataStore()
         return cls._instance
 
     @abc.abstractmethod

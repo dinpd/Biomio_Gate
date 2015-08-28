@@ -24,7 +24,7 @@ class WorkerInterface:
     _lock = Lock()
 
     def __init__(self):
-        self._queue = Queue(connection=Redis())
+        self._queue = Queue(connection=Redis(host=settings.redis_host, port=settings.redis_port))
         self._subscribed_callbacks = dict()
         self._redis_client = Client(host=settings.redis_host, port=settings.redis_port)
         self._redis_probes_client = Client(host=settings.redis_host, port=settings.redis_port)

@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+from threading import Lock
 from biomio.constants import REDIS_APP_AUTH_KEY, REDIS_APPLICATION_KEY
 from biomio.protocol.data_stores.base_data_store import BaseDataStore
 from biomio.utils.biomio_decorators import inherit_docstring_from
@@ -9,6 +10,7 @@ class AppAuthStore(BaseDataStore):
     The AppAuthStore class handles authentication result data in persistence Redis.
     """
     _instance = None
+    _lock = Lock()
 
     def __init__(self):
         BaseDataStore.__init__(self)
@@ -16,8 +18,9 @@ class AppAuthStore(BaseDataStore):
     @classmethod
     @inherit_docstring_from(BaseDataStore)
     def instance(cls):
-        if cls._instance is None:
-            cls._instance = AppAuthStore()
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = AppAuthStore()
         return cls._instance
 
     @staticmethod

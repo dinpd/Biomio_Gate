@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+from threading import Lock
 from biomio.constants import REDIS_APPLICATION_KEY, APPS_TABLE_CLASS_NAME
 from biomio.protocol.data_stores.base_data_store import BaseDataStore
 from biomio.utils.biomio_decorators import inherit_docstring_from
@@ -7,6 +8,7 @@ from biomio.utils.biomio_decorators import inherit_docstring_from
 class ApplicationDataStore(BaseDataStore):
     _instance = None
     _table_class_name = APPS_TABLE_CLASS_NAME
+    _lock = Lock()
 
     # Names of attributes of the corresponding Entity class.
     APP_ID_ATTR = 'app_id'
@@ -22,8 +24,9 @@ class ApplicationDataStore(BaseDataStore):
     @classmethod
     @inherit_docstring_from(BaseDataStore)
     def instance(cls):
-        if cls._instance is None:
-            cls._instance = ApplicationDataStore()
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = ApplicationDataStore()
         return cls._instance
 
     @staticmethod

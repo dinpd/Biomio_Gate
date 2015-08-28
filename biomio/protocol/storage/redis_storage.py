@@ -13,7 +13,7 @@ class RedisStorage:
 
     def __init__(self, lru_instance=True):
         if lru_instance:
-            self._redis = StrictRedis(host=settings.redis_host, port=settings.redis_port)
+            self._redis = StrictRedis(host=settings.redis_host, port=settings.redis_lru_port)
             self._configure_redis_instance()
         else:
             self._redis = StrictRedis(host=settings.redis_host, port=settings.redis_port)
