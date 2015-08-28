@@ -28,6 +28,7 @@ APNS_DEV_PEM = os.path.join(APP_ROOT, 'push_dev.pem')
 DEFAULT_AI_REST_URL = 'http://biom.io/backups/beta2/php/commands.php/%s'
 
 DEFAULT_REST_PORT = 8888
+DEFAULT_REST_SSL_POST = 443
 
 DEFAULT_POLICY_TRY_TYPE = 'face-photo'
 
@@ -49,6 +50,7 @@ define('mysql_db_name', default=DEFAULT_MYSQL_DATABASE_NAME, help='MySQL databas
 
 # REST settings
 define('rest_port', default=DEFAULT_REST_PORT, help='REST port')
+define('rest_ssl_port', default=DEFAULT_REST_SSL_POST, help='REST SSL port')
 
 # Setting Redis options
 define('redis_max_memory', default=DEFAULT_REDIS_MAX_MEMORY, help='Redis max memory option.')

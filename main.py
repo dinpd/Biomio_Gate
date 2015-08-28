@@ -136,13 +136,18 @@ class HttpApplication(tornado.web.Application):
 def run_tornado():
     app = Application()
     server = tornado.httpserver.HTTPServer(app, ssl_options=ssl_options)
-    logger.info('Running tornado server...')
+    logger.info('Running tornado server on port %s ...' % settings.port)
     server.listen(settings.port)
 
     http_app = HttpApplication()
     http_server = tornado.httpserver.HTTPServer(http_app)
-    logger.info('Running REST tornado server...')
+    logger.info('Running REST tornado server on port %s ...' % settings.rest_port)
     http_server.listen(settings.rest_port)
+
+    https_app = HttpApplication()
+    https_server = tornado.httpserver.HTTPServer(https_app, ssl_options=ssl_options)
+    logger.info('Running REST SSL tornado server on port %s ...' % settings.rest_ssl_port)
+    https_server.listen(settings.rest_ssl_port)
 
     tornado.ioloop.IOLoop.instance().start()
 
