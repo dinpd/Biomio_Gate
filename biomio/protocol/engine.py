@@ -562,6 +562,7 @@ class BiomioProtocol:
         try:
             input_msg = self._builder.create_message_from_json(msg_string)
         except ValidationError, e:
+            logger.debug('Not valid message - %s' % msg_string)
             logger.exception(e)
 
         # If message is valid, perform necessary actions
