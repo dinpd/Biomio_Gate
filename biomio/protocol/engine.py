@@ -229,7 +229,8 @@ class MessageHandler:
             current_probe_request = e.protocol_instance.current_probe_request
             if current_probe_request.add_next_sample(probe_id=e.request.msg.probeId,
                                                      samples_list=e.request.msg.probeData.samples):
-                if current_probe_request.has_pending_probes() and not e.protocol_instance.is_condition_any():
+                if current_probe_request.has_pending_samples(probe_id=e.request.msg.probeId) or (
+                    current_probe_request.has_pending_probes() and not e.protocol_instance.is_condition_any()):
                     next_state = STATE_GETTING_PROBES
                 else:
                     message = e.protocol_instance.create_next_message(
@@ -349,9 +350,12 @@ def probe_trying(e):
         resources = None
         auth_types = ['fp', 'face']
         condition = 'any'
-        condition_data = ConditionDataStore.instance().get_data(user_id=e.protocol_instance.app_users[0])
+        app_users = e.protocol_instance.app_users
+        if isinstance(app_users, list):
+            app_users = app_users[0]
+        condition_data = ConditionDataStore.instance().get_data(user_id=app_users)
         if condition_data is None:
-            logger.warning('No conditions set for user - %s' % e.protocol_instance.app_users[0])
+            logger.warning('No conditions set for user - %s' % app_users)
         else:
             condition = condition_data.get(ConditionDataStore.CONDITION_ATTR)
             auth_types = condition_data.get(ConditionDataStore.AUTH_TYPES_ATTR)
