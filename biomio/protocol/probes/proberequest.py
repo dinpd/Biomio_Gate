@@ -47,7 +47,7 @@ class ProbeRequest:
 
     def has_pending_samples(self, probe_id):
         if self.probe_list:
-            probe_type = self.probe_list[probe_id]
+            probe_type = self.probe_list[int(probe_id)]
             if not len(self.sample_data_by_probe_type.get(probe_type, [])) == self.sample_count_by_probe_type.get(
                     probe_type, 0):
                 return True
