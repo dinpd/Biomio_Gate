@@ -1,10 +1,14 @@
 import json
+import logging
 import os
 from threading import Lock
 from business_rules.engine import run_all
+from biomio.protocol.data_stores.condition_data_store import ConditionDataStore
 from biomio.protocol.probes.policy_engine.policy_variables import PolicyVariables
 from biomio.protocol.probes.policy_engine.policy_actions import PolicyActions
 from biomio.protocol.probes.probe_plugin_manager import ProbePluginManager
+
+logger = logging.getLogger(__name__)
 
 MOCKUPS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mockups')
 FP_SCANNER_AND_FACE_PHOTO_RULE_MOCKUP = os.path.join(MOCKUPS_DIR, 'fp-scanner_&_face-photo.json')
@@ -14,6 +18,11 @@ FP_SCANNER_OR_FACE_PHOTO_RULE_MOCKUP = os.path.join(MOCKUPS_DIR, 'fp-scanner_or_
 class PolicyEngineManager:
     _instance = None
     _lock = Lock()
+    _default_condition = 'any'
+
+    # TODO: Maybe we should get this values with plugin_manager (via plugin configs?)
+    _training_condition = 'all'
+    _training_auth_types = ['face']
 
     def __init__(self):
         self._plugin_manager = ProbePluginManager.instance()
@@ -44,13 +53,26 @@ class PolicyEngineManager:
         run_all(self._fp_scanner_or_face_photo_rule, defined_variables=PolicyVariables(policy_data=policy_variables),
                 defined_actions=PolicyActions(callback=None), stop_on_first_trigger=True)
 
-    def generate_try_resources(self, device_resources, auth_types, **kwargs):
+    def generate_try_resources(self, device_resources, user_id, training=False):
         try_resource_items = []
+        if training:
+            condition = self._training_condition
+            auth_types = self._training_auth_types
+        else:
+            condition_data = ConditionDataStore.instance().get_data(user_id=user_id)
+            if condition_data is None:
+                logger.warning('No conditions set for user - %s' % user_id)
+                auth_types = self._plugin_manager.get_available_auth_types()
+                condition = self._default_condition
+            else:
+                condition = condition_data.get(ConditionDataStore.CONDITION_ATTR)
+                auth_types = condition_data.get(ConditionDataStore.AUTH_TYPES_ATTR)
+        policy = {'condition': condition}
         for auth_type in auth_types:
             plugin_config = self._plugin_manager.get_plugin_auth_config(auth_type=auth_type)
             r_resource = self._plugin_manager.get_plugin_by_auth_type(auth_type=auth_type).check_resources(
-                resources=device_resources, plugin_auth_config=plugin_config, **kwargs)
+                resources=device_resources, plugin_auth_config=plugin_config, training=training)
             if r_resource is not None:
                 r_resource.update({'tType': auth_type})
                 try_resource_items.append(r_resource)
-        return try_resource_items
+        return policy, try_resource_items

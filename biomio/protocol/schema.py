@@ -67,6 +67,12 @@ BIOMIO_protocol_json_schema = {
                 "oid": { "enum": ["getResources"] }
             }
         },
+        "policy": {
+            "type": "object",
+            "properties": {
+                "condition": {"type": "string"}
+            }
+        },
         "resource": {
             "type": "object",
             "required": ["rType", "rProperties"],
@@ -113,7 +119,7 @@ BIOMIO_protocol_json_schema = {
             "properties": {
                 "oid": { "enum": ["try"] },
                 "authTimeout": {"type": "number"},
-                "condition": {"type": "string"},
+                "policy": {"$ref": "#/definitions/policy"},
                 "resource": {
                     "type": "array",
                     "items": {"$ref": "#/definitions/resourceItem"}
