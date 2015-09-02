@@ -4,7 +4,7 @@ from biomio.utils.biomio_decorators import inherit_docstring_from
 
 
 class FacePhotoPlugin(base_probe_plugin.BaseProbePlugin):
-    _settings = dict(algoID="001002", userID="0000000000000")
+    _settings = dict(algoID="001022", userID="0000000000000")
 
     @inherit_docstring_from(base_probe_plugin.BaseProbePlugin)
     def run_training(self, data, callback=None):
