@@ -18,7 +18,9 @@ FP_SCANNER_OR_FACE_PHOTO_RULE_MOCKUP = os.path.join(MOCKUPS_DIR, 'fp-scanner_or_
 class PolicyEngineManager:
     _instance = None
     _lock = Lock()
-    _default_condition = 'any'
+    _default_policy = {
+        'condition': 'any'
+    }
 
     # TODO: Maybe we should get this values with plugin_manager (via plugin configs?)
     _training_condition = 'all'
@@ -55,19 +57,17 @@ class PolicyEngineManager:
 
     def generate_try_resources(self, device_resources, user_id, training=False):
         try_resource_items = []
+        policy = self._default_policy
         if training:
-            condition = self._training_condition
             auth_types = self._training_auth_types
         else:
             condition_data = ConditionDataStore.instance().get_data(user_id=user_id)
             if condition_data is None:
                 logger.warning('No conditions set for user - %s' % user_id)
                 auth_types = self._plugin_manager.get_available_auth_types()
-                condition = self._default_condition
             else:
-                condition = condition_data.get(ConditionDataStore.CONDITION_ATTR)
                 auth_types = condition_data.get(ConditionDataStore.AUTH_TYPES_ATTR)
-        policy = {'condition': condition}
+                policy.update({'condition': condition_data.get(ConditionDataStore.CONDITION_ATTR)})
         for auth_type in auth_types:
             plugin_config = self._plugin_manager.get_plugin_auth_config(auth_type=auth_type)
             r_resource = self._plugin_manager.get_plugin_by_auth_type(auth_type=auth_type).check_resources(

@@ -70,7 +70,7 @@ BIOMIO_protocol_json_schema = {
         "policy": {
             "type": "object",
             "properties": {
-                "condition": {"type": "string"}
+                "condition": {"enum": ["none", "all", "any"]}
             }
         },
         "resource": {
