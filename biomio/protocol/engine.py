@@ -229,8 +229,7 @@ class MessageHandler:
             current_probe_request = e.protocol_instance.current_probe_request
             if current_probe_request.add_next_sample(probe_id=e.request.msg.probeId,
                                                      samples_list=e.request.msg.probeData.samples):
-                if current_probe_request.has_pending_samples(probe_id=e.request.msg.probeId) or (
-                            current_probe_request.has_pending_probes() and not e.protocol_instance.is_condition_any()):
+                if current_probe_request.has_pending_probes(current_probe_id=e.request.msg.probeId):
                     next_state = STATE_GETTING_PROBES
                 else:
                     message = e.protocol_instance.create_next_message(
@@ -357,9 +356,8 @@ def probe_trying(e):
             training=is_training)
         if not is_training:
             flow.auth_started(resource_list=e.protocol_instance.available_resources)
-        e.protocol_instance.auth_condition = policy.get('condition')
         if resources:
-            probe_request = ProbeRequest()
+            probe_request = ProbeRequest(policy.get('condition'))
 
             for res in resources:
                 auth_type = res.get(FIELD_AUTH_TYPE, None)
@@ -528,15 +526,12 @@ class BiomioProtocol:
         self.bioauth_flow = None
         self.current_probe_request = None
         self.available_resources = {}
-        self.auth_condition = ''
+
         self.app_users = []
 
         self.auth_items = []
 
         logger.debug(' --------- ')  # helpful to separate output when auto tests is running
-
-    def is_condition_any(self):
-        return self.auth_condition == 'any'
 
     @greenado.groutine
     def process_next(self, msg_string):
