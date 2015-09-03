@@ -1,14 +1,18 @@
 from __future__ import absolute_import
+from biomio.algorithms.algorithms.cascades.scripts_detectors import CascadesDetectionInterface
 from biomio.algorithms.algorithms.recognition.keypoints import KeypointsObjectDetector
-from biomio.algorithms.algorithms.cascades.classifiers import CascadeROIDetector
+from biomio.algorithms.algorithms.cascades.roi_optimal import OptimalROIDetectorSAoS
 from biomio.algorithms.algorithms.clustering.kmeans import KMeans
 from biomio.algorithms.algorithms.clustering.forel import FOREL
+from biomio.algorithms.algorithms.cascades.tools import loadScript
 import logger
 
 
 class ClustersMatchingDetector(KeypointsObjectDetector):
     def __init__(self):
         KeypointsObjectDetector.__init__(self)
+        self._cascadeROI = OptimalROIDetectorSAoS()
+        self._eyeROI = CascadesDetectionInterface(loadScript("main_haarcascade_eyes_union.json", True))
         self._database = []
         self._etalon = []
         self._prob = 100
@@ -24,34 +28,27 @@ class ClustersMatchingDetector(KeypointsObjectDetector):
             self.kodsettings.importSettings(settings['KODSettings'])
             self.kodsettings.dump()
             if self._cascadeROI is None:
-                self._cascadeROI = CascadeROIDetector()
-            self._cascadeROI.importSettings(settings['Face Cascade Detector'])
-            logger.algo_logger.info('Face Cascade Detector')
-            self._cascadeROI.classifierSettings.dump()
+                self._cascadeROI = OptimalROIDetectorSAoS()
             if self._eyeROI is None:
-                self._eyeROI = CascadeROIDetector()
-            self._eyeROI.importSettings(settings['Eye Cascade Detector'])
-            logger.algo_logger.info('Eye Cascade Detector')
-            self._eyeROI.classifierSettings.dump()
+                self._eyeROI = CascadesDetectionInterface(loadScript("main_haarcascade_eyes_union.json", True))
             logger.algo_logger.info("Settings loading finished.")
             return True
         return False
 
     def exportSettings(self):
         return {
-            'KODSettings': self.kodsettings.exportSettings(),
-            'Face Cascade Detector': self._cascadeROI.exportSettings(),
-            'Eye Cascade Detector': self._eyeROI.exportSettings()
+            'KODSettings': self.kodsettings.exportSettings()
         }
 
     def _detect(self, data, detector):
         # ROI detection
-        rect = self._eyeROI.detectAndJoin(data['roi'], False)
+        rect = self._eyeROI.detect(data['roi'])[1]
         if len(rect) <= 0:
             logger.algo_logger.info("Eye ROI wasn't found.")
             self._last_error = "Eye ROI wasn't found."
             return False
         # ROI cutting
+        rect = rect[0]
         lefteye = (rect[0] + rect[3], rect[1] + rect[3] / 2)
         righteye = (rect[0] + rect[2] - rect[3], rect[1] + rect[3] / 2)
         centereye = (lefteye[0] + (righteye[0] - lefteye[0]) / 2, lefteye[1] + (righteye[1] - lefteye[1]) / 2)
