@@ -27,7 +27,6 @@ class PolicyEngineManager:
     }
 
     # TODO: Maybe we should get this values with plugin_manager (via plugin configs?)
-    _training_condition = CONDITION_ALL
     _training_auth_types = ['face']
 
     def __init__(self):
