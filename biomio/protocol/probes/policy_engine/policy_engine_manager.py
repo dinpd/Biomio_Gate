@@ -18,12 +18,15 @@ FP_SCANNER_OR_FACE_PHOTO_RULE_MOCKUP = os.path.join(MOCKUPS_DIR, 'fp-scanner_or_
 class PolicyEngineManager:
     _instance = None
     _lock = Lock()
+
+    CONDITION_ANY = 'any'
+    CONDITION_ALL = 'all'
+
     _default_policy = {
-        'condition': 'any'
+        'condition': CONDITION_ANY
     }
 
     # TODO: Maybe we should get this values with plugin_manager (via plugin configs?)
-    _training_condition = 'all'
     _training_auth_types = ['face']
 
     def __init__(self):
