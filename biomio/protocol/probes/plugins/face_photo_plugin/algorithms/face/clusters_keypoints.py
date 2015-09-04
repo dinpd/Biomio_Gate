@@ -44,7 +44,7 @@ class ClustersMatchingDetector(KeypointsObjectDetector):
         # ROI detection
         rect = self._eyeROI.detect(data['roi'])[1]
         logger.algo_logger.debug(rect)
-        if len(rect) <= 0:
+        if len(rect) <= 0 or len(rect[0]) <= 0:
             logger.algo_logger.info("Eye ROI wasn't found.")
             self._last_error = "Eye ROI wasn't found."
             return False
