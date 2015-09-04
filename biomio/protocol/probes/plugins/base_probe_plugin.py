@@ -59,3 +59,7 @@ class BaseProbePlugin(IPlugin):
         :param data: dict() with values that are required to build the URL.
         """
         pass
+
+    @abc.abstractmethod
+    def set_plugin_config(self, config_values):
+        pass
