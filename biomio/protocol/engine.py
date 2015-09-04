@@ -302,6 +302,8 @@ def create_registration_callback(fsm, protocol_instance, request):
         fingerprint = result.get('app_id')
         error = result.get('error')
         logger.info("REGISTRATION RESULTS: verified: %s, fingerprint: %s, error: %s", verified, fingerprint, error)
+        if verified:
+            protocol_instance.app_users = result.get('user_id', [])
         fsm.registered(protocol_instance=protocol_instance, request=request, verified=verified, key=key,
                        fingerprint=fingerprint, error=error)
 

@@ -37,6 +37,7 @@ def verify_registration_job(code, app_type, callback_code):
             fingerprint = Crypto.get_public_rsa_fingerprint(pub_key)
 
             if app_type == 'probe':
+                result.update({'user_id': user_id})
                 app_verification_url = settings.ai_rest_url % (REST_VERIFY_COMMAND % (str(code), fingerprint))
                 response = requests.post(app_verification_url)
                 worker_logger.debug(response.text)
