@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import json
+import ssl
 
 import tornado.web
 import tornado.websocket
@@ -23,7 +24,8 @@ logger = logging.getLogger(__name__)
 
 ssl_options = {
     "certfile": "prod_certs/biom.io.crt",
-    "keyfile": "prod_certs/biom.io.key"
+    "keyfile": "prod_certs/biom.io.key",
+    "ssl_version": ssl.PROTOCOL_TLSv1
 }
 
 

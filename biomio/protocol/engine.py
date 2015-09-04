@@ -357,7 +357,7 @@ def probe_trying(e):
         if not is_training:
             flow.auth_started(resource_list=e.protocol_instance.available_resources)
         if resources:
-            probe_request = ProbeRequest(policy.get('condition'))
+            probe_request = ProbeRequest(policy)
 
             for res in resources:
                 auth_type = res.get(FIELD_AUTH_TYPE, None)
