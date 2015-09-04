@@ -43,12 +43,14 @@ class ClustersMatchingDetector(KeypointsObjectDetector):
     def _detect(self, data, detector):
         # ROI detection
         rect = self._eyeROI.detect(data['roi'])[1]
+        logger.algo_logger.debug(rect)
         if len(rect) <= 0:
             logger.algo_logger.info("Eye ROI wasn't found.")
             self._last_error = "Eye ROI wasn't found."
             return False
         # ROI cutting
         rect = rect[0]
+        logger.algo_logger.debug(rect)
         lefteye = (rect[0] + rect[3], rect[1] + rect[3] / 2)
         righteye = (rect[0] + rect[2] - rect[3], rect[1] + rect[3] / 2)
         centereye = (lefteye[0] + (righteye[0] - lefteye[0]) / 2, lefteye[1] + (righteye[1] - lefteye[1]) / 2)
