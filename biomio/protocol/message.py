@@ -38,6 +38,7 @@ class BiomioMessageBuilder:
             ns = BiomioMessageBuilder._get_ns()
             return ns.BiomioSchema(**obj)
         except ValueError:
+            logger.error(msg='Not valid message received - %s' % json_string)
             return None
 
     @staticmethod
