@@ -109,26 +109,31 @@ class SetUserCondition(tornado.web.RequestHandler):
         self.write(json.dumps(dict(auth_types=ProbePluginManager.instance().get_available_auth_types())))
 
     def post(self, *args, **kwargs):
-        request_body = json.loads(self.request.body)
-        logger.info('Received set condition request with parameters: %s' % request_body)
-        user_id = request_body.get('user_id')
-        condition = request_body.get('condition')
-        auth_types = request_body.get('auth_types')
-        missing_params = []
-        if user_id is None:
-            missing_params.append('user_id')
-        if condition is None:
-            missing_params.append('condition')
-        if auth_types is None:
-            missing_params.append('auth_types')
-        if len(missing_params):
+        try:
+            request_body = json.loads(self.request.body)
+            logger.info('Received set condition request with parameters: %s' % request_body)
+            user_id = request_body.get('user_id')
+            condition = request_body.get('condition')
+            auth_types = request_body.get('auth_types')
+            missing_params = []
+            if user_id is None:
+                missing_params.append('user_id')
+            if condition is None:
+                missing_params.append('condition')
+            if auth_types is None:
+                missing_params.append('auth_types')
+            if len(missing_params):
+                self.clear()
+                self.set_status(400)
+                self.finish('{"error":"Missing parameter(s): %s"}' % ','.join(missing_params))
+            else:
+                ConditionDataStore.instance().store_data(user_id=request_body.get('user_id'),
+                                                         condition=request_body.get('condition'),
+                                                         auth_types=request_body.get('auth_types'))
+        except ValueError as e:
             self.clear()
             self.set_status(400)
-            self.finish('{"error":"Missing parameter(s): %s"}' % ','.join(missing_params))
-        else:
-            ConditionDataStore.instance().store_data(user_id=request_body.get('user_id'),
-                                                     condition=request_body.get('condition'),
-                                                     auth_types=request_body.get('auth_types'))
+            self.finish('{"error":"Missing parameter(s): %s"}' % str(e))
 
 
 class Application(tornado.web.Application):
