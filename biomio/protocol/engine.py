@@ -826,11 +826,11 @@ class BiomioProtocol:
                                               message=message)
 
     def cancel_auth(self, **kwargs):
-        if e.protocol_instance.bioauth_flow.is_probe_owner():
-            message = e.protocol_instance.create_next_message(
-                request_seq=e.request.header.seq,
+        if self.bioauth_flow.is_probe_owner():
+            message = self.create_next_message(
+                request_seq=self._last_received_message.header.seq,
                 oid='probe',
                 probeStatus='canceled'
             )
-            e.protocol_instance.send_message(responce=message)
+            self.send_message(responce=message)
         self._state_machine_instance.current = STATE_READY
