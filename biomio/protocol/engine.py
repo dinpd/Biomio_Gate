@@ -548,7 +548,7 @@ class BiomioProtocol:
         try:
             input_msg = self._builder.create_message_from_json(msg_string)
         except ValidationError, e:
-            logger.debug('Not valid message - %s' % msg_string)
+            logger.exception('Not valid message - %s' % msg_string)
             logger.exception(e)
 
         # If message is valid, perform necessary actions
@@ -826,4 +826,11 @@ class BiomioProtocol:
                                               message=message)
 
     def cancel_auth(self, **kwargs):
+        if e.protocol_instance.bioauth_flow.is_probe_owner():
+            message = e.protocol_instance.create_next_message(
+                request_seq=e.request.header.seq,
+                oid='probe',
+                probeStatus='canceled'
+            )
+            e.protocol_instance.send_message(responce=message)
         self._state_machine_instance.current = STATE_READY
