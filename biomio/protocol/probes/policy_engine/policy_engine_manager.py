@@ -23,7 +23,7 @@ class PolicyEngineManager:
     CONDITION_ALL = 'all'
 
     _default_policy = {
-        'condition': CONDITION_ANY
+        ConditionDataStore.CONDITION_ATTR: CONDITION_ANY
     }
 
     # TODO: Maybe we should get this values with plugin_manager (via plugin configs?)
@@ -70,7 +70,7 @@ class PolicyEngineManager:
                 auth_types = self._plugin_manager.get_available_auth_types()
             else:
                 auth_types = condition_data.get(ConditionDataStore.AUTH_TYPES_ATTR)
-                policy.update({'condition': condition_data.get(ConditionDataStore.CONDITION_ATTR)})
+                policy.update({ConditionDataStore.CONDITION_ATTR: condition_data.get(ConditionDataStore.CONDITION_ATTR)})
         for auth_type in auth_types:
             plugin_config = self._plugin_manager.get_plugin_auth_config(auth_type=auth_type)
             r_resource = self._plugin_manager.get_plugin_by_auth_type(auth_type=auth_type).check_resources(
@@ -79,3 +79,6 @@ class PolicyEngineManager:
                 r_resource.update({'tType': auth_type})
                 try_resource_items.append(r_resource)
         return policy, try_resource_items
+
+    def check_policy_try_wait_conditions(self, try_policy):
+        return try_policy.get(ConditionDataStore.CONDITION_ATTR, self.CONDITION_ANY) == self.CONDITION_ANY

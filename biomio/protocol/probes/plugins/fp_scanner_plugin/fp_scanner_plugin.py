@@ -5,6 +5,10 @@ from biomio.utils.biomio_decorators import inherit_docstring_from
 class FpScannerPlugin(base_probe_plugin.BaseProbePlugin):
 
     @inherit_docstring_from(base_probe_plugin.BaseProbePlugin)
+    def set_plugin_config(self, config_values):
+        pass
+
+    @inherit_docstring_from(base_probe_plugin.BaseProbePlugin)
     def run_training(self, data, callback=None):
         # No training is required for finger prints.
         pass

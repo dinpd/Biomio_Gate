@@ -302,6 +302,8 @@ def create_registration_callback(fsm, protocol_instance, request):
         fingerprint = result.get('app_id')
         error = result.get('error')
         logger.info("REGISTRATION RESULTS: verified: %s, fingerprint: %s, error: %s", verified, fingerprint, error)
+        if verified:
+            protocol_instance.app_users = result.get('user_id', [])
         fsm.registered(protocol_instance=protocol_instance, request=request, verified=verified, key=key,
                        fingerprint=fingerprint, error=error)
 
@@ -357,7 +359,7 @@ def probe_trying(e):
         if not is_training:
             flow.auth_started(resource_list=e.protocol_instance.available_resources)
         if resources:
-            probe_request = ProbeRequest(policy.get('condition'))
+            probe_request = ProbeRequest(policy)
 
             for res in resources:
                 auth_type = res.get(FIELD_AUTH_TYPE, None)
@@ -546,7 +548,7 @@ class BiomioProtocol:
         try:
             input_msg = self._builder.create_message_from_json(msg_string)
         except ValidationError, e:
-            logger.debug('Not valid message - %s' % msg_string)
+            logger.exception('Not valid message - %s' % msg_string)
             logger.exception(e)
 
         # If message is valid, perform necessary actions
@@ -824,4 +826,11 @@ class BiomioProtocol:
                                               message=message)
 
     def cancel_auth(self, **kwargs):
+        if self.bioauth_flow.is_probe_owner():
+            message = self.create_next_message(
+                request_seq=self._last_received_message.header.seq,
+                oid='probe',
+                probeStatus='canceled'
+            )
+            self.send_message(responce=message)
         self._state_machine_instance.current = STATE_READY

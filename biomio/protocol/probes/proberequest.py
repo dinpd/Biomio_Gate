@@ -9,7 +9,7 @@ class ProbeRequest:
     Class ProbeRequest is responsible for checking and counting probes and samples for each probe.
     """
 
-    def __init__(self, probe_condition):
+    def __init__(self, policy):
         self.probe_list = []
         self.sample_count_by_probe_type = {}
         self.sample_data_by_probe_type = {}
@@ -17,7 +17,7 @@ class ProbeRequest:
         self.current_probe = None
         self.current_sample = None
 
-        self._probe_condition = probe_condition
+        self._try_policy = policy
 
     def clear(self):
         self.probe_list = []
@@ -41,7 +41,7 @@ class ProbeRequest:
 
     def has_pending_probes(self, current_probe_id):
         if self.probe_list:
-            if self._probe_condition == PolicyEngineManager.CONDITION_ANY:
+            if PolicyEngineManager.instance().check_policy_try_wait_conditions(self._try_policy):
                 probe_type = self.probe_list[int(current_probe_id)]
                 return len(self.sample_data_by_probe_type.get(probe_type, [])) != self.sample_count_by_probe_type.get(
                     probe_type, 0)

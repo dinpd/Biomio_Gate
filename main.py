@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import json
+import ssl
 
 import tornado.web
 import tornado.websocket
@@ -23,7 +24,8 @@ logger = logging.getLogger(__name__)
 
 ssl_options = {
     "certfile": "prod_certs/biom.io.crt",
-    "keyfile": "prod_certs/biom.io.key"
+    "keyfile": "prod_certs/biom.io.key",
+    "ssl_version": ssl.PROTOCOL_TLSv1
 }
 
 
@@ -107,10 +109,31 @@ class SetUserCondition(tornado.web.RequestHandler):
         self.write(json.dumps(dict(auth_types=ProbePluginManager.instance().get_available_auth_types())))
 
     def post(self, *args, **kwargs):
-        request_body = json.loads(self.request.body)
-        ConditionDataStore.instance().store_data(user_id=request_body.get('user_id'),
-                                                 condition=request_body.get('condition'),
-                                                 auth_types=request_body.get('auth_types'))
+        try:
+            request_body = json.loads(self.request.body)
+            logger.info('Received set condition request with parameters: %s' % request_body)
+            user_id = request_body.get('user_id')
+            condition = request_body.get('condition')
+            auth_types = request_body.get('auth_types')
+            missing_params = []
+            if user_id is None:
+                missing_params.append('user_id')
+            if condition is None:
+                missing_params.append('condition')
+            if auth_types is None:
+                missing_params.append('auth_types')
+            if len(missing_params):
+                self.clear()
+                self.set_status(400)
+                self.finish('{"error":"Missing parameter(s): %s"}' % ','.join(missing_params))
+            else:
+                ConditionDataStore.instance().store_data(user_id=request_body.get('user_id'),
+                                                         condition=request_body.get('condition'),
+                                                         auth_types=request_body.get('auth_types'))
+        except ValueError as e:
+            self.clear()
+            self.set_status(400)
+            self.finish('{"error":"Missing parameter(s): %s"}' % str(e))
 
 
 class Application(tornado.web.Application):
@@ -128,7 +151,7 @@ class HttpApplication(tornado.web.Application):
             (r'/new_email/(?P<email>[\w.%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4})', NewEmailPGPKeysHandler),
             (r'/set_try_type/(?P<try_type>[\w\-]+)', SetTryTypeHandler),
             (r'/set_keypoints_coff/(?P<coff>\d+\.\d{2})', SetKeypointsCoffHandler),
-            (r'/set_condition', SetUserCondition)
+            (r'/set_condition.*', SetUserCondition)
         ]
         tornado.web.Application.__init__(self, handlers)
 

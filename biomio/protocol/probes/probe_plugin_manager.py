@@ -75,6 +75,7 @@ class ProbePluginManager:
                     logger.warning(e)
                     logger.debug(extra_config)
                 plugin_extra_config.update({extra_config_attr: extra_config})
+        plugin_info.plugin_object.set_plugin_config(plugin_extra_config)
         logger.debug('EXTRA PLUGIN CONFIG: %s ==== %s' % (plugin_info.name, plugin_extra_config))
         return plugin_extra_config
 
