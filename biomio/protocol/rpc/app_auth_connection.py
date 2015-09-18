@@ -24,7 +24,7 @@ class AppAuthConnection:
 
     def _setup_app_connections(self, on_behalf_of=None):
         if on_behalf_of is None or (self._on_behalf_of is not None and self._on_behalf_of == on_behalf_of):
-            connected_apps = self._connection_manager.get_active_apps(curr_app_id=self._app_id)
+            connected_apps = self._connection_manager.get_active_apps(current_app_id=self._app_id)
             if len(connected_apps):
                 connected_app = connected_apps[0]
                 existing_connections = self._connection_manager.get_active_apps(current_app_id=connected_app)
