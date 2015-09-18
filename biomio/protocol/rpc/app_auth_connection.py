@@ -33,7 +33,7 @@ class AppAuthConnection:
 
     def _set_keys_for_connected_app(self, on_behalf_of=None):
         connected_apps = self._connection_manager.get_active_apps(self._app_id)
-        if len(connected_apps):
+        if len(connected_apps) and self.is_probe_owner():
             existing_connected_app_apps = self._connection_manager.get_active_apps(connected_apps[0])
             for connected_app in existing_connected_app_apps:
                 self._connection_manager.remove_active_app(connected_app, connected_apps[0])
