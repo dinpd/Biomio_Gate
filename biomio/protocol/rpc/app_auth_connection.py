@@ -32,11 +32,6 @@ class AppAuthConnection:
         return self._app_type.lower().startswith(PROBE_APP_TYPE_PREFIX)
 
     def _set_keys_for_connected_app(self, on_behalf_of=None):
-        if on_behalf_of is not None:
-            if self._on_behalf_of != on_behalf_of:
-                self._on_behalf_of = on_behalf_of
-                AppConnectionManager.get_connected_apps(app_id=self._on_behalf_of, probe_device=self.is_probe_owner(),
-                                                        callback=self._get_keys_for_connected_apps_callback(retry=True))
         connected_apps = self._connection_manager.get_active_apps(self._app_id)
         if len(connected_apps):
             existing_connected_app_apps = self._connection_manager.get_active_apps(connected_apps[0])
@@ -58,15 +53,26 @@ class AppAuthConnection:
             AppConnectionManager.get_connected_apps(app_id=app_id, probe_device=self.is_probe_owner(),
                                                     callback=self._get_keys_for_connected_apps_callback())
 
-    def _get_keys_for_connected_apps_callback(self, retry=False):
-        self.retry = retry
+    def _get_keys_for_connected_apps_callback(self):
 
         def _set_keys_for_connected_app_callback(app_ids):
             app_ids = app_ids.get('result') if app_ids else []
+            if not self.is_probe_owner():
+                connected_probes = self._connection_manager.get_active_apps(self._app_id)
+                if len(connected_probes):
+                    matching_connections = list(set(connected_probes).intersection(set(app_ids)))
+                    if len(matching_connections):
+                        new_app_key = self._connection_listener.auth_key(extension_id=self._app_id,
+                                                                         probe_id=matching_connections[0])
+                        if self._app_key is None or self._app_key != new_app_key:
+                            self.remove_extension_keys_that_are_not_connected()
+                            self._app_key = new_app_key
+                            self.extension_keys = []
+                        self.extension_keys = [self._app_key]
+                        self.store_data(state='auth_wait')
+                        return
             for app_id in app_ids:
                 self._connection_manager.add_active_app(app_id, self._app_id)
-            if self.retry:
-                self._set_keys_for_connected_app(on_behalf_of=self._on_behalf_of)
 
         return _set_keys_for_connected_app_callback
 
