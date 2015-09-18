@@ -74,6 +74,11 @@ TRAINING_TYPES_AI_RESPONSE = {
     'voice': '0'
 }
 
+
+PROBE_APP_TYPE_PREFIX = 'probe'
+GENERAL_SUBSCRIBE_PATTERN = '__keyspace*:{redis_key_pattern}'
+
+
 def get_ai_training_response(training_type):
     response = TRAINING_TYPES_AI_RESPONSE
     response.update({TRAINING_GATE_AI_TYPES_MAP.get(training_type, ''): '1'})

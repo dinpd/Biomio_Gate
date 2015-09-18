@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 from threading import Lock
-from biomio.constants import REDIS_APP_AUTH_KEY, REDIS_APPLICATION_KEY
+from biomio.constants import REDIS_APPLICATION_KEY
 from biomio.protocol.data_stores.base_data_store import BaseDataStore
 from biomio.utils.biomio_decorators import inherit_docstring_from
 

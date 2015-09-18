@@ -224,3 +224,39 @@ class BaseDataStore:
         else:
             self._run_storage_job(self._worker.SELECT_EXTENSIONS_BY_PROBE_JOB, callback,
                                   table_class_name=table_class_name, probe_id=object_id)
+
+    def _append_value_to_list(self, key, value, to_head=False):
+        """
+            Persistence Redis instance
+            internal method to append specified value into list by given key.
+        :param key: of the stored list
+        :param value: to add
+        :param to_head: whether to add value into the head of the list (by default it is appended to tail)
+        """
+        self._persistence_redis.append_value_to_list(key=key, value=value, append_to_head=to_head)
+
+    def _remove_value_from_list(self, key, value):
+        """
+            Persistence instance
+            Internal method to remove given value from the list by given key.
+        :param key: of the stored list
+        :param value: to remove
+        """
+        self._persistence_redis.remove_value_from_list(key=key, value=value)
+
+    def _get_stored_list(self, key):
+        """
+            Persistence redis instance
+            internal method to return stored list by given key.
+        :param key: of the stored list
+        :return: list
+        """
+        return self._persistence_redis.get_stored_list(key=key)
+
+    def _delete_stored_list(self, key):
+        """
+            Persistence Redis instance
+            Internal method to delete stored list by given key.
+        :param key: of the stored list
+        """
+        self._persistence_redis.delete_data(key=key)
