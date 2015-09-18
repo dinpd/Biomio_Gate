@@ -386,10 +386,10 @@ class BioauthFlow:
         return self._state_machine_instance.current == state
 
     def is_probe_owner(self):
-        return self.auth_connection.is_probe_owner()
+        return self.auth_connection._is_probe_device()
 
     def is_extension_owner(self):
-        return self.auth_connection.is_extension_owner()
+        return not self.auth_connection._is_probe_device()
 
     @classmethod
     def start_training(cls, probe_id, code):
