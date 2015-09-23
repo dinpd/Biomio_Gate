@@ -8,7 +8,7 @@ class FacePhotoPlugin(base_probe_plugin.BaseProbePlugin):
 
     @inherit_docstring_from(base_probe_plugin.BaseProbePlugin)
     def set_plugin_config(self, config_values):
-        self._settings.update({'algo_id': config_values.get('algo_id', "001022")})
+        self._settings.update({'algoID': config_values.get('algo_id', "001022")})
 
     @inherit_docstring_from(base_probe_plugin.BaseProbePlugin)
     def run_training(self, data, callback=None):
