@@ -453,7 +453,7 @@ biomio_states = {
         {
             'name': 'bye',
             'src': [STATE_CONNECTED, STATE_HANDSHAKE, STATE_READY, STATE_PROBE_TRYING, STATE_GETTING_PROBES,
-                    STATE_GETTING_RESOURCES],
+                    STATE_GETTING_RESOURCES, STATE_APP_REGISTERED],
             'dst': STATE_DISCONNECTED,
             'decision': MessageHandler.on_bye_message
         },
