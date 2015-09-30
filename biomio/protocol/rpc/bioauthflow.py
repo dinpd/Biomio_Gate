@@ -336,8 +336,12 @@ class BioauthFlow:
             data = dict(samples=samples_list, probe_id=self.app_id)
             result = yield tornado.gen.Task(
                 ProbePluginManager.instance().get_plugin_by_auth_type(probe_type).run_verification, data)
-            error = result.get('error')
-            verified = result.get('verified')
+            if isinstance(result, bool):
+                verified = result
+                error = None
+            else:
+                error = result.get('error')
+                verified = result.get('verified')
             if error:
                 logger.debug(msg='Some samples could not be processed. Sending "try" message again.')
                 self._state_machine_instance.retry(bioauth_flow=self)
