@@ -34,6 +34,7 @@ class AppAuthConnection:
     def _set_keys_for_connected_app(self, on_behalf_of=None):
         connected_apps = self._connection_manager.get_active_apps(self._app_id)
         if len(connected_apps) and self.is_probe_owner():
+            # Looking for already connected extensions that are waiting for authentication.
             existing_connected_app_apps = self._connection_manager.get_active_apps(connected_apps[0])
             for connected_app in existing_connected_app_apps:
                 self._connection_manager.remove_active_app(connected_app, connected_apps[0])
@@ -56,10 +57,16 @@ class AppAuthConnection:
     def _get_keys_for_connected_apps_callback(self):
 
         def _set_keys_for_connected_app_callback(app_ids):
+            # App arrived first so we tell all its related probes/extensions that it is available for them
             app_ids = app_ids.get('result') if app_ids else []
             if not self.is_probe_owner():
+                # Check if there are any connected probe devices for incoming extension
                 connected_probes = self._connection_manager.get_active_apps(self._app_id)
+                if not len(connected_probes):
+                    # Maybe device was connected before client app was registered
+                    connected_probes = self._connection_manager.get_on_apps(probe_device=self.is_probe_owner())
                 if len(connected_probes):
+                    # Getting only probe devices that belong to current user.
                     matching_connections = list(set(connected_probes).intersection(set(app_ids)))
                     if len(matching_connections):
                         new_app_key = self._connection_listener.auth_key(extension_id=self._app_id,
@@ -71,6 +78,7 @@ class AppAuthConnection:
                         self.extension_keys = [self._app_key]
                         self.store_data(state='auth_wait')
                         return
+
             for app_id in app_ids:
                 self._connection_manager.add_active_app(app_id, self._app_id)
 
@@ -83,6 +91,7 @@ class AppAuthConnection:
         """
         # Start listen to auth data changes
         if self._app_auth_data_callback is None:
+            self._connection_manager.mark_app_active(app_id=self._app_id, probe_device=self.is_probe_owner())
             self._app_auth_data_callback = app_auth_data_callback
             self._connection_listener.subscribe(callback=self._on_connection_data)
         if self.is_probe_owner():
@@ -109,6 +118,7 @@ class AppAuthConnection:
         """
         Unsubscribes app from auth status key changes.
         """
+        self._connection_manager.mark_app_off(app_id=self._app_id, probe_device=self.is_probe_owner())
         self._remove_disconnected_app_keys(on_behalf_of)
         self._connection_listener.unsubscribe()
 

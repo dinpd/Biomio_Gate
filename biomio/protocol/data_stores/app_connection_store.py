@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 from threading import Lock
-from biomio.constants import REDIS_ACTIVE_DEVICES_KEY
+from biomio.constants import REDIS_ACTIVE_DEVICES_KEY, REDIS_ACTIVE_PROBE_DEVICES, REDIS_ACTIVE_CLIENT_CONNECTIONS
 from biomio.protocol.data_stores.base_data_store import BaseDataStore
 from biomio.utils.biomio_decorators import inherit_docstring_from
 
@@ -73,3 +73,25 @@ class AppConnectionStore(BaseDataStore):
 
     def delete_active_apps_list(self, current_app_id):
         self._delete_stored_list(key=self.get_data_key(current_app_id))
+
+    def add_active_probe_device(self, probe_id):
+        existing_active_probes = self._get_stored_list(key=REDIS_ACTIVE_PROBE_DEVICES)
+        if probe_id not in existing_active_probes:
+            self._append_value_to_list(key=REDIS_ACTIVE_PROBE_DEVICES, value=probe_id, to_head=True)
+
+    def add_active_client_connection(self, client_app_id):
+        existing_connected_clients = self._get_stored_list(key=REDIS_ACTIVE_CLIENT_CONNECTIONS)
+        if client_app_id not in existing_connected_clients:
+            self._append_value_to_list(key=REDIS_ACTIVE_CLIENT_CONNECTIONS, value=client_app_id, to_head=True)
+
+    def remove_active_probe_device(self, probe_id):
+        self._remove_value_from_list(key=REDIS_ACTIVE_PROBE_DEVICES, value=probe_id)
+
+    def remove_active_client_connection(self, client_app_id):
+        self._remove_value_from_list(key=REDIS_ACTIVE_CLIENT_CONNECTIONS, value=client_app_id)
+
+    def get_active_probe_devices(self):
+        return self._get_stored_list(key=REDIS_ACTIVE_PROBE_DEVICES)
+
+    def get_active_client_connections(self):
+        return self._get_stored_list(key=REDIS_ACTIVE_CLIENT_CONNECTIONS)

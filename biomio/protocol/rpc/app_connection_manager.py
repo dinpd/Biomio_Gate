@@ -43,3 +43,20 @@ class AppConnectionManager:
 
     def delete_active_apps_list(self, current_app_id):
         self._app_connection_store.delete_active_apps_list(current_app_id=current_app_id)
+
+    def mark_app_active(self, app_id, probe_device=False):
+        if probe_device:
+            self._app_connection_store.add_active_probe_device(probe_id=app_id)
+        else:
+            self._app_connection_store.add_active_client_connection(client_app_id=app_id)
+
+    def mark_app_off(self, app_id, probe_device=False):
+        if probe_device:
+            self._app_connection_store.remove_active_probe_device(probe_id=app_id)
+        else:
+            self._app_connection_store.remove_active_client_connection(client_app_id=app_id)
+
+    def get_on_apps(self, probe_device=False):
+        if probe_device:
+            return self._app_connection_store.get_active_client_connections()
+        return self._app_connection_store.get_active_probe_devices()
