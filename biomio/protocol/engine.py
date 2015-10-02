@@ -794,8 +794,8 @@ class BiomioProtocol:
         # Should be last RPC request
         input_msg = self._last_received_message
 
-        wait_message = 'To proceed with encryption it is required to identify yourself \
-        on Biom.io service. Server will wait for your probe for 5 minutes.'
+        wait_message = 'To proceed with encryption please open Biomio application on the phone. ' \
+                       'Server will wait for 5 minutes to receive results.'
 
         res_keys = []
         res_values = []
