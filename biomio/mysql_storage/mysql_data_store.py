@@ -40,11 +40,7 @@ class MySQLDataStore():
         else:
             result = pny.select(r for r in table_class_)
         if kwargs.get('clear_after_select', False):
-            result_list = []
-            for res in result:
-                result_list.append(res.to_dict())
-                res.delete()
-            return result_list
+            database.execute('DELETE FROM %s' % table_class_.get_table_name())
         return [res.to_dict() for res in result]
 
     @pny.db_session
