@@ -39,6 +39,12 @@ class MySQLDataStore():
             result = pny.select(r for r in table_class_).order_by('r.%s' % kwargs.get('order_by'))
         else:
             result = pny.select(r for r in table_class_)
+        if kwargs.get('clear_after_select', False):
+            result_list = []
+            for res in result:
+                result_list.append(res.to_dict())
+                res.delete()
+            return result_list
         return [res.to_dict() for res in result]
 
     @pny.db_session
