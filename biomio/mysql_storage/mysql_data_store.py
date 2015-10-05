@@ -39,9 +39,10 @@ class MySQLDataStore():
             result = pny.select(r for r in table_class_).order_by('r.%s' % kwargs.get('order_by'))
         else:
             result = pny.select(r for r in table_class_)
+        result_list = [res.to_dict() for res in result]
         if kwargs.get('clear_after_select', False):
             database.execute('DELETE FROM %s' % table_class_.get_table_name())
-        return [res.to_dict() for res in result]
+        return result_list
 
     @pny.db_session
     def get_object(self, module_name, table_name, object_id, return_dict):
