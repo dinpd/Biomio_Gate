@@ -11,7 +11,7 @@ class SchedulerInterface:
     _lock = Lock()
 
     def __init__(self):
-        self._scheduler = Scheduler(connection=Redis(host=settings.redis_host, port=settings.redis_port), interval=5)
+        self._scheduler = Scheduler(connection=Redis(host=settings.redis_host, port=settings.redis_port), interval=30)
 
     @classmethod
     def instance(cls):
@@ -27,5 +27,5 @@ class SchedulerInterface:
         self._scheduler.schedule(
             scheduled_time=datetime.utcnow(),
             func=update_redis_job,
-            interval=5,
+            interval=30,
         )
