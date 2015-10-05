@@ -14,9 +14,10 @@ def update_redis_job():
     for result in results:
         keys_to_delete = get_storage_keys_by_table_name(result.get('table_name'))
         for key_to_delete in keys_to_delete:
-            key = key_to_delete % result.get('record_id')
-            worker_logger.info('Deleting key - %s' % key)
-            BaseDataStore.instance().delete_custom_lru_redis_data(key)
+            if result.get('record_id'):
+                key = key_to_delete % result.get('record_id')
+                worker_logger.info('Deleting key - %s' % key)
+                BaseDataStore.instance().delete_custom_lru_redis_data(key)
     worker_logger.info('REDIS UPDATE done.')
 
 

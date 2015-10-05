@@ -199,7 +199,7 @@ class Application(BaseEntityClass, database.Entity):
 class ChangesTable(BaseEntityClass, database.Entity):
     _table_ = MYSQL_CHANGES_TABLE_NAME
     table_name = pny.Required(str)
-    record_id = pny.Required(str)
+    record_id = pny.Optional(str)
     change_time = pny.Required(datetime.datetime, default=lambda: datetime.datetime.now())
     pny.composite_key(table_name, record_id)
 
