@@ -751,6 +751,7 @@ class BiomioProtocol:
 
             wait_callback = self.send_in_progress_responce
             app_id = str(input_msg.header.appId)
+            app_type = str(input_msg.header.appType)
             flow_key = '%s_%s' % (app_id, user_id)
             bioauth_flow = self.bioauth_flows.get(flow_key)
             if bioauth_flow is None:
