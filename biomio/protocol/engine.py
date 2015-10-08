@@ -339,12 +339,11 @@ def ready(e):
         bioauth_flow = BioauthFlow(app_type=app_type, app_id=app_id,
                                    try_probe_callback=auth_wait_callback,
                                    cancel_auth_callback=cancel_auth_callback, auto_initialize=False)
-
+        e.protocol_instance.bioauth_flows.update({app_id: bioauth_flow})
         if bioauth_flow.is_probe_owner():
             e.protocol_instance.policy = PolicyManager.get_policy_for_app(app_id=app_id)
 
         bioauth_flow.initialize()
-        e.protocol_instance.bioauth_flows.update({app_id: bioauth_flow})
 
 
 def probe_trying(e):
