@@ -37,7 +37,7 @@ def on_request(e):
     flow = e.bioauth_flow
 
     if flow.is_extension_owner():
-        flow.auth_connection.start_auth(on_behalf_of=e.on_behalf_of)
+        flow.auth_connection.start_auth()
 
     return STATE_AUTH_WAIT
 
@@ -115,7 +115,7 @@ def on_auth_finished(e):
 
     if flow.is_probe_owner():
         if e.fsm.current == STATE_AUTH_CANCELED:
-            flow.cancel_auth_callback()
+            flow.cancel_auth_callback(bioauth_flow=flow)
 
 
 def on_auth_verification_started(e):
@@ -254,7 +254,7 @@ class BioauthFlow:
         else:
             self.cancel_auth()
             self._store_state()
-        self.auth_connection.set_app_disconnected(on_behalf_of=self._on_behalf_of)
+        self.auth_connection.set_app_disconnected()
 
     def _get_state_machine_logger_callback(self):
         def _state_machine_logger(e):
