@@ -5,7 +5,7 @@ from threading import Lock
 from os import urandom
 from hashlib import sha1
 
-from redis import Redis
+from redis.client import StrictRedis
 
 from rq import Queue
 
@@ -24,7 +24,7 @@ class WorkerInterface:
     _lock = Lock()
 
     def __init__(self):
-        self._queue = Queue(connection=Redis())
+        self._queue = Queue(connection=StrictRedis(host=settings.redis_host, port=settings.redis_port))
         self._subscribed_callbacks = dict()
         self._redis_client = Client(host=settings.redis_host, port=settings.redis_port)
         self._redis_probes_client = Client(host=settings.redis_host, port=settings.redis_port)
@@ -172,7 +172,10 @@ class WorkerInterface:
             worker_logger.warning(msg=str(e))
         finally:
             self._persistence_redis.delete_data(result_key)
-            del self._subscribed_callbacks[callback_code]
+            try:
+                del self._subscribed_callbacks[callback_code]
+            except KeyError as e:
+                worker_logger.warning(e)
 
     def queue_jobs_count(self):
         """

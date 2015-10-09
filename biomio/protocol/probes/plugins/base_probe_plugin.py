@@ -5,16 +5,24 @@ from biomio.worker.worker_interface import WorkerInterface
 
 class BaseProbePlugin(IPlugin):
 
+    _AUTH_CONFIG_RESOURCES_ATTR = 'resources'
+    _AUTH_CONFIG_CER_ATTR = 'cer'
+    _AUTH_CONFIG_SAMPLES_ATTR = 'samples'
+    _AUTH_CONFIG_PROPERTIES_ATTR = 'rProperties'
+    _AUTH_CONFIG_R_TYPE_ATTR = 'rType'
+    _AUTH_CONFIG_RESOLUTIONS_ATTR = 'resolutions'
+
     def __init__(self):
         self._callback = None
         self._worker = WorkerInterface.instance()
         super(BaseProbePlugin, self).__init__()
 
     @abc.abstractmethod
-    def apply_policy(self, resources):
+    def check_resources(self, resources, plugin_auth_config, **kwargs):
         """
-            Will apply policy on given probe (device) resources
+            Will check if device resource are valid for plugin.
         :param resources: dict with probe(device) resources
+        :param plugin_auth_config: dict with plugin auth config
         :returns updated resources dict based on policy results.
         """
         return resources
@@ -50,4 +58,8 @@ class BaseProbePlugin(IPlugin):
             verification/training process.
         :param data: dict() with values that are required to build the URL.
         """
+        pass
+
+    @abc.abstractmethod
+    def set_plugin_config(self, config_values):
         pass

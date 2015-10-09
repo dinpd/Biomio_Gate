@@ -7,12 +7,14 @@ USERS_TABLE_CLASS_NAME = 'UserInformation'
 EMAILS_TABLE_CLASS_NAME = 'EmailsData'
 REDIS_CHANGES_CLASS_NAME = 'ChangesTable'
 TRAINING_DATA_TABLE_CLASS_NAME = 'TrainingData'
+POLICY_DATA_TABLE_CLASS_NAME = 'Policy'
 
 MYSQL_APPS_TABLE_NAME = 'Applications'
 MYSQL_EMAILS_TABLE_NAME = 'EmailsData'
 MYSQL_USERS_TABLE_NAME = 'Profiles'
 MYSQL_TRAINING_DATA_TABLE_NAME = 'TrainingData'
 MYSQL_CHANGES_TABLE_NAME = 'UILog'
+MYSQL_POLICIES_TABLE_NAME = 'Policies'
 
 # Redis Constants
 REDIS_APP_AUTH_KEY = 'auth:%s'
@@ -27,8 +29,14 @@ REDIS_PROBE_RESULT_KEY = 'probe_result:%s'
 REDIS_RESULTS_COUNTER_KEY = 'job_results_counter:%s'
 REDIS_PARTIAL_RESULTS_KEY = 'job_results_gatherer:%s'
 REDIS_JOB_RESULTS_ERROR = 'job_results_error:%s'
-REDIS_ACTIVE_DEVICES_KEY = 'active_devices:%s'
+REDIS_ACTIVE_DEVICES_KEY = 'active_devices_relations:%s'
 REDIS_UPDATE_TRAINING_KEY = 'update_training:%s'
+REDIS_RESOURCES_KEY = 'device_resources:%s'
+REDIS_USER_POLICY_KEY = 'policy:%s'
+REDIS_USER_CONDITION_KEY = 'auth_condition:%s'
+
+REDIS_ACTIVE_PROBE_DEVICES = 'active_probes_list'
+REDIS_ACTIVE_CLIENT_CONNECTIONS = 'active_clients_list'
 
 # Other constants
 REDIS_CONFIG_MAX_MEMORY_OPTION_KEY = 'maxmemory'
@@ -50,6 +58,7 @@ MODULES_CLASSES_BY_TABLE_NAMES = {
 REST_VERIFY_COMMAND = 'verify_service/%s/%s'
 REST_CREATE_EMAIL_KEYS = 'get_user/%s'
 REST_REGISTER_BIOMETRICS = 'register_biometrics/%s/%s'
+REST_BIOAUTH_LOGIN = 'bioauth/%s/%s'
 
 TRAINING_FACE_TYPE = 'face-photo'
 TRAINING_FINGER_TYPE = 'fingerprints'
@@ -67,6 +76,11 @@ TRAINING_TYPES_AI_RESPONSE = {
     'fingerprints': ['0', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
     'voice': '0'
 }
+
+
+PROBE_APP_TYPE_PREFIX = 'probe'
+GENERAL_SUBSCRIBE_PATTERN = '__keyspace*:{redis_key_pattern}'
+
 
 def get_ai_training_response(training_type):
     response = TRAINING_TYPES_AI_RESPONSE

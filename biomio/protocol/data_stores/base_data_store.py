@@ -1,6 +1,7 @@
 import abc
 import ast
 import logging
+from threading import Lock
 
 from biomio.constants import REDIS_JOB_RESULT_KEY
 from biomio.protocol.storage.redis_storage import RedisStorage
@@ -10,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 class BaseDataStore:
     _instance = None
+    _lock = Lock()
 
     def __init__(self):
         self._lru_redis = RedisStorage.lru_instance()
@@ -27,8 +29,9 @@ class BaseDataStore:
 
         :return: BaseDataStore instance.
         """
-        if cls._instance is None:
-            cls._instance = BaseDataStore()
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = BaseDataStore()
         return cls._instance
 
     @abc.abstractmethod
@@ -98,7 +101,8 @@ class BaseDataStore:
         """
         created = self._lru_redis.store_data(key=key, ex=ex, **kwargs)
         if created:
-            self._run_storage_job(self._worker.CREATE_JOB, table_class_name=table_class_name, **kwargs)
+            self._run_storage_job(self._worker.CREATE_JOB, table_class_name=table_class_name, object_id=object_id,
+                                  **kwargs)
         else:
             self._run_storage_job(self._worker.UPDATE_JOB, table_class_name=table_class_name, object_id=object_id,
                                   **kwargs)
@@ -115,7 +119,7 @@ class BaseDataStore:
         self._lru_redis.store_data(key=key, ex=ex, **kwargs)
         self._run_storage_job(self._worker.UPDATE_JOB, table_class_name=table_class_name, object_id=object_id, **kwargs)
 
-    def _get_lru_data(self, key, table_class_name, object_id, callback):
+    def _get_lru_data(self, key, table_class_name, object_id, callback, to_dict=False):
         """
             Internal method which gets data from LRU Redis. If it exists there then callback is executed with this data.
             If not - we run worker job to get data from MySQL and save it into Redis.
@@ -134,7 +138,7 @@ class BaseDataStore:
             callback(result)
         else:
             self._run_storage_job(self._worker.GET_JOB, callback, table_class_name=table_class_name,
-                                  object_id=object_id)
+                                  object_id=object_id, to_dict=to_dict)
 
     def _delete_lru_data(self, key, table_class_name, object_id):
         """
@@ -185,7 +189,14 @@ class BaseDataStore:
             Internal method which gets data from persistence redis instance by given key.
         :param key: Generated redis key.
         """
-        return self._persistence_redis.get_data(key)
+        result = self._persistence_redis.get_data(key)
+        if result is not None:
+            try:
+                result = ast.literal_eval(result)
+            except ValueError as e:
+                logger.exception(e)
+                result = None
+        return result
 
     def _select_data_by_ids(self, table_class_name, object_ids, callback):
         """
@@ -213,3 +224,39 @@ class BaseDataStore:
         else:
             self._run_storage_job(self._worker.SELECT_EXTENSIONS_BY_PROBE_JOB, callback,
                                   table_class_name=table_class_name, probe_id=object_id)
+
+    def _append_value_to_list(self, key, value, to_head=False):
+        """
+            Persistence Redis instance
+            internal method to append specified value into list by given key.
+        :param key: of the stored list
+        :param value: to add
+        :param to_head: whether to add value into the head of the list (by default it is appended to tail)
+        """
+        self._persistence_redis.append_value_to_list(key=key, value=value, append_to_head=to_head)
+
+    def _remove_value_from_list(self, key, value):
+        """
+            Persistence instance
+            Internal method to remove given value from the list by given key.
+        :param key: of the stored list
+        :param value: to remove
+        """
+        self._persistence_redis.remove_value_from_list(key=key, value=value)
+
+    def _get_stored_list(self, key):
+        """
+            Persistence redis instance
+            internal method to return stored list by given key.
+        :param key: of the stored list
+        :return: list
+        """
+        return self._persistence_redis.get_stored_list(key=key)
+
+    def _delete_stored_list(self, key):
+        """
+            Persistence Redis instance
+            Internal method to delete stored list by given key.
+        :param key: of the stored list
+        """
+        self._persistence_redis.delete_data(key=key)

@@ -1,7 +1,7 @@
 import requests
 from requests.exceptions import HTTPError
 from biomio.constants import REST_CREATE_EMAIL_KEYS, REDIS_PARTIAL_RESULTS_KEY, REDIS_RESULTS_COUNTER_KEY, \
-    REDIS_DO_NOT_STORE_RESULT_KEY, EMAILS_TABLE_CLASS_NAME, APPS_TABLE_CLASS_NAME
+    REDIS_DO_NOT_STORE_RESULT_KEY, EMAILS_TABLE_CLASS_NAME, APPS_TABLE_CLASS_NAME, REDIS_EMAILS_KEY
 from biomio.mysql_storage.mysql_data_store_interface import MySQLDataStoreInterface
 from biomio.protocol.data_stores.base_data_store import BaseDataStore
 from biomio.protocol.settings import settings
@@ -52,6 +52,9 @@ def verify_email_job(email, callback_code):
 
 def generate_pgp_keys_job(email):
     worker_logger.info('Started email PGP keys generation, email - %s' % email)
+    # TODO: Temp solution, use lru cleaner scheduled method.
+    BaseDataStore.instance().delete_custom_lru_redis_data(REDIS_EMAILS_KEY % email)
+
     generate_email_pgp_keys(email=email, table_class_name=EMAILS_TABLE_CLASS_NAME)
     worker_logger.info('Finished email PGP keys generation, email - %s' % email)
 

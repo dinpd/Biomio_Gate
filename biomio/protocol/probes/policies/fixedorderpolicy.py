@@ -6,12 +6,12 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-FIELD_RESOURCE_TYPE = 'rType'
+FIELD_AUTH_TYPE = 'tType'
 FIELD_SAMPLES_NUM = 'samples'
 
 
 def create_resource_item(type_str, samples):
-    return {FIELD_RESOURCE_TYPE: type_str, FIELD_SAMPLES_NUM: samples}
+    return {FIELD_AUTH_TYPE: type_str, FIELD_SAMPLES_NUM: samples}
 
 
 class FixedOrderPolicy(IPolicy):
@@ -25,7 +25,7 @@ class FixedOrderPolicy(IPolicy):
         """
         resource_item_list = []
         for resource_item_type, props in self.resource_items_ordered_dict.iteritems():
-            res_type = props.get(FIELD_RESOURCE_TYPE, None)
+            res_type = props.get(FIELD_AUTH_TYPE, None)
             if res_type in available_resources:
                 samples_num = props.get(FIELD_SAMPLES_NUM, None)
                 resource_item_list.append(create_resource_item(type_str=resource_item_type, samples=samples_num))

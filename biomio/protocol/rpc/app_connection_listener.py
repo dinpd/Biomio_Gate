@@ -2,22 +2,18 @@ import tornado.gen
 from tornadoredis import Client
 import re
 
-from biomio.constants import REDIS_APP_AUTH_KEY
+from biomio.constants import REDIS_APP_AUTH_KEY, GENERAL_SUBSCRIBE_PATTERN, PROBE_APP_TYPE_PREFIX
 from biomio.protocol.settings import settings
 
 import logging
+
 logger = logging.getLogger(__name__)
 
-GENERAL_SUBSCRIBE_PATTERN = '__keyspace*:{redis_key_pattern}'
-EXTENSION_SUBSCRIBE_PATTERN = '{extension_id}:*'
-PROBE_SUBSCRIBE_PATTERN = '*:{probe_id}'
 
-
-class AppConnectionListener():
-
+class AppConnectionListener:
     def __init__(self, app_id, app_type):
-        redis_key_pattern = AppConnectionListener.app_key_pattern(app_id=app_id, app_type=app_type)
-        self._redis_channel = GENERAL_SUBSCRIBE_PATTERN.format(redis_key_pattern=redis_key_pattern) if redis_key_pattern else ''
+        self._redis_channel = GENERAL_SUBSCRIBE_PATTERN.format(
+            redis_key_pattern=self.app_key_pattern(app_id=app_id, app_type=app_type))
 
         self._callback = None
 
@@ -26,14 +22,10 @@ class AppConnectionListener():
 
     @staticmethod
     def app_key_pattern(app_id, app_type):
-        redis_key_pattern = ''
-
-        if app_type == 'extension':
-            redis_key_pattern = AppConnectionListener.auth_key(app_id, '*')
-        elif app_type == 'probe':
+        if app_type == PROBE_APP_TYPE_PREFIX:
             redis_key_pattern = AppConnectionListener.auth_key('*', app_id)
         else:
-            logger.error(msg='Unknown app type')
+            redis_key_pattern = AppConnectionListener.auth_key(app_id, '*')
 
         return redis_key_pattern
 
@@ -82,14 +74,9 @@ class AppConnectionListener():
     def _on_redis_message(self, msg):
         if msg.kind == 'pmessage':
             if msg.body == 'set' or msg.body == 'expired' or msg.body == 'del':
-                redis_key = re.search('.*:(%s)' % (REDIS_APP_AUTH_KEY % '.*'), msg.channel).group(1)
 
-                extension_id = AppConnectionListener.extension_id(redis_auth_key=msg.channel)
-                probe_id = AppConnectionListener.probe_id(redis_auth_key=msg.channel)
-
-                # data = self._persistence_redis.get_data(probe_key)
-                # if msg.body == 'expired' and data:
-                #     return
+                extension_id = self.extension_id(redis_auth_key=msg.channel)
+                probe_id = self.probe_id(redis_auth_key=msg.channel)
 
                 if self._callback:
                     logger.debug("######## GOT AUTH MESSAGE FROM SUBSCRIBED APP : %s" % str(msg))
@@ -98,4 +85,3 @@ class AppConnectionListener():
                     except Exception as e:
                         logger.warn(str(e))
                         pass
-

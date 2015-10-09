@@ -5,4 +5,6 @@ Module = fp_scanner_plugin
 [Documentation]
 Description = This is fingerprint scanner plugin.
 Version = 1.0
-Enabled = True
+enabled = True
+auth_config = {"resources":{"rType":"fp-scanner"},"cer":0, "samples":1}
+auth_type = fp

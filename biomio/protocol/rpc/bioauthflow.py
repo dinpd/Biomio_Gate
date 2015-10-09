@@ -330,14 +330,18 @@ class BioauthFlow:
         self._state_machine_instance.verification_started(bioauth_flow=self)
         self._store_state()
 
-        auth_result = False
+        auth_result = True
 
         for probe_type, samples_list in samples_by_probe_type.iteritems():
             data = dict(samples=samples_list, probe_id=self.app_id)
             result = yield tornado.gen.Task(
-                ProbePluginManager.instance().get_plugin_by_name(probe_type).run_verification, data)
-            error = result.get('error')
-            verified = result.get('verified')
+                ProbePluginManager.instance().get_plugin_by_auth_type(probe_type).run_verification, data)
+            if isinstance(result, bool):
+                verified = result
+                error = None
+            else:
+                error = result.get('error')
+                verified = result.get('verified')
             if error:
                 logger.debug(msg='Some samples could not be processed. Sending "try" message again.')
                 self._state_machine_instance.retry(bioauth_flow=self)
@@ -345,7 +349,7 @@ class BioauthFlow:
                 break
             else:
                 logger.debug(msg='SET NEXT AUTH RESULT: %s' % verified)
-                auth_result = verified or auth_result
+                auth_result = verified and auth_result
 
         self.set_auth_results(result=auth_result)
         self._store_state()
@@ -361,7 +365,7 @@ class BioauthFlow:
             for probe_type, samples in samples_by_probe_type.iteritems():
                 data = dict(try_type=probe_type, ai_code=ai_code, samples=samples, probe_id=self.app_id)
                 result = yield tornado.gen.Task(
-                    ProbePluginManager.instance().get_plugin_by_name(probe_type).run_training, data)
+                    ProbePluginManager.instance().get_plugin_by_auth_type(probe_type).run_training, data)
                 if not isinstance(result, bool):
                     error = result.get('error')
                     result = result.get('result')
@@ -389,7 +393,7 @@ class BioauthFlow:
         return self.auth_connection.is_probe_owner()
 
     def is_extension_owner(self):
-        return self.auth_connection.is_extension_owner()
+        return not self.auth_connection.is_probe_owner()
 
     @classmethod
     def start_training(cls, probe_id, code):

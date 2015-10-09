@@ -1,0 +1,6 @@
+[Core]
+Name = AuthClientPlugin
+Module = auth_client_plugin
+
+[Documentation]
+Description = Plugin that will provide functionality to invoke biometric authentication.

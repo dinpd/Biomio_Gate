@@ -1,18 +1,23 @@
-
 import logging
+from biomio.protocol.probes.policy_engine.policy_engine_manager import PolicyEngineManager
+
 logger = logging.getLogger(__name__)
+
 
 class ProbeRequest:
     """
     Class ProbeRequest is responsible for checking and counting probes and samples for each probe.
     """
-    def __init__(self):
+
+    def __init__(self, policy):
         self.probe_list = []
         self.sample_count_by_probe_type = {}
         self.sample_data_by_probe_type = {}
 
         self.current_probe = None
         self.current_sample = None
+
+        self._try_policy = policy
 
     def clear(self):
         self.probe_list = []
@@ -34,12 +39,16 @@ class ProbeRequest:
         else:
             logger.error('Could not add probe - probe already exists.')
 
-    def has_pending_probes(self):
+    def has_pending_probes(self, current_probe_id):
         if self.probe_list:
+            if PolicyEngineManager.instance().check_policy_try_wait_conditions(self._try_policy):
+                probe_type = self.probe_list[int(current_probe_id)]
+                return len(self.sample_data_by_probe_type.get(probe_type, [])) != self.sample_count_by_probe_type.get(
+                    probe_type, 0)
             for probe_type in self.probe_list:
-                if not len(self.sample_data_by_probe_type.get(probe_type, [])) == self.sample_count_by_probe_type.get(probe_type, 0):
+                if len(self.sample_data_by_probe_type.get(probe_type, [])) != self.sample_count_by_probe_type.get(
+                        probe_type, 0):
                     return True
-
         return False
 
     def add_next_sample(self, probe_id, samples_list):

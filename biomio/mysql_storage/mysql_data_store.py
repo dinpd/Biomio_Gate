@@ -39,7 +39,10 @@ class MySQLDataStore():
             result = pny.select(r for r in table_class_).order_by('r.%s' % kwargs.get('order_by'))
         else:
             result = pny.select(r for r in table_class_)
-        return [res.to_dict() for res in result]
+        result_list = [res.to_dict() for res in result]
+        if kwargs.get('clear_after_select', False) and len(result_list) > 0:
+            database.execute('DELETE FROM %s' % table_class_.get_table_name())
+        return result_list
 
     @pny.db_session
     def get_object(self, module_name, table_name, object_id, return_dict):
@@ -47,7 +50,10 @@ class MySQLDataStore():
         search_query = {table_class.get_unique_search_attribute(): object_id}
         result = table_class.get(**search_query)
         if return_dict and result is not None:
-            return result.to_dict(with_collections=True)
+            result_redis_key = result.get_redis_key()
+            result = result.to_dict(with_collections=True)
+            result.update({'redis_key': result_redis_key})
+            return result
         return result
 
     @pny.db_session
