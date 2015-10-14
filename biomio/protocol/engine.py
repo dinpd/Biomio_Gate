@@ -788,6 +788,7 @@ class BiomioProtocol:
 
             res_params = {
                 'oid': 'rpcResp',
+                'onBehalfOf': str(input_msg.msg.onBehalfOf),
                 'namespace': str(input_msg.msg.namespace),
                 'call': str(input_msg.msg.call),
                 'rpcStatus': status
@@ -820,6 +821,7 @@ class BiomioProtocol:
 
         res_params = {
             'oid': 'rpcResp',
+            'onBehalfOf': str(input_msg.msg.onBehalfOf),
             'namespace': str(input_msg.msg.namespace),
             'call': str(input_msg.msg.call),
             'rpcStatus': 'inprogress'
