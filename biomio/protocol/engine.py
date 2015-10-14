@@ -747,17 +747,19 @@ class BiomioProtocol:
             user_id = ''
             if hasattr(input_msg.msg, 'onBehalfOf'):
                 user_id = str(input_msg.msg.onBehalfOf)
-
             wait_callback = self.send_in_progress_responce
             app_id = str(input_msg.header.appId)
-            app_type = str(input_msg.header.appType)
-            flow_key = '%s_%s' % (app_id, user_id)
-            bioauth_flow = self.bioauth_flows.get(flow_key)
-            if bioauth_flow is None:
-                bioauth_flow = BioauthFlow(app_type=app_type, app_id=flow_key,
-                                   try_probe_callback=self.try_probe,
-                                   cancel_auth_callback=self.cancel_auth)
-                self.bioauth_flows.update({flow_key: bioauth_flow})
+            if '@' in user_id:
+                app_type = str(input_msg.header.appType)
+                flow_key = '%s_%s' % (app_id, user_id)
+                bioauth_flow = self.bioauth_flows.get(flow_key)
+                if bioauth_flow is None:
+                    bioauth_flow = BioauthFlow(app_type=app_type, app_id=flow_key,
+                                       try_probe_callback=self.try_probe,
+                                       cancel_auth_callback=self.cancel_auth)
+                    self.bioauth_flows.update({flow_key: bioauth_flow})
+            else:
+                bioauth_flow = None
             self._rpc_handler.process_rpc_call(
                 str(user_id),
                 str(input_msg.msg.call),
