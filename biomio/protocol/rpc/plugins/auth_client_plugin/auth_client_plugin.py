@@ -4,7 +4,8 @@ from requests.exceptions import HTTPError
 
 from yapsy.IPlugin import IPlugin
 from biomio.constants import REST_BIOAUTH_LOGIN
-from biomio.protocol.rpc.rpcutils import rpc_call_with_auth, rpc_call
+from biomio.protocol.data_stores.email_data_store import EmailDataStore
+from biomio.protocol.rpc.rpcutils import rpc_call_with_auth, rpc_call, get_store_data
 from biomio.protocol.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -30,5 +31,8 @@ class AuthClientPlugin(IPlugin):
     @rpc_call
     def check_user_exists(self, client_key):
         logger.info('Checking if user with key - %s, exists.' % client_key)
+        email_data = get_store_data(EmailDataStore.instance(), object_id=client_key)
+        if email_data is None or len(email_data) == 0:
+            return dict(exists=False)
         # TODO: Implement method that will check user existence in DB by his client key.
         return dict(exists=True, email=client_key)
