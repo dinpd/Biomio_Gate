@@ -32,7 +32,7 @@ class AuthClientPlugin(IPlugin):
     def check_user_exists(self, client_key):
         logger.info('Checking if user with key - %s, exists.' % client_key)
         email_data = get_store_data(EmailDataStore.instance(), object_id=client_key)
-        if email_data is None or len(email_data) == 0:
+        if email_data is None or len(email_data) == 0 or 'error' in email_data:
             return dict(exists=False)
         # TODO: Implement method that will check user existence in DB by his client key.
         return dict(exists=True, email=client_key)
