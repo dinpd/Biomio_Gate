@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class AuthClientPlugin(base_rpc_plugin.BaseRpcPlugin):
 
-    client_auth_data_store = EmailDataStore
+    client_auth_data_store = EmailDataStore.instance()
 
     @inherit_docstring_from(base_rpc_plugin.BaseRpcPlugin)
     def identify_user(self, on_behalf_of):
@@ -45,7 +45,7 @@ class AuthClientPlugin(base_rpc_plugin.BaseRpcPlugin):
     @rpc_call
     def check_user_exists(self, client_key):
         logger.info('Checking if user with key - %s, exists.' % client_key)
-        email_data = get_store_data(EmailDataStore.instance(), object_id=client_key)
+        email_data = get_store_data(self.client_auth_data_store, object_id=client_key)
         if email_data is None or len(email_data) == 0 or 'error' in email_data:
             return dict(exists=False)
         # TODO: Implement method that will check user existence in DB by his client key.
