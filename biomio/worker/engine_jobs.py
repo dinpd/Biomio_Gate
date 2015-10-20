@@ -62,28 +62,22 @@ def verify_registration_job(code, app_type, callback_code):
         worker_logger.info('Finished app registration with result: %s' % str(result))
 
 
-def get_probe_ids_by_user_email(table_class_name, email, callback_code):
-    worker_logger.info('Getting probe ids by user email - %s' % email)
+def get_probe_ids_by_user_email(table_class_name, user_id, callback_code):
+    worker_logger.info('Getting probe ids for user - %s' % user_id)
     result = dict()
     try:
-        email_data = MySQLDataStoreInterface.get_object(table_name=EMAILS_TABLE_CLASS_NAME, object_id=email)
-        if email_data is not None:
-            worker_logger.debug('Email Data - %s' % email_data.to_dict())
-            worker_logger.debug(email_data.user)
-            probe_ids = MySQLDataStoreInterface.get_applications_by_user_id_and_type(table_name=table_class_name,
-                                                                                     user_id=email_data.user,
-                                                                                     app_type='probe')
-            worker_logger.debug('probe IDS - %s' % probe_ids)
-            result.update({'result': probe_ids})
-        else:
-            result.update({'result': [], 'error': 'Email is not registered'})
+        probe_ids = MySQLDataStoreInterface.get_applications_by_user_id_and_type(table_name=table_class_name,
+                                                                                 user_id=user_id,
+                                                                                 app_type='probe')
+        worker_logger.debug('probe IDS - %s' % probe_ids)
+        result.update({'result': probe_ids})
     except Exception as e:
         worker_logger.exception(e)
         result.update({'result': [], 'error': str(e)})
     finally:
         BaseDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
                                                   record_dict=result, callback_code=callback_code)
-        worker_logger.info('Got probe ids by user email - %s' % email)
+        worker_logger.info('Got probe ids for user - %s' % user_id)
 
 
 def get_extension_ids_by_probe_id(table_class_name, probe_id, callback_code):

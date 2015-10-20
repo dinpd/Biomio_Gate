@@ -299,18 +299,15 @@ class BioauthFlow:
         self._store_state()
 
     @tornado.gen.engine
-    def request_auth(self, verification_started_callback, on_behalf_of, callback):
+    def request_auth(self, verification_started_callback, callback):
         """
         Should be called for extension to request biometric authentication from probe.
         """
-        self._on_behalf_of = on_behalf_of
         self._verification_started_callback = verification_started_callback  # Store callback to call later before verification started
         self.rpc_callback = callback  # Store callback to call later in STATE_AUTH_FINISHED state
-        data_dict = {
-            _PROBESTORE_ON_BEHALF_OF_KEY: on_behalf_of
-        }
+        data_dict = {}
         self.auth_connection.store_data(**data_dict)
-        self._state_machine_instance.request(bioauth_flow=self, on_behalf_of=on_behalf_of)
+        self._state_machine_instance.request(bioauth_flow=self)
         self._store_state()
 
     def auth_started(self, resource_list=None):

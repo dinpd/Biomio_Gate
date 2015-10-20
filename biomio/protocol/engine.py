@@ -15,7 +15,7 @@ from biomio.third_party.fysom import Fysom, FysomError
 from biomio.protocol.sessionmanager import SessionManager
 from biomio.protocol.settings import settings
 from biomio.protocol.crypt import Crypto
-from biomio.protocol.rpc.rpchandler import RpcHandler
+from biomio.protocol.rpc.rpc_handler import RpcHandler
 from biomio.protocol.data_stores.application_data_store import ApplicationDataStore
 from biomio.protocol.probes.policymanager import PolicyManager
 from biomio.protocol.probes.policies.fixedorderpolicy import FIELD_AUTH_TYPE, FIELD_SAMPLES_NUM
@@ -540,9 +540,6 @@ class BiomioProtocol:
 
         logger.debug(' --------- ')  # helpful to separate output when auto tests is running
 
-    def corresponding_bio_instance(self, app_id):
-        return self.bioauth_flows.get(app_id)
-
     @greenado.groutine
     def process_next(self, msg_string):
         """ Processes next message received from client.
@@ -744,32 +741,38 @@ class BiomioProtocol:
                 for k, v in izip(list(input_msg.msg.data.keys), list(input_msg.msg.data.values)):
                     data[str(k)] = str(v)
 
-            user_id = ''
+            user_key = ''
             if hasattr(input_msg.msg, 'onBehalfOf'):
-                user_id = str(input_msg.msg.onBehalfOf)
-            wait_callback = self.send_in_progress_responce
+                user_key = str(input_msg.msg.onBehalfOf)
+            namespace = str(input_msg.msg.namespace)
+            req_plugin = self._rpc_handler.get_plugin_instance(namespace=namespace)
+            user_id = req_plugin.identify_user(on_behalf_of=user_key)
+            process_callback_for_rpc_result = self.get_process_callback_for_rpc_result(input_msg=input_msg)
             app_id = str(input_msg.header.appId)
-            if '@' in user_id:
-                app_type = str(input_msg.header.appType)
+            app_type = str(input_msg.header.appType)
+            if user_id is None:
+                process_callback_for_rpc_result(status='fail',
+                                                result={'error': 'Cannot identify user with key - %s' % user_key})
+            else:
+                req_plugin.assign_user_to_application(app_id=app_id, user_id=user_id)
+                wait_callback = self.send_in_progress_responce
                 flow_key = '%s_%s' % (app_id, user_id)
                 bioauth_flow = self.bioauth_flows.get(flow_key)
                 if bioauth_flow is None:
                     bioauth_flow = BioauthFlow(app_type=app_type, app_id=flow_key,
-                                       try_probe_callback=self.try_probe,
-                                       cancel_auth_callback=self.cancel_auth)
+                                               try_probe_callback=self.try_probe,
+                                               cancel_auth_callback=self.cancel_auth)
                     self.bioauth_flows.update({flow_key: bioauth_flow})
-            else:
-                bioauth_flow = None
-            self._rpc_handler.process_rpc_call(
-                str(user_id),
-                str(input_msg.msg.call),
-                str(input_msg.msg.namespace),
-                data,
-                wait_callback,
-                bioauth_flow,
-                app_id,
-                self.get_process_callback_for_rpc_result(input_msg=input_msg)
-            )
+                self._rpc_handler.process_rpc_call(
+                    str(user_id),
+                    str(input_msg.msg.call),
+                    str(input_msg.msg.namespace),
+                    data,
+                    wait_callback,
+                    bioauth_flow,
+                    app_id,
+                    self.get_process_callback_for_rpc_result(input_msg=input_msg)
+                )
         elif message_id == 'rpcEnumNsReq':
             namespaces = self._rpc_handler.get_available_namespaces()
             message = self.create_next_message(request_seq=input_msg.header.seq, oid='rpcEnumNsReq',

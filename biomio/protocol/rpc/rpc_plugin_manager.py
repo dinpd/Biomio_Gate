@@ -9,10 +9,12 @@ import logging
 logger = logging.getLogger('yapsy')
 logger.disabled = True
 
+
 def get_plugin_dir_path():
     curr_dir = os.path.dirname(os.path.abspath(__file__))
     plugin_dir_path = os.path.join(curr_dir, 'plugins')
     return plugin_dir_path
+
 
 class RpcPluginManager:
     _instance = None
@@ -30,7 +32,8 @@ class RpcPluginManager:
         plugin_places = (plugin_dir,)
         self._plugin_locator.setPluginPlaces(plugin_places)
 
-        self._plugin_manager = PluginManager(categories_filter={"Default": IPlugin}, plugin_locator=self._plugin_locator)
+        self._plugin_manager = PluginManager(categories_filter={"Default": IPlugin},
+                                             plugin_locator=self._plugin_locator)
         self._plugin_manager.collectPlugins()
 
         self._plugins_by_namespace = {}
