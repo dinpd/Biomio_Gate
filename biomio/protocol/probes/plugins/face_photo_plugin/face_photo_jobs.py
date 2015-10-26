@@ -11,7 +11,7 @@ import requests
 from requests.exceptions import HTTPError
 from biomio.constants import REDIS_PROBE_RESULT_KEY, REDIS_RESULTS_COUNTER_KEY, REDIS_PARTIAL_RESULTS_KEY, \
     TRAINING_DATA_TABLE_CLASS_NAME, REDIS_JOB_RESULTS_ERROR, REST_REGISTER_BIOMETRICS, get_ai_training_response, \
-    REDIS_UPDATE_TRAINING_KEY
+    REDIS_UPDATE_TRAINING_KEY, REDIS_VERIFICATION_RETIES_COUNT_KEY, REDiS_TRAINING_RETRIES_COUNT_KEY
 from biomio.mysql_storage.mysql_data_store_interface import MySQLDataStoreInterface
 from biomio.protocol.storage.redis_storage import RedisStorage
 from biomio.protocol.probes.plugins.face_photo_plugin.algorithms.algorithms_interface import AlgorithmsInterface
@@ -101,10 +101,10 @@ def verification_job(image, probe_id, settings, callback_code):
         if error is not None or RedisStorage.persistence_instance().exists(
                 key=REDIS_JOB_RESULTS_ERROR % callback_code):
             if not RedisStorage.persistence_instance().exists(key=REDIS_JOB_RESULTS_ERROR % callback_code):
-                result = dict(verified=False, error=error if error is not None else '')
+                result = dict(verified=False, error=error)
                 RedisStorage.persistence_instance().store_data(key=REDIS_JOB_RESULTS_ERROR % callback_code,
-                                                                ex=300, result=result)
-                store_verification_results(result=result, callback_code=callback_code)
+                                                               ex=300, result=result)
+                store_verification_results(result=result, callback_code=callback_code, probe_id=probe_id)
             if error is not None:
                 worker_logger.info('Job was finished with internal algorithm error %s ' % error)
             else:
@@ -124,12 +124,21 @@ def verification_job(image, probe_id, settings, callback_code):
                 else:
                     true_count = float(gathered_results.count('True'))
                     result = dict(verified=((true_count / len(gathered_results)) * 100) >= 50)
-                store_verification_results(result=result, callback_code=callback_code)
+                store_verification_results(result=result, callback_code=callback_code, probe_id=probe_id)
         shutil.rmtree(temp_image_path)
     worker_logger.info('Verification finished for user - %s, with result - %s' % (settings.get('userID'), result))
 
 
-def store_verification_results(result, callback_code):
+def store_verification_results(result, callback_code, probe_id):
+    if 'error' in result:
+        retries_count = RedisStorage.persistence_instance().decrement_int_value(
+            REDIS_VERIFICATION_RETIES_COUNT_KEY % probe_id)
+        if retries_count == 0:
+            RedisStorage.persistence_instance().delete_data(key=REDIS_VERIFICATION_RETIES_COUNT_KEY % probe_id)
+            worker_logger.debug('Max number of verification attempts reached...')
+            del result['error']
+    else:
+        RedisStorage.persistence_instance().delete_data(key=REDIS_VERIFICATION_RETIES_COUNT_KEY % probe_id)
     RedisStorage.persistence_instance().delete_data(key=REDIS_RESULTS_COUNTER_KEY % callback_code)
     RedisStorage.persistence_instance().delete_data(key=REDIS_PARTIAL_RESULTS_KEY % callback_code)
     RedisStorage.persistence_instance().store_data(key=REDIS_PROBE_RESULT_KEY % callback_code, result=result)
@@ -233,9 +242,10 @@ def training_job(images, probe_id, settings, callback_code, try_type, ai_code):
                     worker_logger.exception('Error during education - %s, %s, %s' % (algo_result_item.get('status'),
                                                                                      algo_result_item.get('type'),
                                                                                      algo_result_item.get('details')))
-                    ai_response_type.update({'status': 'error'})
                     if 'Internal Training Error' in algo_result_item.get('type', ''):
                         error = algo_result_item.get('details', {}).get('message', '')
+                    else:
+                        ai_response_type.update({'status': 'error'})
                 elif algo_result_item.get('status', '') == 'update':
                     database = algo_result_item.get('database', None)
                     if database is not None:
@@ -263,9 +273,10 @@ def training_job(images, probe_id, settings, callback_code, try_type, ai_code):
             worker_logger.exception('Error during education - %s, %s, %s' % (algo_result.get('status'),
                                                                              algo_result.get('type'),
                                                                              algo_result.get('details')))
-            ai_response_type.update({'status': 'error'})
             if 'Internal Training Error' in algo_result.get('type', ''):
                 error = algo_result.get('details', {}).get('message', '')
+            else:
+                ai_response_type.update({'status': 'error'})
             # record = dictionary:
             # key          value
             #      'status'     "error"
@@ -290,33 +301,46 @@ def training_job(images, probe_id, settings, callback_code, try_type, ai_code):
     finally:
         shutil.rmtree(temp_image_path)
         if error is not None:
-            RedisStorage.persistence_instance().store_data(key=REDIS_UPDATE_TRAINING_KEY % probe_id, error=error)
-            result = dict(result=False, error=error if error is not None else '')
+            retries_count = RedisStorage.persistence_instance().decrement_int_value(
+                REDiS_TRAINING_RETRIES_COUNT_KEY % probe_id)
+            if retries_count == 0:
+                RedisStorage.persistence_instance().delete_data(key=REDiS_TRAINING_RETRIES_COUNT_KEY % probe_id)
+                worker_logger.debug('Maximum training attempts reached...')
+                result = False
+                _tell_ai_training_results(result, ai_response_type, try_type, ai_code)
+            else:
+                RedisStorage.persistence_instance().store_data(key=REDIS_UPDATE_TRAINING_KEY % probe_id, error=error)
+                result = dict(result=False, error=error)
             RedisStorage.persistence_instance().store_data(key=REDIS_PROBE_RESULT_KEY % callback_code, result=result)
             worker_logger.info('Job was finished with internal algorithm error %s ' % error)
         else:
+            RedisStorage.persistence_instance().delete_data(key=REDiS_TRAINING_RETRIES_COUNT_KEY % probe_id)
             RedisStorage.persistence_instance().store_data(key=REDIS_PROBE_RESULT_KEY % callback_code, result=result)
-            if result:
-                ai_response_type.update(get_ai_training_response(try_type))
-            try:
-                worker_logger.info('Telling AI that training is finished with code - %s and result - %s' %
-                                   (ai_code, result))
-                response_type = base64.b64encode(json.dumps(ai_response_type))
-                register_biometrics_url = biomio_settings.ai_rest_url % (REST_REGISTER_BIOMETRICS %
-                                                                         (ai_code, response_type))
-                response = requests.post(register_biometrics_url)
-                try:
-                    response.raise_for_status()
-                    worker_logger.info(
-                        'AI should now know that training is finished with code - %s and response type - %s' %
-                        (ai_code, response_type))
-                except HTTPError as e:
-                    worker_logger.exception(e)
-                    worker_logger.exception('Failed to tell AI that training is finished, reason - %s' % response.reason)
-            except Exception as e:
-                worker_logger.error('Failed to build rest request to AI - %s' % str(e))
-                worker_logger.exception(e)
+            _tell_ai_training_results(result, ai_response_type, try_type, ai_code)
     worker_logger.info('training finished for user - %s, with result - %s' % (settings.get('userID'), result))
+
+
+def _tell_ai_training_results(result, ai_response_type, try_type, ai_code):
+    ai_response_type.update(get_ai_training_response(try_type))
+    try:
+        worker_logger.info('Telling AI that training is finished with code - %s and result - %s' %
+                           (ai_code, result))
+        response_type = base64.b64encode(json.dumps(ai_response_type))
+        register_biometrics_url = biomio_settings.ai_rest_url % (REST_REGISTER_BIOMETRICS %
+                                                                 (ai_code, response_type))
+        response = requests.post(register_biometrics_url)
+        try:
+            response.raise_for_status()
+            worker_logger.info(
+                'AI should now know that training is finished with code - %s and response type - %s' %
+                (ai_code, response_type))
+        except HTTPError as e:
+            worker_logger.exception(e)
+            worker_logger.exception(
+                'Failed to tell AI that training is finished, reason - %s' % response.reason)
+    except Exception as e:
+        worker_logger.error('Failed to build rest request to AI - %s' % str(e))
+        worker_logger.exception(e)
 
 
 def _store_training_db(database, probe_id):

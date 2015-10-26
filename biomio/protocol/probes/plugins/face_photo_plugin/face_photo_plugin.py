@@ -1,14 +1,20 @@
+from biomio.constants import REDIS_VERIFICATION_RETIES_COUNT_KEY, REDiS_TRAINING_RETRIES_COUNT_KEY
 import biomio.protocol.probes.plugins.base_probe_plugin as base_probe_plugin
 from biomio.protocol.probes.plugins.face_photo_plugin.face_photo_jobs import training_job, verification_job
+from biomio.protocol.storage.redis_storage import RedisStorage
 from biomio.utils.biomio_decorators import inherit_docstring_from
 
 
 class FacePhotoPlugin(base_probe_plugin.BaseProbePlugin):
     _settings = dict(algoID="001022", userID="0000000000000")
+    _max_verification_attempts = 5
+    _max_training_attempts = 3
 
     @inherit_docstring_from(base_probe_plugin.BaseProbePlugin)
     def set_plugin_config(self, config_values):
         self._settings.update({'algoID': config_values.get('algo_id', "001022")})
+        self._max_verification_attempts = config_values.get('max_verification_attempts', 5)
+        self._max_training_attempts = config_values.get('max_training_attempts', 3)
 
     @inherit_docstring_from(base_probe_plugin.BaseProbePlugin)
     def run_training(self, data, callback=None):
@@ -17,6 +23,10 @@ class FacePhotoPlugin(base_probe_plugin.BaseProbePlugin):
         normalized_images = [str(image) for image in data.get('samples')]
         del data['samples']
         data.update({'images': normalized_images, 'settings': self._settings})
+        redis_instance = RedisStorage.persistence_instance()
+        retries_key = REDiS_TRAINING_RETRIES_COUNT_KEY % data['probe_id']
+        if not redis_instance.exists(retries_key):
+            redis_instance.store_counter_value(key=retries_key, counter=self._max_training_attempts)
         self._process_probe(training_job, **data)
 
     @inherit_docstring_from(base_probe_plugin.BaseProbePlugin)
@@ -28,6 +38,10 @@ class FacePhotoPlugin(base_probe_plugin.BaseProbePlugin):
         for image in data.get('samples'):
             kwargs_list_for_results_gatherer.append({'image': str(image)})
         del data['samples']
+        redis_instance = RedisStorage.persistence_instance()
+        retries_key = REDIS_VERIFICATION_RETIES_COUNT_KEY % data['probe_id']
+        if not redis_instance.exists(retries_key):
+            redis_instance.store_counter_value(key=retries_key, counter=self._max_verification_attempts)
         self._process_probe(verification_job,
                             kwargs_list_for_results_gatherer=kwargs_list_for_results_gatherer, **data)
 
