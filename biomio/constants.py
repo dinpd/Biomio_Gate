@@ -35,6 +35,9 @@ REDIS_RESOURCES_KEY = 'device_resources:%s'
 REDIS_USER_POLICY_KEY = 'policy:%s'
 REDIS_USER_CONDITION_KEY = 'auth_condition:%s'
 
+REDiS_TRAINING_RETRIES_COUNT_KEY = 'training_retries_count:%s'
+REDIS_VERIFICATION_RETIES_COUNT_KEY = 'verification_retries_count:%s'
+
 REDIS_ACTIVE_PROBE_DEVICES = 'active_probes_list'
 REDIS_ACTIVE_CLIENT_CONNECTIONS = 'active_clients_list'
 

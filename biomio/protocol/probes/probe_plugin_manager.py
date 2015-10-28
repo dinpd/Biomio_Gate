@@ -19,8 +19,12 @@ class ProbePluginManager:
     AUTH_TYPE_ATTR = 'auth_type'
     AUTH_CONFIG_ATTR = 'auth_config'
     ENABLED_ATTR = 'enabled'
+    ALGO_ID_ATTR = 'algo_id'
+    MAX_TRAINING_ATTR = 'max_training_attempts'
+    MAX_VERIFICATION_ATTR = 'max_verification_attempts'
 
-    _AVAILABLE_EXTRA_CONFIG_ATTR = [AUTH_TYPE_ATTR, AUTH_CONFIG_ATTR, ENABLED_ATTR]
+    _AVAILABLE_EXTRA_CONFIG_ATTR = [AUTH_TYPE_ATTR, AUTH_CONFIG_ATTR, ENABLED_ATTR, ALGO_ID_ATTR, MAX_TRAINING_ATTR,
+                                    MAX_VERIFICATION_ATTR]
 
     @classmethod
     def instance(cls):

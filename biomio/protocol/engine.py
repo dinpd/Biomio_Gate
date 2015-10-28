@@ -5,11 +5,13 @@ import logging
 from jsonschema import ValidationError
 import tornado.gen
 import greenado
+from biomio.constants import REDiS_TRAINING_RETRIES_COUNT_KEY, REDIS_VERIFICATION_RETIES_COUNT_KEY
 from biomio.protocol.data_stores.condition_data_store import ConditionDataStore
 from biomio.protocol.data_stores.device_resources_store import DeviceResourcesDataStore
 
 from biomio.protocol.message import BiomioMessageBuilder
 from biomio.protocol.probes.policy_engine.policy_engine_manager import PolicyEngineManager
+from biomio.protocol.storage.redis_storage import RedisStorage
 from biomio.third_party.fysom import Fysom, FysomError
 from biomio.protocol.sessionmanager import SessionManager
 from biomio.protocol.settings import settings
@@ -829,6 +831,10 @@ class BiomioProtocol:
 
     def cancel_auth(self, **kwargs):
         if self.bioauth_flow.is_probe_owner():
+            RedisStorage.persistence_instance().delete_data(
+                key=REDIS_VERIFICATION_RETIES_COUNT_KEY % self.bioauth_flow.app_id)
+            RedisStorage.persistence_instance().delete_data(
+                key=REDiS_TRAINING_RETRIES_COUNT_KEY % self.bioauth_flow.app_id)
             message = self.create_next_message(
                 request_seq=self._last_received_message.header.seq,
                 oid='probe',
