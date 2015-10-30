@@ -60,7 +60,7 @@ REST_CREATE_EMAIL_KEYS = 'get_user/%s'
 REST_REGISTER_BIOMETRICS = 'register_biometrics/%s/%s'
 REST_BIOAUTH_LOGIN = 'bioauth/%s/%s'
 
-TRAINING_FACE_TYPE = 'face-photo'
+TRAINING_FACE_TYPE = 'face'
 TRAINING_FINGER_TYPE = 'fingerprints'
 TRAINING_VOICE_TYPE = 'voice'
 
