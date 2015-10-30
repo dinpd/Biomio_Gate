@@ -6,6 +6,9 @@ from yapsy.IPlugin import IPlugin
 from yapsy.PluginFileLocator import PluginFileLocator
 from yapsy.PluginManager import PluginManager
 
+logger = logging.getLogger('yapsy')
+logger.disabled = True
+
 logger = logging.getLogger(__name__)
 
 
@@ -23,8 +26,7 @@ class ProbePluginManager:
     MAX_TRAINING_ATTR = 'max_training_attempts'
     MAX_VERIFICATION_ATTR = 'max_verification_attempts'
 
-    _AVAILABLE_EXTRA_CONFIG_ATTR = [AUTH_TYPE_ATTR, AUTH_CONFIG_ATTR, ENABLED_ATTR, ALGO_ID_ATTR, MAX_TRAINING_ATTR,
-                                    MAX_VERIFICATION_ATTR]
+    _AVAILABLE_EXTRA_CONFIG_ATTR = [AUTH_TYPE_ATTR, AUTH_CONFIG_ATTR, ENABLED_ATTR]
 
     @classmethod
     def instance(cls):

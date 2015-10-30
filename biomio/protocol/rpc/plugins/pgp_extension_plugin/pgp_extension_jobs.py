@@ -75,23 +75,15 @@ def generate_email_pgp_keys(email, table_class_name, result=None):
         return result
 
 
-def assign_user_to_extension_job(app_id, email):
-    worker_logger.info('Checking if user with email %s is assigned to application %s' % (email, app_id))
-    email_data = MySQLDataStoreInterface.get_object(table_name=EMAILS_TABLE_CLASS_NAME, object_id=email,
-                                                    return_dict=True)
-    if email_data is not None:
-        extension = MySQLDataStoreInterface.get_object(table_name=APPS_TABLE_CLASS_NAME, object_id=app_id,
-                                                       return_dict=True)
-        email_user = email_data.get('user')
-        extension_users = extension.get('users')
-        if email_user in extension_users:
-            worker_logger.info('User with email %s is assigned to application %s' % (email, app_id))
-        else:
-            extension_users.append(email_user)
-
-            from biomio.protocol.data_stores.application_data_store import ApplicationDataStore
-
-            ApplicationDataStore.instance().update_data(app_id=app_id, users=extension_users)
-            worker_logger.info('Assigned user with email %s to application %s' % (email, app_id))
+def assign_user_to_application_job(app_id, user_id):
+    worker_logger.info('Checking if user %s is assigned to application %s' % (user_id, app_id))
+    application = MySQLDataStoreInterface.get_object(table_name=APPS_TABLE_CLASS_NAME, object_id=app_id,
+                                                     return_dict=True)
+    application_users = application.get('users')
+    if user_id in application_users:
+        worker_logger.info('User %s is assigned to application %s' % (user_id, app_id))
     else:
-        worker_logger.info('Email %s is not registered' % email)
+        application_users.append(user_id)
+        from biomio.protocol.data_stores.application_data_store import ApplicationDataStore
+        ApplicationDataStore.instance().update_data(app_id=app_id, users=application_users)
+        worker_logger.info('Assigned user %s to application %s' % (user_id, app_id))

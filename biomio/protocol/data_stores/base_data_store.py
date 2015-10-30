@@ -220,7 +220,7 @@ class BaseDataStore:
     def _get_app_ids_by_app_id(self, table_class_name, object_id, callback, probes=False):
         if probes:
             self._run_storage_job(self._worker.SELECT_PROBES_BY_EXTENSION_JOB, callback,
-                                  table_class_name=table_class_name, email=object_id)
+                                  table_class_name=table_class_name, user_id=object_id)
         else:
             self._run_storage_job(self._worker.SELECT_EXTENSIONS_BY_PROBE_JOB, callback,
                                   table_class_name=table_class_name, probe_id=object_id)

@@ -1,17 +1,31 @@
 import ast
-from yapsy.IPlugin import IPlugin
+import biomio.protocol.rpc.plugins.base_rpc_plugin as base_rpc_plugin
 from biomio.protocol.data_stores.email_data_store import EmailDataStore
-from biomio.protocol.rpc.plugins.pgp_extension_plugin.pgp_extension_jobs import assign_user_to_extension_job, \
+from biomio.protocol.rpc.plugins.pgp_extension_plugin.pgp_extension_jobs import assign_user_to_application_job, \
     verify_email_job
 
 from biomio.protocol.rpc.rpcutils import rpc_call_with_auth, rpc_call, get_store_data, select_store_data, \
-    parse_email_data, run_async_job, run_sync_job
+    parse_email_data, run_sync_job
 import logging
+from biomio.utils.biomio_decorators import inherit_docstring_from
 
 logger = logging.getLogger(__name__)
 
 
-class ExtensionPlugin(IPlugin):
+class ExtensionPlugin(base_rpc_plugin.BaseRpcPlugin):
+
+    email_data_store = EmailDataStore.instance()
+
+    @inherit_docstring_from(base_rpc_plugin.BaseRpcPlugin)
+    def identify_user(self, on_behalf_of):
+        email = parse_email_data(on_behalf_of)
+        email_data = get_store_data(self.email_data_store, object_id=email)
+        return email_data.get(self.email_data_store.USER_ATTR) if email_data is not None else None
+
+    @inherit_docstring_from(base_rpc_plugin.BaseRpcPlugin)
+    def assign_user_to_application(self, app_id, user_id):
+        self._process_job(assign_user_to_application_job, app_id=app_id, user_id=user_id)
+
     @rpc_call
     def test_func(self, val1, val2):
         pass
@@ -23,24 +37,21 @@ class ExtensionPlugin(IPlugin):
     @rpc_call_with_auth
     def get_pass_phrase(self, email):
         email = parse_email_data(email)
-        email_store_instance = EmailDataStore.instance()
-        email_data = get_store_data(email_store_instance, object_id=email)
-        if email_data is None or len(email_data) == 0:
+        email_data = get_store_data(self.email_data_store, object_id=email)
+        if email_data is None or len(email_data) == 0 or 'error' in email_data:
             raise Exception('Sorry but your email is not activated in your BioMio account.')
         result = {'pass_phrase': email_data.get(EmailDataStore.PASS_PHRASE_ATTR)}
         if email_data.get(EmailDataStore.PRIVATE_PGP_KEY_ATTR) is not None:
             result.update({'private_pgp_key': email_data.get(EmailDataStore.PRIVATE_PGP_KEY_ATTR)})
             update_keywords = {EmailDataStore.PRIVATE_PGP_KEY_ATTR: None}
-            email_store_instance.store_data(email, **update_keywords)
+            self.email_data_store.store_data(email, **update_keywords)
         return result
 
     @rpc_call
-    def get_users_public_pgp_keys(self, user_id, emails, app_id):
-        run_async_job(assign_user_to_extension_job, app_id=app_id, email=parse_email_data(user_id))
+    def get_users_public_pgp_keys(self, emails):
         emails = parse_email_data(emails).split(',')
-        emails_store_instance = EmailDataStore.instance()
         public_pgp_keys = []
-        emails_data = select_store_data(emails_store_instance, emails)
+        emails_data = select_store_data(self.email_data_store, emails)
         emails_with_errors = []
         if emails_data is not None:
             for key in emails_data.keys():
