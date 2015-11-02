@@ -4,6 +4,7 @@ import inspect
 import tornado.gen
 import greenado
 import traceback
+from biomio.constants import AUTH_MAX_RETRIES_MESSAGE
 
 from biomio.protocol.rpc import bioauthflow
 
@@ -140,6 +141,8 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
                 error_msg = 'Biometric authentication timeout.'
             elif bioauth_flow.is_current_state(bioauthflow.STATE_AUTH_CANCELED):
                 error_msg = 'Biometric authentication canceled.'
+            elif bioauth_flow.is_current_state(bioauth_flow.STATE_AUTH_MAX_RETRIES):
+                error_msg = AUTH_MAX_RETRIES_MESSAGE
             else:
                 error_msg = 'Biometric auth internal error'
             callback(result={"error": error_msg}, status='fail')

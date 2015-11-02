@@ -1,4 +1,10 @@
+import base64
+import json
+import requests
+from requests.exceptions import HTTPError
+from biomio.constants import TRAINING_CANCELED_STATUS, TRAINING_CANCELED_MESSAGE, REST_REGISTER_BIOMETRICS
 from biomio.protocol.probes.probe_plugin_manager import ProbePluginManager
+from biomio.protocol.rpc.app_connection_listener import AppConnectionListener
 from biomio.third_party.fysom import Fysom, FysomError
 from biomio.protocol.storage.auth_state_storage import AuthStateStorage
 from biomio.protocol.rpc.app_auth_connection import AppAuthConnection
@@ -20,6 +26,7 @@ STATE_AUTH_FAILED = 'auth_failed'
 STATE_AUTH_TIMEOUT = 'auth_timeout'
 STATE_AUTH_ERROR = 'auth_error'
 STATE_AUTH_CANCELED = 'auth_canceled'
+STATE_AUTH_MAX_RETRIES = 'max_auth_retries_reached'
 
 # Training states
 STATE_AUTH_TRAINING_STARTED = 'auth_training'
@@ -27,6 +34,7 @@ STATE_AUTH_TRAINING_INPROGRESS = 'auth_training_inprogress'
 STATE_AUTH_TRAINING_DONE = 'auth_training_done'
 STATE_AUTH_TRAINING_FAILED = 'auth_training_failed'
 STATE_AUTH_RESULTS_AVAILABLE = 'results_available'
+
 
 # Event callbacks
 def on_reset(e):
@@ -46,6 +54,8 @@ def on_probe_available(e):
     flow = e.bioauth_flow
 
     if not e.fsm.current == STATE_AUTH_ERROR:
+        if e.max_retries:
+            return STATE_AUTH_MAX_RETRIES
         if e.result is not None:
             if e.result:
                 return STATE_AUTH_SUCCEED
@@ -131,14 +141,14 @@ auth_states = {
         {
             'name': 'reset',
             'src': [STATE_AUTH_READY, STATE_AUTH_WAIT, STATE_AUTH_CANCELED,
-                    STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR,
+                    STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR, STATE_AUTH_MAX_RETRIES,
                     STATE_AUTH_TRAINING_STARTED, STATE_AUTH_TRAINING_DONE, STATE_AUTH_TRAINING_FAILED],
             'dst': [STATE_AUTH_READY],
             'decision': on_reset
         },
         {
             'name': 'request',
-            'src': [STATE_AUTH_READY, STATE_AUTH_SUCCEED, STATE_AUTH_FAILED,
+            'src': [STATE_AUTH_READY, STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_MAX_RETRIES,
                     STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR, STATE_AUTH_CANCELED],
             'dst': [STATE_AUTH_WAIT],
             'decision': on_request
@@ -156,12 +166,14 @@ auth_states = {
         {
             'name': 'results_available',
             'src': [STATE_AUTH_VERIFICATION_STARTED],
-            'dst': [STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR, STATE_AUTH_CANCELED],
+            'dst': [STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR, STATE_AUTH_CANCELED,
+                    STATE_AUTH_MAX_RETRIES],
             'decision': on_probe_available
         },
         {
             'name': 'results_accepted',
-            'src': [STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR, STATE_AUTH_CANCELED],
+            'src': [STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR, STATE_AUTH_CANCELED,
+                    STATE_AUTH_MAX_RETRIES],
             'dst': [STATE_AUTH_READY],
             'decision': on_got_results
         },
@@ -185,11 +197,11 @@ auth_states = {
         {
             'name': 'state_changed',
             'src': [STATE_AUTH_READY, STATE_AUTH_WAIT, STATE_AUTH_VERIFICATION_STARTED, STATE_AUTH_CANCELED,
-                    STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR,
+                    STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR, STATE_AUTH_MAX_RETRIES,
                     STATE_AUTH_TRAINING_STARTED, STATE_AUTH_TRAINING_INPROGRESS,
                     STATE_AUTH_TRAINING_DONE, STATE_AUTH_TRAINING_FAILED],
             'dst': [STATE_AUTH_READY, STATE_AUTH_WAIT, STATE_AUTH_VERIFICATION_STARTED, STATE_AUTH_CANCELED,
-                    STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR,
+                    STATE_AUTH_SUCCEED, STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR, STATE_AUTH_MAX_RETRIES,
                     STATE_AUTH_TRAINING_STARTED, STATE_AUTH_TRAINING_INPROGRESS,
                     STATE_AUTH_TRAINING_DONE, STATE_AUTH_TRAINING_FAILED],
             'decision': on_state_changed
@@ -202,6 +214,7 @@ auth_states = {
         'onauth_timeout': on_auth_finished,
         'onauth_error': on_auth_finished,
         'onauth_canceled': on_auth_finished,
+        'onauth_max_retries': on_auth_finished,
         'onauth_training': on_auth_training,
         'onauth_verification_started': on_auth_verification_started
     }
@@ -278,7 +291,7 @@ class BioauthFlow:
         """
         next_state = self.auth_connection.get_data(key=_PROBESTORE_STATE_KEY)
 
-        if next_state in [STATE_AUTH_TRAINING_DONE, STATE_AUTH_CANCELED, STATE_AUTH_SUCCEED,
+        if next_state in [STATE_AUTH_TRAINING_DONE, STATE_AUTH_CANCELED, STATE_AUTH_SUCCEED, STATE_AUTH_MAX_RETRIES,
                           STATE_AUTH_FAILED, STATE_AUTH_TIMEOUT, STATE_AUTH_ERROR, STATE_AUTH_VERIFICATION_STARTED]:
             # Result of previous auth is still stored in auth key
             self.reset()
@@ -328,6 +341,7 @@ class BioauthFlow:
         self._store_state()
 
         auth_result = True
+        max_retries = False
 
         for probe_type, samples_list in samples_by_probe_type.iteritems():
             data = dict(samples=samples_list, probe_id=self.app_id)
@@ -336,9 +350,11 @@ class BioauthFlow:
             if isinstance(result, bool):
                 verified = result
                 error = None
+                max_retries = False
             else:
                 error = result.get('error')
                 verified = result.get('verified')
+                max_retries = result.get('max_retries', False)
             if error:
                 logger.debug(msg='Some samples could not be processed. Sending "try" message again.')
                 self._state_machine_instance.retry(bioauth_flow=self)
@@ -348,7 +364,7 @@ class BioauthFlow:
                 logger.debug(msg='SET NEXT AUTH RESULT: %s' % verified)
                 auth_result = verified and auth_result
 
-        self.set_auth_results(result=auth_result)
+        self.set_auth_results(result=auth_result, max_retries=max_retries)
         self._store_state()
 
     @tornado.gen.engine
@@ -378,9 +394,9 @@ class BioauthFlow:
                 self._store_state()
                 self.auth_connection.end_auth()
 
-    def set_auth_results(self, result):
+    def set_auth_results(self, result, max_retries=False):
         # TODO: make method private
-        self._state_machine_instance.results_available(bioauth_flow=self, result=result)
+        self._state_machine_instance.results_available(bioauth_flow=self, result=result, max_retries=max_retries)
         self._store_state()
 
     def is_current_state(self, state):
@@ -406,6 +422,31 @@ class BioauthFlow:
     def cancel_auth(self):
         if self._state_machine_instance.current in [STATE_AUTH_WAIT, STATE_AUTH_TRAINING_STARTED]:
             if self._state_machine_instance.current == STATE_AUTH_TRAINING_STARTED:
+                client_id = self.auth_connection.get_client_id()
+                if client_id is not None and 'code_' in client_id:
+                    self.tell_ai_canceled_training(client_id.split('_')[1])
                 self.auth_connection.end_auth()
             self._state_machine_instance.cancel_auth(bioauth_flow=self)
             self._store_state()
+
+    @staticmethod
+    def tell_ai_canceled_training(ai_code):
+        try:
+            ai_response_status = {
+                'status': TRAINING_CANCELED_STATUS,
+                'message': TRAINING_CANCELED_MESSAGE
+            }
+            logger.info('Telling AI that training was canceled with code - %s' % ai_code)
+            response_type = base64.b64encode(json.dumps(ai_response_status))
+            register_biometrics_url = settings.ai_rest_url % (REST_REGISTER_BIOMETRICS % (ai_code, response_type))
+            response = requests.post(register_biometrics_url)
+            try:
+                response.raise_for_status()
+                logger.info('AI should now know that training is finished with code - %s and response type - %s' %
+                            (ai_code, response_type))
+            except HTTPError as e:
+                logger.exception(e)
+                logger.exception('Failed to tell AI that training is finished, reason - %s' % response.reason)
+        except Exception as e:
+            logger.error('Failed to build rest request to AI - %s' % str(e))
+            logger.exception(e)

@@ -175,6 +175,11 @@ class AppAuthConnection:
         AppConnectionManager.get_connected_apps(app_id=app_id, probe_device=self.is_probe_owner(),
                                                 callback=self._get_disconnect_apps_callback())
 
+    def get_client_id(self):
+        if self._app_key is not None:
+            return self._connection_listener.extension_id(self._app_key)
+        return None
+
     def _get_disconnect_apps_callback(self):
         def _disconnect_apps(app_ids):
             if self.clear_related_keys:

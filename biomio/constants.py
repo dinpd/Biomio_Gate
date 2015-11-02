@@ -74,6 +74,27 @@ TRAINING_GATE_AI_TYPES_MAP = {
 }
 
 
+AUTH_CANCELED_STATUS = 'canceled'
+AUTH_CANCELED_MESSAGE = 'Authentication was canceled'
+AUTH_FAILED_STATUS = 'failed'
+AUTH_FAILED_MESSAGE = 'Authentication failed'
+AUTH_MAX_RETRIES_STATUS = AUTH_FAILED_STATUS
+AUTH_MAX_RETRIES_MESSAGE = 'Maximum number of auth retries reached'
+
+TRAINING_CANCELED_STATUS = 'canceled'
+TRAINING_CANCELED_MESSAGE = 'Training was canceled'
+TRAINING_FAILED_STATUS = 'failed'
+TRAINING_FAILED_MESSAGE = 'Training failed. Try to change your location or your device position'
+TRAINING_MAX_RETRIES_STATUS = TRAINING_FAILED_STATUS
+TRAINING_MAX_RETRIES_MESSAGE = 'Maximum number of training retries reached.Try to change your location or your ' \
+                               'device position'
+TRAINING_STARTED_STATUS = 'in-progress'
+TRAINING_STARTED_MESSAGE = 'Training started'
+TRAINING_RETRY_STATUS = 'retry'
+TRAINING_RETRY_MESSAGE = 'Additional data is required, please check your device'
+TRAINING_SUCCESS_STATUS = 'success'
+TRAINING_SUCCESS_MESSAGE = 'Our recognition algorithm was successfully trained with your face data'
+
 TRAINING_TYPES_AI_RESPONSE = {
     'face': '0',
     'fingerprints': ['0', '0', '0', '0', '0', '0', '0', '0', '0', '0'],

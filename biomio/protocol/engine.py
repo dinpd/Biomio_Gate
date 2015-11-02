@@ -857,7 +857,6 @@ class BiomioProtocol:
                 key=REDIS_VERIFICATION_RETIES_COUNT_KEY % flow.app_id)
             RedisStorage.persistence_instance().delete_data(
                 key=REDiS_TRAINING_RETRIES_COUNT_KEY % flow.app_id)
-        if flow.is_probe_owner():
             message = self.create_next_message(
                 request_seq=self._last_received_message.header.seq,
                 oid='probe',
