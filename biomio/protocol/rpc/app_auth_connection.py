@@ -26,7 +26,7 @@ class AppAuthConnection:
         self._app_auth_data_callback = None
         self._on_behalf_of = None
         self._push_notifications_callback = push_notification_callback(
-            'Please, open the app to proceed with Verification.')
+            'Please open the app to proceed with Verification.')
 
     def is_probe_owner(self):
         """
