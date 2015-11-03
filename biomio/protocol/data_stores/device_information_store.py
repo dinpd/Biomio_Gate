@@ -1,5 +1,5 @@
 from threading import Lock
-from biomio.constants import MYSQL_DEVICE_INFORMATION_TABLE_NAME, REDIS_DEVICE_INFORMATION_KEY
+from biomio.constants import REDIS_DEVICE_INFORMATION_KEY, DEVICE_INFORMATION_TABLE_CLASS_NAME
 from biomio.protocol.data_stores.base_data_store import BaseDataStore
 from biomio.utils.biomio_decorators import inherit_docstring_from
 
@@ -7,7 +7,7 @@ from biomio.utils.biomio_decorators import inherit_docstring_from
 class DeviceInformationStore(BaseDataStore):
     _instance = None
     _lock = Lock()
-    _table_class_name = MYSQL_DEVICE_INFORMATION_TABLE_NAME
+    _table_class_name = DEVICE_INFORMATION_TABLE_CLASS_NAME
 
     DEVICE_TOKEN_ATTR = 'device_token'
     PUSH_TOKEN_ATTR = 'push_token'
