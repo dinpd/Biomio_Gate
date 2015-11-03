@@ -3,6 +3,7 @@ import json
 import requests
 from requests.exceptions import HTTPError
 from biomio.constants import TRAINING_CANCELED_STATUS, TRAINING_CANCELED_MESSAGE, REST_REGISTER_BIOMETRICS
+from biomio.protocol.data_stores.device_information_store import DeviceInformationStore
 from biomio.protocol.probes.probe_plugin_manager import ProbePluginManager
 from biomio.protocol.rpc.app_connection_listener import AppConnectionListener
 from biomio.third_party.fysom import Fysom, FysomError
@@ -13,6 +14,7 @@ from biomio.protocol.settings import settings
 import tornado.gen
 
 import logging
+from biomio.utils.utils import push_notification_callback
 
 logger = logging.getLogger(__name__)
 
@@ -416,6 +418,8 @@ class BioauthFlow:
             _PROBESTORE_AI_CODE_KEY: code
         }
         app_id = 'auth:%s:%s' % ('code_%s' % code, probe_id)
+        DeviceInformationStore.instance().get_data(app_id=probe_id, callback=push_notification_callback(
+            'Please, open the app to proceed with training'))
         AuthStateStorage.instance().store_probe_data(app_id, ttl=settings.bioauth_timeout, **data)
         logger.debug('Training process started...')
 

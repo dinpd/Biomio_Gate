@@ -8,6 +8,7 @@ import greenado
 from biomio.constants import REDiS_TRAINING_RETRIES_COUNT_KEY, REDIS_VERIFICATION_RETIES_COUNT_KEY
 from biomio.constants import PROBE_APP_TYPE_PREFIX
 from biomio.protocol.data_stores.condition_data_store import ConditionDataStore
+from biomio.protocol.data_stores.device_information_store import DeviceInformationStore
 from biomio.protocol.data_stores.device_resources_store import DeviceResourcesDataStore
 
 from biomio.protocol.message import BiomioMessageBuilder
@@ -259,6 +260,9 @@ class MessageHandler:
         logger.debug(msg='RESOURCES: %s available' % resources_dict)
         e.protocol_instance.available_resources = resources_dict
         DeviceResourcesDataStore.instance().store_data(device_id=str(e.request.header.appId), **resources_dict)
+        if hasattr(e.request.msg, 'push_token'):
+            DeviceInformationStore.instance().update_data(app_id=str(e.request.header.appId),
+                                                          push_token=str(e.request.msg.push_token))
         return STATE_READY
 
 

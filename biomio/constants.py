@@ -8,6 +8,7 @@ EMAILS_TABLE_CLASS_NAME = 'EmailsData'
 REDIS_CHANGES_CLASS_NAME = 'ChangesTable'
 TRAINING_DATA_TABLE_CLASS_NAME = 'TrainingData'
 POLICY_DATA_TABLE_CLASS_NAME = 'Policy'
+DEVICE_INFORMATION_TABLE_CLASS_NAME = 'DeviceInformation'
 
 MYSQL_APPS_TABLE_NAME = 'Applications'
 MYSQL_EMAILS_TABLE_NAME = 'EmailsData'
@@ -15,6 +16,7 @@ MYSQL_USERS_TABLE_NAME = 'Profiles'
 MYSQL_TRAINING_DATA_TABLE_NAME = 'TrainingData'
 MYSQL_CHANGES_TABLE_NAME = 'UILog'
 MYSQL_POLICIES_TABLE_NAME = 'Policies'
+MYSQL_DEVICE_INFORMATION_TABLE_NAME = 'UserServices'
 
 # Redis Constants
 REDIS_APP_AUTH_KEY = 'auth:%s'
@@ -34,6 +36,7 @@ REDIS_UPDATE_TRAINING_KEY = 'update_training:%s'
 REDIS_RESOURCES_KEY = 'device_resources:%s'
 REDIS_USER_POLICY_KEY = 'policy:%s'
 REDIS_USER_CONDITION_KEY = 'auth_condition:%s'
+REDIS_DEVICE_INFORMATION_KEY = 'device_info:%s'
 
 REDiS_TRAINING_RETRIES_COUNT_KEY = 'training_retries_count:%s'
 REDIS_VERIFICATION_RETIES_COUNT_KEY = 'verification_retries_count:%s'

@@ -1,10 +1,12 @@
 from biomio.constants import PROBE_APP_TYPE_PREFIX
+from biomio.protocol.data_stores.device_information_store import DeviceInformationStore
 from biomio.protocol.rpc.app_connection_listener import AppConnectionListener
 from biomio.protocol.rpc.app_connection_manager import AppConnectionManager
 from biomio.protocol.storage.auth_state_storage import AuthStateStorage
 from biomio.protocol.settings import settings
 
 import logging
+from biomio.utils.utils import push_notification_callback
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +25,8 @@ class AppAuthConnection:
         self.extension_keys = []
         self._app_auth_data_callback = None
         self._on_behalf_of = None
+        self._push_notifications_callback = push_notification_callback(
+            'Please, open the app to proceed with Verification.')
 
     def is_probe_owner(self):
         """
@@ -83,8 +87,8 @@ class AppAuthConnection:
                         self.extension_keys = [self._app_key]
                         self.store_data(state='auth_wait')
                         return
-
             for app_id in app_ids:
+                DeviceInformationStore.instance().get_data(app_id=app_id, callback=self._push_notifications_callback)
                 self._connection_manager.add_active_app(app_id, self._app_id)
 
         return _set_keys_for_connected_app_callback

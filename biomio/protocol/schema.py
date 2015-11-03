@@ -188,7 +188,8 @@ BIOMIO_protocol_json_schema = {
                 "data": {
                     "type": "array",
                     "items": {"$ref": "#/definitions/resource"}
-                }
+                },
+                "push_token": {"type": "string"}
             }
         },
         "imageSamples": {

@@ -6,6 +6,7 @@ APP_ROOT = os.path.join(APP_ROOT, '..', '..')
 
 DEFAULT_CONNECTION_TTL = 30  # 30 minutes
 DEFAULT_PORT = 8080
+DEFAULT_DEV_MODE = False
 DEFAULT_SESSION_TTL = 3 * 60  # 3 minutes
 DEFAULT_REDIS_PORT = 6379
 DEFAULT_REDIS_LRU_PORT = 6381
@@ -37,6 +38,7 @@ DEFAULT_POLICY_TRY_TYPE = 'face-photo'
 define('connection_timeout', default=DEFAULT_CONNECTION_TTL,
        help='Number of seconds in which inactive connection will be closed.')
 define('port', default=DEFAULT_PORT)
+define('dev_mode', default=DEFAULT_DEV_MODE)
 define('host', default='127.0.0.1')
 define('session_ttl', default=DEFAULT_SESSION_TTL, help='Number of seconds in which session expires.')
 define('redis_port', default=DEFAULT_REDIS_PORT, help='Redis port')

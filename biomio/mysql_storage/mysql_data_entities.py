@@ -5,7 +5,7 @@ import abc
 from pony.orm.ormtypes import LongStr
 from biomio.constants import REDIS_USER_KEY, REDIS_EMAILS_KEY, REDIS_APPLICATION_KEY, MYSQL_APPS_TABLE_NAME, \
     MYSQL_EMAILS_TABLE_NAME, MYSQL_USERS_TABLE_NAME, MYSQL_TRAINING_DATA_TABLE_NAME, MYSQL_CHANGES_TABLE_NAME, \
-    MYSQL_POLICIES_TABLE_NAME, REDIS_USER_POLICY_KEY
+    MYSQL_POLICIES_TABLE_NAME, REDIS_USER_POLICY_KEY, MYSQL_DEVICE_INFORMATION_TABLE_NAME, REDIS_DEVICE_INFORMATION_KEY
 from biomio.utils.biomio_decorators import inherit_docstring_from
 
 database = pny.Database()
@@ -306,3 +306,45 @@ class Policy(BaseEntityClass, database.Entity):
     @inherit_docstring_from
     def get_redis_key(self):
         return REDIS_USER_POLICY_KEY % self.owner
+
+
+class DeviceInformation(BaseEntityClass, database.Entity):
+    _table_ = MYSQL_DEVICE_INFORMATION_TABLE_NAME
+    profileId = pny.Required(int)
+    serviceId = pny.Required(int)
+    title = pny.Optional(str, default='No_name')
+    status = pny.Optional(bool, default=0)
+    device_token = pny.Optional(str)
+    push_token = pny.Optional(str)
+    date_created = pny.Required(datetime.datetime, default=lambda: datetime.datetime.now(), lazy=True)
+    date_modified = pny.Required(datetime.datetime, default=lambda: datetime.datetime.now(), auto=True, lazy=True)
+
+    @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
+    def get_table_name():
+        return MYSQL_DEVICE_INFORMATION_TABLE_NAME
+
+    @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
+    def create_record(**kwargs):
+        DeviceInformation(**kwargs)
+
+    @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
+    def update_record(record_id, **kwargs):
+        search_query = {DeviceInformation.get_unique_search_attribute(): record_id}
+        device_information = DeviceInformation.get(**search_query)
+        if device_information is not None:
+            for key, value in kwargs.iteritems():
+                if not hasattr(device_information, key):
+                    continue
+                setattr(device_information, key, value)
+
+    @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
+    def get_unique_search_attribute():
+        return 'device_token'
+
+    @inherit_docstring_from(BaseEntityClass)
+    def get_redis_key(self):
+        return REDIS_DEVICE_INFORMATION_KEY % self.device_token
