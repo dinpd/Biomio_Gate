@@ -33,7 +33,7 @@ class DeviceInformationStore(BaseDataStore):
     @inherit_docstring_from(BaseDataStore)
     def get_data(self, app_id, callback):
         self._get_lru_data(key=self.get_data_key(app_id), table_class_name=self._table_class_name, object_id=app_id,
-                           callback=callback, to_dict=True)
+                           callback=callback, to_dict=False)
 
     @inherit_docstring_from(BaseDataStore)
     def store_data(self, app_id, **kwargs):

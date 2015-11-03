@@ -88,7 +88,9 @@ class AppAuthConnection:
                         self.store_data(state='auth_wait')
                         return
             for app_id in app_ids:
-                DeviceInformationStore.instance().get_data(app_id=app_id, callback=self._push_notifications_callback)
+                if not self.is_probe_owner():
+                    DeviceInformationStore.instance().get_data(app_id=app_id,
+                                                               callback=self._push_notifications_callback)
                 self._connection_manager.add_active_app(app_id, self._app_id)
 
         return _set_keys_for_connected_app_callback
