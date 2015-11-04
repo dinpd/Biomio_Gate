@@ -8,10 +8,11 @@ from biomio.protocol.settings import APNS_PRODUCTION_PEM, APNS_DEV_PEM, settings
 logger = logging.getLogger(__name__)
 
 
-def push_notification_callback(message):
+def push_notification_callback(message, clear=False):
     """
 
     :param message: str message to send to device.
+    :param clear: specifies whether it is required to clear the notifications on device,
     """
 
     def send_push_notification(data):
@@ -29,7 +30,7 @@ def push_notification_callback(message):
                     cert_file = APNS_PRODUCTION_PEM
 
                 apns = APNs(use_sandbox=settings.dev_mode, cert_file=cert_file)
-                payload = Payload(alert=message, sound='default')
+                payload = Payload(alert=message, sound='default', badge=0 if clear else None)
 
                 apns.gateway_server.send_notification(token_hex=push_token, payload=payload)
                 logger.info('Notification sent')

@@ -27,6 +27,7 @@ class AppAuthConnection:
         self._on_behalf_of = None
         self._push_notifications_callback = push_notification_callback(
             'Please open the app to proceed with Verification.')
+        self._push_notifications_clear_callback = push_notification_callback('', clear=True)
 
     def is_probe_owner(self):
         """
@@ -48,6 +49,8 @@ class AppAuthConnection:
             # Looking for already connected extensions that are waiting for authentication.
             existing_connected_app_apps = self._connection_manager.get_active_apps(connected_apps[0].split('_')[0])
             for connected_app in existing_connected_app_apps:
+                DeviceInformationStore.instance().get_data(app_id=connected_app,
+                                                           callback=self._push_notifications_clear_callback)
                 self._connection_manager.remove_active_app(connected_app, connected_apps[0])
             self._connection_manager.add_active_app(connected_apps[0].split('_')[0], self._app_id)
             new_app_key = self._connection_listener.auth_key(extension_id=connected_apps[0], probe_id=self._app_id)
@@ -192,6 +195,9 @@ class AppAuthConnection:
                 app_ids = app_ids.get('result') if app_ids is not None else []
                 logger.debug('App ids to remove connections for: %s' % app_ids)
                 for app_id in app_ids:
+                    if not self.is_probe_owner():
+                        DeviceInformationStore.instance().get_data(app_id=app_id,
+                                                                   callback=self._push_notifications_clear_callback)
                     self._connection_manager.remove_active_app(app_id, self._app_id)
             if self.is_probe_owner():
                 self._connection_manager.delete_active_apps_list(self._app_id)
