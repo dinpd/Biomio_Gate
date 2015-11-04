@@ -51,7 +51,7 @@ class AppAuthConnection:
             for connected_app in existing_connected_app_apps:
                 self._connection_manager.remove_active_app(connected_app, connected_apps[0])
             AppConnectionManager.get_connected_apps(app_id=connected_apps[0].split('_')[1],
-                                                    probe_device=self.is_probe_owner(),
+                                                    probe_device=False,
                                                     callback=self._reset_auth_for_other_devices_callback(
                                                         connected_apps[0]))
             self._connection_manager.add_active_app(connected_apps[0].split('_')[0], self._app_id)
