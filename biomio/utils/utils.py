@@ -30,7 +30,7 @@ def push_notification_callback(message, clear=False):
                     cert_file = APNS_PRODUCTION_PEM
 
                 apns = APNs(use_sandbox=settings.dev_mode, cert_file=cert_file)
-                payload = Payload(alert=message, sound='default', badge=0 if clear else None)
+                payload = Payload(alert=message, sound='default' if not clear else None, badge=0 if clear else 1)
 
                 apns.gateway_server.send_notification(token_hex=push_token, payload=payload)
                 logger.info('Notification sent')

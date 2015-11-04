@@ -49,6 +49,7 @@ class AppAuthConnection:
             # Looking for already connected extensions that are waiting for authentication.
             existing_connected_app_apps = self._connection_manager.get_active_apps(connected_apps[0].split('_')[0])
             for connected_app in existing_connected_app_apps:
+                logger.debug('CONNECTED_APP')
                 DeviceInformationStore.instance().get_data(app_id=connected_app,
                                                            callback=self._push_notifications_clear_callback)
                 self._connection_manager.remove_active_app(connected_app, connected_apps[0])
@@ -196,6 +197,7 @@ class AppAuthConnection:
                 logger.debug('App ids to remove connections for: %s' % app_ids)
                 for app_id in app_ids:
                     if not self.is_probe_owner():
+                        logger.debug('DISCONNECTED')
                         DeviceInformationStore.instance().get_data(app_id=app_id,
                                                                    callback=self._push_notifications_clear_callback)
                     self._connection_manager.remove_active_app(app_id, self._app_id)
