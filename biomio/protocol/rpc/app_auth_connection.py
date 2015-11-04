@@ -49,10 +49,11 @@ class AppAuthConnection:
             # Looking for already connected extensions that are waiting for authentication.
             existing_connected_app_apps = self._connection_manager.get_active_apps(connected_apps[0].split('_')[0])
             for connected_app in existing_connected_app_apps:
-                logger.debug('CONNECTED_APP')
-                DeviceInformationStore.instance().get_data(app_id=connected_app,
-                                                           callback=self._push_notifications_clear_callback)
                 self._connection_manager.remove_active_app(connected_app, connected_apps[0])
+            AppConnectionManager.get_connected_apps(app_id=connected_apps[0].split('_')[1],
+                                                    probe_device=self.is_probe_owner(),
+                                                    callback=self._reset_auth_for_other_devices_callback(
+                                                        connected_apps[0]))
             self._connection_manager.add_active_app(connected_apps[0].split('_')[0], self._app_id)
             new_app_key = self._connection_listener.auth_key(extension_id=connected_apps[0], probe_id=self._app_id)
             if self._app_key is None or self._app_key != new_app_key:
@@ -65,6 +66,20 @@ class AppAuthConnection:
             app_id = app_id if self._on_behalf_of is None else self._on_behalf_of
             AppConnectionManager.get_connected_apps(app_id=app_id, probe_device=self.is_probe_owner(),
                                                     callback=self._get_keys_for_connected_apps_callback())
+
+    def _reset_auth_for_other_devices_callback(self, connected_app):
+
+        def _reset_auth_for_other_devices(app_ids):
+            app_ids = app_ids.get('result') if app_ids else []
+            if self.is_probe_owner():
+                for app_id in app_ids:
+                    if app_id == self._app_id:
+                        continue
+                    DeviceInformationStore.instance().get_data(app_id=app_id,
+                                                               callback=self._push_notifications_clear_callback)
+                    self._connection_manager.remove_active_app(app_id, connected_app)
+
+        return _reset_auth_for_other_devices
 
     def _get_keys_for_connected_apps_callback(self):
 
