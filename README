@@ -1,6 +1,5 @@
 ### Version: beta_2.0 ###
 
-
 TESTING
 -------
 To run all tests, execute: nosetests -s -v tests.py --attr '!slow'
