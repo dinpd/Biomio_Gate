@@ -8,6 +8,7 @@ EMAILS_TABLE_CLASS_NAME = 'EmailsData'
 REDIS_CHANGES_CLASS_NAME = 'ChangesTable'
 TRAINING_DATA_TABLE_CLASS_NAME = 'TrainingData'
 POLICY_DATA_TABLE_CLASS_NAME = 'Policy'
+DEVICE_INFORMATION_TABLE_CLASS_NAME = 'DeviceInformation'
 
 MYSQL_APPS_TABLE_NAME = 'Applications'
 MYSQL_EMAILS_TABLE_NAME = 'EmailsData'
@@ -15,6 +16,7 @@ MYSQL_USERS_TABLE_NAME = 'Profiles'
 MYSQL_TRAINING_DATA_TABLE_NAME = 'TrainingData'
 MYSQL_CHANGES_TABLE_NAME = 'UILog'
 MYSQL_POLICIES_TABLE_NAME = 'Policies'
+MYSQL_DEVICE_INFORMATION_TABLE_NAME = 'UserServices'
 
 # Redis Constants
 REDIS_APP_AUTH_KEY = 'auth:%s'
@@ -34,6 +36,10 @@ REDIS_UPDATE_TRAINING_KEY = 'update_training:%s'
 REDIS_RESOURCES_KEY = 'device_resources:%s'
 REDIS_USER_POLICY_KEY = 'policy:%s'
 REDIS_USER_CONDITION_KEY = 'auth_condition:%s'
+REDIS_DEVICE_INFORMATION_KEY = 'device_info:%s'
+
+REDiS_TRAINING_RETRIES_COUNT_KEY = 'training_retries_count:%s'
+REDIS_VERIFICATION_RETIES_COUNT_KEY = 'verification_retries_count:%s'
 
 REDIS_ACTIVE_PROBE_DEVICES = 'active_probes_list'
 REDIS_ACTIVE_CLIENT_CONNECTIONS = 'active_clients_list'
@@ -60,7 +66,7 @@ REST_CREATE_EMAIL_KEYS = 'get_user/%s'
 REST_REGISTER_BIOMETRICS = 'register_biometrics/%s/%s'
 REST_BIOAUTH_LOGIN = 'bioauth/%s/%s'
 
-TRAINING_FACE_TYPE = 'face-photo'
+TRAINING_FACE_TYPE = 'face'
 TRAINING_FINGER_TYPE = 'fingerprints'
 TRAINING_VOICE_TYPE = 'voice'
 
@@ -70,6 +76,27 @@ TRAINING_GATE_AI_TYPES_MAP = {
     TRAINING_VOICE_TYPE: 'voice'
 }
 
+
+AUTH_CANCELED_STATUS = 'canceled'
+AUTH_CANCELED_MESSAGE = 'Authentication was canceled'
+AUTH_FAILED_STATUS = 'failed'
+AUTH_FAILED_MESSAGE = 'Authentication failed'
+AUTH_MAX_RETRIES_STATUS = AUTH_FAILED_STATUS
+AUTH_MAX_RETRIES_MESSAGE = 'Maximum number of auth retries reached'
+
+TRAINING_CANCELED_STATUS = 'canceled'
+TRAINING_CANCELED_MESSAGE = 'Training was canceled'
+TRAINING_FAILED_STATUS = 'failed'
+TRAINING_FAILED_MESSAGE = 'Training failed. Try to change your location or your device position'
+TRAINING_MAX_RETRIES_STATUS = TRAINING_FAILED_STATUS
+TRAINING_MAX_RETRIES_MESSAGE = 'Maximum number of training retries reached.Try to change your location or your ' \
+                               'device position'
+TRAINING_STARTED_STATUS = 'in-progress'
+TRAINING_STARTED_MESSAGE = 'Training started'
+TRAINING_RETRY_STATUS = 'retry'
+TRAINING_RETRY_MESSAGE = 'Additional data is required, please check your device'
+TRAINING_SUCCESS_STATUS = 'success'
+TRAINING_SUCCESS_MESSAGE = 'Our recognition algorithm was successfully trained with your face data'
 
 TRAINING_TYPES_AI_RESPONSE = {
     'face': '0',

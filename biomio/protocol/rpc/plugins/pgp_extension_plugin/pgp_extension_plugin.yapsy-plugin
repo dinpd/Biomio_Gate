@@ -3,4 +3,5 @@ Name = ExtensionPlugin
 Module = pgp_extension_plugin
 
 [Documentation]
-Description = This is extension PGP plugin
+Description = Plugin that provides different functionality for PGP extension APP
+

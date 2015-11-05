@@ -188,7 +188,8 @@ BIOMIO_protocol_json_schema = {
                 "data": {
                     "type": "array",
                     "items": {"$ref": "#/definitions/resource"}
-                }
+                },
+                "push_token": {"type": "string"}
             }
         },
         "imageSamples": {
@@ -346,6 +347,7 @@ BIOMIO_protocol_json_schema = {
             "required": ["oid", "namespace", "call", "data"],
             "properties": {
                 "oid": { "enum": ["rpcResp"] },
+                "onBehalfOf": {"type": "string"},
                 "namespace": {"type": "string"},
                 "call": {"type": "string"},
                 "data": {"$ref": "#/definitions/rpcData"},

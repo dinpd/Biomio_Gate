@@ -1,5 +1,5 @@
 import time
-from biomio.mysql_storage.mysql_data_entities import pny, database
+from biomio.mysql_storage.mysql_data_entities import pny, database, UserInformation
 from biomio.protocol.settings import settings
 
 if settings.logging == 'DEBUG':
@@ -99,6 +99,8 @@ class MySQLDataStore():
     @pny.db_session
     def get_applications_by_user_id_and_type(self, module_name, table_name, user_id, app_type):
         table_class = self.get_table_class(module_name=module_name, table_name=table_name)
+        if isinstance(user_id, str):
+            user_id = UserInformation.get(id=user_id)
         objects = pny.select(app.app_id for app in table_class if user_id in app.users and app.app_type == app_type)[:]
         return objects
 

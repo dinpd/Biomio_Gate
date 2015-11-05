@@ -5,16 +5,20 @@ import logging
 from jsonschema import ValidationError
 import tornado.gen
 import greenado
+from biomio.constants import REDiS_TRAINING_RETRIES_COUNT_KEY, REDIS_VERIFICATION_RETIES_COUNT_KEY
+from biomio.constants import PROBE_APP_TYPE_PREFIX
 from biomio.protocol.data_stores.condition_data_store import ConditionDataStore
+from biomio.protocol.data_stores.device_information_store import DeviceInformationStore
 from biomio.protocol.data_stores.device_resources_store import DeviceResourcesDataStore
 
 from biomio.protocol.message import BiomioMessageBuilder
 from biomio.protocol.probes.policy_engine.policy_engine_manager import PolicyEngineManager
+from biomio.protocol.storage.redis_storage import RedisStorage
 from biomio.third_party.fysom import Fysom, FysomError
 from biomio.protocol.sessionmanager import SessionManager
 from biomio.protocol.settings import settings
 from biomio.protocol.crypt import Crypto
-from biomio.protocol.rpc.rpchandler import RpcHandler
+from biomio.protocol.rpc.rpc_handler import RpcHandler
 from biomio.protocol.data_stores.application_data_store import ApplicationDataStore
 from biomio.protocol.probes.policymanager import PolicyManager
 from biomio.protocol.probes.policies.fixedorderpolicy import FIELD_AUTH_TYPE, FIELD_SAMPLES_NUM
@@ -220,7 +224,7 @@ class MessageHandler:
     @verify_header
     def on_getting_probe(e):
         next_state = STATE_READY
-        flow = e.protocol_instance.bioauth_flow
+        flow = e.protocol_instance.bioauth_flows.get(str(e.request.header.appId))
         if e.request.msg.probeStatus == 'canceled':
             flow.cancel_auth()
             next_state = STATE_READY
@@ -256,6 +260,9 @@ class MessageHandler:
         logger.debug(msg='RESOURCES: %s available' % resources_dict)
         e.protocol_instance.available_resources = resources_dict
         DeviceResourcesDataStore.instance().store_data(device_id=str(e.request.header.appId), **resources_dict)
+        if hasattr(e.request.msg, 'push_token'):
+            DeviceInformationStore.instance().update_data(app_id=str(e.request.header.appId),
+                                                          push_token=str(e.request.msg.push_token))
         return STATE_READY
 
 
@@ -330,24 +337,24 @@ def app_registered(e):
 
 
 def ready(e):
-    if e.protocol_instance.bioauth_flow is None:
-        app_type = str(e.request.header.appType)
-        app_id = str(e.request.header.appId)
+    app_type = str(e.request.header.appType)
+    app_id = str(e.request.header.appId)
+    if app_type.startswith(PROBE_APP_TYPE_PREFIX) and app_id not in e.protocol_instance.bioauth_flows:
         auth_wait_callback = e.protocol_instance.try_probe
         cancel_auth_callback = e.protocol_instance.cancel_auth
-        e.protocol_instance.bioauth_flow = BioauthFlow(app_type=app_type, app_id=app_id,
-                                                       try_probe_callback=auth_wait_callback,
-                                                       cancel_auth_callback=cancel_auth_callback, auto_initialize=False)
-
-        if e.protocol_instance.bioauth_flow.is_probe_owner():
+        bioauth_flow = BioauthFlow(app_type=app_type, app_id=app_id,
+                                   try_probe_callback=auth_wait_callback,
+                                   cancel_auth_callback=cancel_auth_callback, auto_initialize=False)
+        e.protocol_instance.bioauth_flows.update({app_id: bioauth_flow})
+        if bioauth_flow.is_probe_owner():
             e.protocol_instance.policy = PolicyManager.get_policy_for_app(app_id=app_id)
 
-        e.protocol_instance.bioauth_flow.initialize()
+        bioauth_flow.initialize()
 
 
 def probe_trying(e):
     if not e.src == STATE_PROBE_TRYING:
-        flow = e.protocol_instance.bioauth_flow
+        flow = e.protocol_instance.bioauth_flows.get(str(e.request.header.appId))
         resources = None
         app_users = e.protocol_instance.app_users
         if isinstance(app_users, list):
@@ -526,6 +533,10 @@ class BiomioProtocol:
 
         self.policy = None
         self.bioauth_flow = None
+
+        # key - app_id (if not probe device then app_id + _on_behalf_of from rpc), value - bioauthlow instance
+        self.bioauth_flows = {}
+
         self.current_probe_request = None
         self.available_resources = {}
 
@@ -657,8 +668,8 @@ class BiomioProtocol:
             if self._session and self._session.is_open:
                 SessionManager.instance().close_session(session=self._session)
 
-        if self.bioauth_flow:
-            self.bioauth_flow.shutdown()
+        for bioauth_flow in self.bioauth_flows.values():
+            bioauth_flow.shutdown()
 
         # Close connection
         self._close_callback()
@@ -736,22 +747,38 @@ class BiomioProtocol:
                 for k, v in izip(list(input_msg.msg.data.keys), list(input_msg.msg.data.values)):
                     data[str(k)] = str(v)
 
-            user_id = ''
+            user_key = ''
             if hasattr(input_msg.msg, 'onBehalfOf'):
-                user_id = str(input_msg.msg.onBehalfOf)
-
-            wait_callback = self.send_in_progress_responce
-
-            self._rpc_handler.process_rpc_call(
-                str(user_id),
-                str(input_msg.msg.call),
-                str(input_msg.msg.namespace),
-                data,
-                wait_callback,
-                self.bioauth_flow,
-                self.bioauth_flow.app_id,
-                self.get_process_callback_for_rpc_result(input_msg=input_msg)
-            )
+                user_key = str(input_msg.msg.onBehalfOf)
+            namespace = str(input_msg.msg.namespace)
+            req_plugin = self._rpc_handler.get_plugin_instance(namespace=namespace)
+            user_id = req_plugin.identify_user(on_behalf_of=user_key)
+            process_callback_for_rpc_result = self.get_process_callback_for_rpc_result(input_msg=input_msg)
+            app_id = str(input_msg.header.appId)
+            app_type = str(input_msg.header.appType)
+            if user_id is None:
+                process_callback_for_rpc_result(status='fail',
+                                                result={'error': 'Cannot identify user with key - %s' % user_key})
+            else:
+                req_plugin.assign_user_to_application(app_id=app_id, user_id=user_id)
+                wait_callback = self.send_in_progress_responce
+                flow_key = '%s_%s' % (app_id, user_id)
+                bioauth_flow = self.bioauth_flows.get(flow_key)
+                if bioauth_flow is None:
+                    bioauth_flow = BioauthFlow(app_type=app_type, app_id=flow_key,
+                                               try_probe_callback=self.try_probe,
+                                               cancel_auth_callback=self.cancel_auth)
+                    self.bioauth_flows.update({flow_key: bioauth_flow})
+                self._rpc_handler.process_rpc_call(
+                    str(user_id),
+                    str(input_msg.msg.call),
+                    str(input_msg.msg.namespace),
+                    data,
+                    wait_callback,
+                    bioauth_flow,
+                    app_id,
+                    self.get_process_callback_for_rpc_result(input_msg=input_msg)
+                )
         elif message_id == 'rpcEnumNsReq':
             namespaces = self._rpc_handler.get_available_namespaces()
             message = self.create_next_message(request_seq=input_msg.header.seq, oid='rpcEnumNsReq',
@@ -770,6 +797,7 @@ class BiomioProtocol:
 
             res_params = {
                 'oid': 'rpcResp',
+                'onBehalfOf': str(input_msg.msg.onBehalfOf),
                 'namespace': str(input_msg.msg.namespace),
                 'call': str(input_msg.msg.call),
                 'rpcStatus': status
@@ -794,7 +822,7 @@ class BiomioProtocol:
         # Should be last RPC request
         input_msg = self._last_received_message
 
-        wait_message = 'To proceed with encryption please open Biomio application on the phone. ' \
+        wait_message = 'To proceed with decryption please open Biomio application on the phone. ' \
                        'Server will wait for 5 minutes to receive results.'
 
         res_keys = []
@@ -802,6 +830,7 @@ class BiomioProtocol:
 
         res_params = {
             'oid': 'rpcResp',
+            'onBehalfOf': str(input_msg.msg.onBehalfOf),
             'namespace': str(input_msg.msg.namespace),
             'call': str(input_msg.msg.call),
             'rpcStatus': 'inprogress'
@@ -826,7 +855,12 @@ class BiomioProtocol:
                                               message=message)
 
     def cancel_auth(self, **kwargs):
-        if self.bioauth_flow.is_probe_owner():
+        flow = kwargs.get('bioauth_flow')
+        if flow.is_probe_owner():
+            RedisStorage.persistence_instance().delete_data(
+                key=REDIS_VERIFICATION_RETIES_COUNT_KEY % flow.app_id)
+            RedisStorage.persistence_instance().delete_data(
+                key=REDiS_TRAINING_RETRIES_COUNT_KEY % flow.app_id)
             message = self.create_next_message(
                 request_seq=self._last_received_message.header.seq,
                 oid='probe',

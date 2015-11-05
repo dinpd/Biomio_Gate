@@ -4,12 +4,11 @@ import inspect
 import tornado.gen
 import greenado
 import traceback
-from biomio.protocol.data_stores.application_data_store import ApplicationDataStore
+from biomio.constants import AUTH_MAX_RETRIES_MESSAGE
 
 from biomio.protocol.rpc import bioauthflow
 
 import logging
-from biomio.protocol.rpc.plugins.pgp_extension_plugin.pgp_extension_jobs import assign_user_to_extension_job
 from biomio.worker.worker_interface import WorkerInterface
 
 logger = logging.getLogger(__name__)
@@ -91,15 +90,10 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
     :param callable_args: List of arguments of RPC routine.
     :param callable_kwargs: List of named arguments of RPC routine.
     """
-    user_id = callable_kwargs.get(USER_ID_ARG, None)
-    app_id = callable_kwargs.get(APP_ID_ATG, None)
+
     wait_callback = callable_kwargs.get(WAIT_CALLBACK_ARG, None)
     callback = callable_kwargs.get(CALLBACK_ARG, None)
     bioauth_flow = callable_kwargs.get(BIOAUTH_FLOW_INSTANCE_ARG, None)
-
-    if app_id is not None and bioauth_flow is not None and bioauth_flow.app_type == 'extension':
-        email = parse_email_data(user_id)
-        run_async_job(assign_user_to_extension_job, app_id=app_id, email=email)
 
     # Send RPC message with inprogress state
     try:
@@ -118,8 +112,7 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
                 callback(result={"error": error_msg}, status='fail')
                 return
 
-        future = tornado.gen.Task(bioauth_flow.request_auth, get_verification_started_callback(callback=callback),
-                                  user_id)
+        future = tornado.gen.Task(bioauth_flow.request_auth, get_verification_started_callback(callback=callback))
         greenado.gyield(future)
 
         # TODO: check for current auth state
@@ -148,6 +141,8 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
                 error_msg = 'Biometric authentication timeout.'
             elif bioauth_flow.is_current_state(bioauthflow.STATE_AUTH_CANCELED):
                 error_msg = 'Biometric authentication canceled.'
+            elif bioauth_flow.is_current_state(bioauth_flow.STATE_AUTH_MAX_RETRIES):
+                error_msg = AUTH_MAX_RETRIES_MESSAGE
             else:
                 error_msg = 'Biometric auth internal error'
             callback(result={"error": error_msg}, status='fail')
@@ -232,10 +227,6 @@ def run_sync_job(job_to_run, **kwargs):
     except Exception as e:
         logger.exception(e)
     raise tornado.gen.Return(result)
-
-
-def run_async_job(job_to_run, **kwargs):
-    WorkerInterface.instance().run_job(job_to_run=job_to_run, **kwargs)
 
 
 def parse_email_data(emails):
