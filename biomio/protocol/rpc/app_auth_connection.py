@@ -63,7 +63,7 @@ class AppAuthConnection:
             self.extension_keys = [self._app_key]
             self.store_data(state='auth_wait')
         else:
-            app_id = app_id if self._on_behalf_of is None else self._on_behalf_of
+            app_id = app_id if self.is_probe_owner() else self._app_id.split('_')[1]
             AppConnectionManager.get_connected_apps(app_id=app_id, probe_device=self.is_probe_owner(),
                                                     callback=self._get_keys_for_connected_apps_callback())
 
@@ -195,7 +195,7 @@ class AppAuthConnection:
         return result
 
     def _remove_disconnected_app_keys(self, clear_related_keys=True):
-        app_id = self._app_id if self._on_behalf_of is None else self._on_behalf_of
+        app_id = self._app_id if self.is_probe_owner() else self._app_id.split('_')[1]
         self.clear_related_keys = clear_related_keys
         AppConnectionManager.get_connected_apps(app_id=app_id, probe_device=self.is_probe_owner(),
                                                 callback=self._get_disconnect_apps_callback())
