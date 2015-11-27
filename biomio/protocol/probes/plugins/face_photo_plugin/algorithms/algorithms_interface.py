@@ -1,13 +1,14 @@
 from __future__ import absolute_import
+import json
+import os
+
 import logger
-from biomio.algorithms.algorithms.imgobj import loadImageObject
+from biomio.algorithms.imgobj import loadImageObject
 from biomio.protocol.probes.plugins.face_photo_plugin.algorithms.face import (
     getClustersMatchingDetectorWithoutTemplate,
     getClustersMatchingDetectorWithL0Template,
     getClustersMatchingDetectorWithL1Template
 )
-import json
-import os
 
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 SETTINGS_DIR = os.path.join(APP_ROOT, 'settings')

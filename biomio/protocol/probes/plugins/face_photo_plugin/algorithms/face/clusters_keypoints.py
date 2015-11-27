@@ -1,10 +1,10 @@
 from __future__ import absolute_import
-from biomio.algorithms.algorithms.cascades.scripts_detectors import CascadesDetectionInterface
-from biomio.algorithms.algorithms.recognition.keypoints import KeypointsObjectDetector
-from biomio.algorithms.algorithms.cascades.roi_optimal import OptimalROIDetectorSAoS
-from biomio.algorithms.algorithms.clustering.kmeans import KMeans
-from biomio.algorithms.algorithms.clustering.forel import FOREL
-from biomio.algorithms.algorithms.cascades.tools import loadScript
+from biomio.algorithms.cascades.scripts_detectors import CascadesDetectionInterface
+from biomio.algorithms.recognition.keypoints import KeypointsObjectDetector
+from biomio.algorithms.cascades.detectors import OptimalROIDetectorSAoS
+from biomio.algorithms.clustering.kmeans import KMeans
+from biomio.algorithms.clustering import FOREL
+from biomio.algorithms.cascades.tools import loadScript
 import logger
 
 

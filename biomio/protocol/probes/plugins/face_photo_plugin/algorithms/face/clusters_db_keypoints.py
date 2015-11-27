@@ -1,10 +1,11 @@
 from __future__ import absolute_import
-from biomio.protocol.probes.plugins.face_photo_plugin.algorithms.face.clusters_keypoints import ClustersMatchingDetector
-from biomio.algorithms.algorithms.cvtools.types import listToNumpy_ndarray, numpy_ndarrayToList
-from biomio.algorithms.algorithms.features import matcherForDetector, dtypeForDetector
-from biomio.algorithms.algorithms.recognition.keypoints import verifying
-from biomio.algorithms.algorithms.features.matchers import Matcher
 import itertools
+
+from biomio.protocol.probes.plugins.face_photo_plugin.algorithms.face.clusters_keypoints import ClustersMatchingDetector
+from biomio.algorithms.cvtools.types import listToNumpy_ndarray, numpy_ndarrayToList
+from biomio.algorithms.features import matcherForDetector, dtypeForDetector
+from biomio.algorithms.recognition.keypoints import verifying
+from biomio.algorithms.features.matchers import Matcher
 import logger
 
 
