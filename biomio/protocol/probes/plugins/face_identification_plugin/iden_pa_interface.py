@@ -1,5 +1,6 @@
 from biomio.algorithms.recognition.processes import MainTrainingProcess, TrainingProcess
 from biomio.algorithms.interfaces import AlgorithmInterface
+from biomio.worker.worker_interface import WorkerInterface
 from defs import TRAINING_FULL, TEMP_DATA_PATH
 
 class IdentificationPAInterface(AlgorithmInterface):
@@ -9,8 +10,9 @@ class IdentificationPAInterface(AlgorithmInterface):
     def training(self, **kwargs):
         mode = kwargs.get("mode", TRAINING_FULL)
         if mode == TRAINING_FULL:
-            main_process = MainTrainingProcess(TEMP_DATA_PATH)
-            training_process = TrainingProcess(TEMP_DATA_PATH)
+            worker = WorkerInterface.instance()
+            main_process = MainTrainingProcess(TEMP_DATA_PATH, worker)
+            training_process = TrainingProcess(TEMP_DATA_PATH, worker)
 
             main_process.set_data_training_process(training_process)
 

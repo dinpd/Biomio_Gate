@@ -31,6 +31,5 @@ class VerificationPAInterface(AlgorithmInterface):
 
         main_process.process(kwargs["data"])
 
-
     def apply(self, callback=None, **kwargs):
         pass
