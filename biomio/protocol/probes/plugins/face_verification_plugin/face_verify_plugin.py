@@ -1,12 +1,11 @@
 from biomio.constants import REDIS_VERIFICATION_RETIES_COUNT_KEY, REDiS_TRAINING_RETRIES_COUNT_KEY
 import biomio.protocol.probes.plugins.base_probe_plugin as base_probe_plugin
-from biomio.protocol.probes.plugins.face_photo_plugin.face_photo_jobs import training_job, verification_job
 from biomio.protocol.storage.redis_storage import RedisStorage
 from biomio.utils.biomio_decorators import inherit_docstring_from
 from verify_pa_interface import VerificationPAInterface
 
 
-class FacePhotoPlugin(base_probe_plugin.BaseProbePlugin):
+class FaceVerifyPlugin(base_probe_plugin.BaseProbePlugin):
     _settings = dict(algoID="001022", userID="0000000000000")
     _algorithm = VerificationPAInterface()
     _max_verification_attempts = 5
