@@ -29,7 +29,7 @@ class VerificationPAInterface(AlgorithmInterface):
         data_detect_process.set_final_training_process(final_training_process)
         cluster_matching_process.set_final_training_process(final_training_process)
 
-        main_process.process(kwargs["data"])
+        main_process.process(**kwargs)
 
     def apply(self, callback=None, **kwargs):
         pass
