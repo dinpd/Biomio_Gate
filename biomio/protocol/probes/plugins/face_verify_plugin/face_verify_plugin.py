@@ -1,8 +1,8 @@
+from biomio.protocol.probes.plugins.face_verify_plugin.verify_pa_interface import VerificationPAInterface
 from biomio.constants import REDIS_VERIFICATION_RETIES_COUNT_KEY, REDiS_TRAINING_RETRIES_COUNT_KEY
 import biomio.protocol.probes.plugins.base_probe_plugin as base_probe_plugin
-from biomio.protocol.storage.redis_storage import RedisStorage
 from biomio.utils.biomio_decorators import inherit_docstring_from
-from verify_pa_interface import VerificationPAInterface
+from biomio.protocol.storage.redis_storage import RedisStorage
 
 
 class FaceVerifyPlugin(base_probe_plugin.BaseProbePlugin):
