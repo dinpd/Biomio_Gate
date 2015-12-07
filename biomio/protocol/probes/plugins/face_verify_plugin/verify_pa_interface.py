@@ -18,7 +18,7 @@ class VerificationPAInterface(AlgorithmInterface):
         rotation_detect_process = RotationDetectionProcess(TEMP_DATA_PATH)
         rotation_result_process = RotationResultProcess(TEMP_DATA_PATH, worker)
         cluster_matching_process = ClusterMatchingProcess(worker)
-        final_training_process = FinalTrainingProcess()
+        final_training_process = FinalTrainingProcess(callback)
 
         main_process.set_data_training_process(training_process)
         training_process.set_data_detection_process(data_detect_process)

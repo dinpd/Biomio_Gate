@@ -1,5 +1,6 @@
 from biomio.protocol.probes.plugins.face_verify_plugin.verify_pa_interface import VerificationPAInterface
 from biomio.constants import REDIS_VERIFICATION_RETIES_COUNT_KEY, REDiS_TRAINING_RETRIES_COUNT_KEY
+from biomio.protocol.probes.plugins.face_verify_plugin.face_photo_jobs import verification_job
 import biomio.protocol.probes.plugins.base_probe_plugin as base_probe_plugin
 from biomio.utils.biomio_decorators import inherit_docstring_from
 from biomio.protocol.storage.redis_storage import RedisStorage
@@ -43,8 +44,10 @@ class FaceVerifyPlugin(base_probe_plugin.BaseProbePlugin):
         retries_key = REDIS_VERIFICATION_RETIES_COUNT_KEY % data['probe_id']
         if not redis_instance.exists(retries_key):
             redis_instance.store_counter_value(key=retries_key, counter=self._max_verification_attempts)
-        self._algorithm.apply(self._probe_callback,
-                              kwargs_list_for_results_gatherer=kwargs_list_for_results_gatherer, **data)
+        # self._algorithm.apply(self._probe_callback,
+        #                       kwargs_list_for_results_gatherer=kwargs_list_for_results_gatherer, **data)
+        self._process_probe(verification_job,
+                            kwargs_list_for_results_gatherer=kwargs_list_for_results_gatherer, **data)
 
     @inherit_docstring_from(base_probe_plugin.BaseProbePlugin)
     def check_resources(self, resources, plugin_auth_config, training=False):
