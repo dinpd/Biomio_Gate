@@ -3,7 +3,7 @@ from biomio.algorithms.recognition.processes import (MainTrainingProcess, Traini
                                                      RotationDetectionProcess, RotationResultProcess,
                                                      ClusterMatchingProcess, FinalTrainingProcess)
 from biomio.worker.worker_interface import WorkerInterface
-from interface_helper import pre_training_helper
+from training_start_process import TrainingStartProcess
 from defs import TEMP_DATA_PATH
 
 
@@ -18,6 +18,7 @@ class VerificationPAInterface(AlgorithmInterface):
     def training(self, callback=None, **kwargs):
         self._callback = callback
         worker = WorkerInterface.instance()
+        training_start_process = TrainingStartProcess()
         main_process = MainTrainingProcess(TEMP_DATA_PATH, worker)
         training_process = TrainingProcess(TEMP_DATA_PATH, worker)
         data_detect_process = DataDetectionProcess(TEMP_DATA_PATH, worker)
@@ -26,6 +27,7 @@ class VerificationPAInterface(AlgorithmInterface):
         cluster_matching_process = ClusterMatchingProcess(worker)
         final_training_process = FinalTrainingProcess(self._interface_callback)
 
+        training_start_process.set_main_training_process(main_process)
         main_process.set_data_training_process(training_process)
         training_process.set_data_detection_process(data_detect_process)
         training_process.set_data_rotation_process(rotation_detect_process)
@@ -35,9 +37,7 @@ class VerificationPAInterface(AlgorithmInterface):
         data_detect_process.set_final_training_process(final_training_process)
         cluster_matching_process.set_final_training_process(final_training_process)
 
-        settings = pre_training_helper(**kwargs)
-        if settings is not None:
-            main_process.process(**settings)
+        training_start_process.run(worker, **kwargs)
 
     def apply(self, callback=None, **kwargs):
         pass
