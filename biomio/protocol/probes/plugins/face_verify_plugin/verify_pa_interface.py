@@ -18,7 +18,7 @@ class VerificationPAInterface(AlgorithmInterface):
     def training(self, callback=None, **kwargs):
         self._callback = callback
         worker = WorkerInterface.instance()
-        training_start_process = TrainingStartProcess()
+        training_start_process = TrainingStartProcess(self._interface_callback)
         main_process = MainTrainingProcess(TEMP_DATA_PATH, worker)
         training_process = TrainingProcess(TEMP_DATA_PATH, worker)
         data_detect_process = DataDetectionProcess(TEMP_DATA_PATH, worker)
