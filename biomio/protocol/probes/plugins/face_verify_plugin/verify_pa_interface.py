@@ -1,8 +1,9 @@
 from biomio.algorithms.interfaces import AlgorithmInterface
 from biomio.algorithms.recognition.processes import (MainTrainingProcess, TrainingProcess, DataDetectionProcess,
                                                      RotationDetectionProcess, RotationResultProcess,
-                                                     ClusterMatchingProcess, FinalTrainingProcess)
+                                                     ClusterMatchingProcess)
 from biomio.worker.worker_interface import WorkerInterface
+from final_training_process import FinalTrainingProcess
 from training_start_process import TrainingStartProcess
 from defs import TEMP_DATA_PATH
 
