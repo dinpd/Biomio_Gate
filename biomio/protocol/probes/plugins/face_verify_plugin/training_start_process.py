@@ -5,10 +5,7 @@ from interface_helper import pre_training_helper
 
 
 def job(callback_code, **kwargs):
-    settings = pre_training_helper(callback_code=callback_code, **kwargs)
-    if settings is not None:
-        AlgorithmsDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
-                                                        record_dict=settings, callback_code=callback_code)
+    TrainingStartProcess.job(callback_code, **kwargs)
 
 
 class TrainingStartProcess(AlgorithmProcessInterface):
@@ -21,7 +18,8 @@ class TrainingStartProcess(AlgorithmProcessInterface):
     def set_main_training_process(self, process):
         self._main_training_process = process
 
-    def handler(self, **result):
+    def handler(self, result):
+        self._handler_logger_info(result)
         if result.keys().__contains__('error'):
             self._callback(result)
         else:
@@ -29,7 +27,11 @@ class TrainingStartProcess(AlgorithmProcessInterface):
 
     @staticmethod
     def job(callback_code, **kwargs):
-        pass
+        TrainingStartProcess._job_logger_info("TrainingStartProcess", **kwargs)
+        settings = pre_training_helper(callback_code=callback_code, **kwargs)
+        if settings is not None:
+            AlgorithmsDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
+                                                            record_dict=settings, callback_code=callback_code)
 
     @staticmethod
     def process(**kwargs):
