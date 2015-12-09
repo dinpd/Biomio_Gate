@@ -42,7 +42,7 @@ class BiomioTest:
     def init_db_test_data(cls, app_id=None):
         from biomio.protocol.data_stores.user_data_store import UserDataStore
         from biomio.protocol.data_stores.application_data_store import ApplicationDataStore
-        from biomio.protocol.data_stores.email_data_store import EmailDataStore
+        from biomio.protocol.data_stores.pgp_keys_data_store import PgpKeysDataStore
         # from biomio.protocol.data_stores.base_data_store import BaseDataStore
 
         key, pub_key = Crypto.generate_keypair()
@@ -57,15 +57,15 @@ class BiomioTest:
         ApplicationDataStore.instance().store_data(app_id, **store_keywords)
 
         store_keywords = {
-            EmailDataStore.PASS_PHRASE_ATTR: 'test_pass_phrase',
-            EmailDataStore.PUBLIC_PGP_KEY_ATTR: 'test_pub_pgp_key',
-            EmailDataStore.PRIVATE_PGP_KEY_ATTR: None,
-            EmailDataStore.USER_ATTR: 1
+            PgpKeysDataStore.PASS_PHRASE_ATTR: 'test_pass_phrase',
+            PgpKeysDataStore.PUBLIC_PGP_KEY_ATTR: 'test_pub_pgp_key',
+            PgpKeysDataStore.PRIVATE_PGP_KEY_ATTR: None,
+            PgpKeysDataStore.USER_ATTR: 1
         }
-        EmailDataStore.instance().store_data(USER_TEST_EMAIL, **store_keywords)
+        PgpKeysDataStore.instance().store_data(USER_TEST_EMAIL, **store_keywords)
         # BaseDataStore.instance().delete_custom_lru_redis_data(UserDataStore.get_data_key(1))
         # BaseDataStore.instance().delete_custom_lru_redis_data(ApplicationDataStore.get_data_key('test_app_id'))
-        # BaseDataStore.instance().delete_custom_lru_redis_data(EmailDataStore.get_data_key(USER_TEST_EMAIL))
+        # BaseDataStore.instance().delete_custom_lru_redis_data(PgpKeysDataStore.get_data_key(USER_TEST_EMAIL))
         BiomioTest._registered_key = key
         BiomioTest._registered_app_id = app_id
 

@@ -1,4 +1,4 @@
-import time
+from threading import Lock
 from biomio.mysql_storage.mysql_data_entities import pny, database, UserInformation
 from biomio.protocol.settings import settings
 
@@ -6,9 +6,9 @@ if settings.logging == 'DEBUG':
     pny.sql_debug(True)
 
 
-class MySQLDataStore():
+class MySQLDataStore:
     _instance = None
-    _locked = False
+    _lock = Lock()
 
     def __init__(self):
         self.database = database
@@ -18,13 +18,9 @@ class MySQLDataStore():
 
     @classmethod
     def instance(cls):
-        if cls._instance is None:
-            if cls._locked:
-                time.sleep(1)
-                return cls.instance()
-            cls._locked = True
-            cls._instance = MySQLDataStore()
-            cls._locked = False
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = MySQLDataStore()
         return cls._instance
 
     @pny.db_session
@@ -45,9 +41,13 @@ class MySQLDataStore():
         return result_list
 
     @pny.db_session
-    def get_object(self, module_name, table_name, object_id, return_dict):
+    def get_object(self, module_name, table_name, object_id, return_dict, custom_search_attr,
+                   **additional_query_params):
         table_class = self.get_table_class(module_name, table_name)
-        search_query = {table_class.get_unique_search_attribute(): object_id}
+        if custom_search_attr is None:
+            custom_search_attr = table_class.get_unique_search_attribute()
+        search_query = {custom_search_attr: object_id}
+        search_query.update(additional_query_params)
         result = table_class.get(**search_query)
         if return_dict and result is not None:
             result_redis_key = result.get_redis_key()
@@ -103,10 +103,6 @@ class MySQLDataStore():
             user_id = UserInformation.get(id=user_id)
         objects = pny.select(app.app_id for app in table_class if user_id in app.users and app.app_type == app_type)[:]
         return objects
-
-    @pny.db_session
-    def self_join_applications(self, module_name, table_name, app_id, app_type):
-        table_class = self.get_table_class(module_name=module_name, table_name=table_name)
 
     @staticmethod
     def get_table_class(module_name, table_name):
