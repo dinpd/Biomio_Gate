@@ -20,11 +20,16 @@ class TrainingStartProcess(AlgorithmProcessInterface):
         else:
             self._main_training_process.process(**result)
 
-    def job(self, callback_code, **kwargs):
+    @staticmethod
+    def job(callback_code, **kwargs):
         settings = pre_training_helper(callback_code=callback_code, **kwargs)
         if settings is not None:
             AlgorithmsDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
                                                             record_dict=settings, callback_code=callback_code)
 
-    def process(self, **kwargs):
+    @staticmethod
+    def process(**kwargs):
         raise NotImplementedError
+
+    def run(self, worker, kwargs_list_for_results_gatherer=None, **kwargs):
+        self._run(worker, TrainingStartProcess.job, kwargs_list_for_results_gatherer, **kwargs)
