@@ -62,14 +62,16 @@ def pre_training_helper(images, probe_id, settings, callback_code, try_type, ai_
         store_test_photo_helper(image_paths)
 
         settings.update({'data': image_paths})
-        return {"general": {"data_path": temp_image_path,
-                "ai_response": ai_response_type}, "settings": settings}
+        settings.update({'data_path': temp_image_path})
+        return settings
     except:
         final_helper(temp_image_path, probe_id, error, callback_code, result, ai_response_type, try_type, ai_code)
-        return {None, None}
+        return None
 
 
-def result_training_helper(algo_result, callback_code, ai_response_type, probe_id, temp_image_path, try_type, ai_code):
+def result_training_helper(algo_result, callback_code, probe_id, temp_image_path, try_type, ai_code):
+    ai_response_type = dict()
+    ai_response_type.update({'status': TRAINING_SUCCESS_STATUS, 'message': TRAINING_SUCCESS_MESSAGE})
     result = False
     error = None
     try:
