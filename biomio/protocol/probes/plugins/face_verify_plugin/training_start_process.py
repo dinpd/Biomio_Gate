@@ -4,6 +4,8 @@ from biomio.constants import REDIS_DO_NOT_STORE_RESULT_KEY
 from interface_helper import pre_training_helper
 
 
+TRAINING_START_PROCESS_CLASS_NAME = "TrainingStartProcess"
+
 def job(callback_code, **kwargs):
     TrainingStartProcess.job(callback_code, **kwargs)
 
@@ -11,7 +13,7 @@ def job(callback_code, **kwargs):
 class TrainingStartProcess(AlgorithmProcessInterface):
     def __init__(self, callback):
         AlgorithmProcessInterface.__init__(self)
-        self._classname = "TrainingStartProcess"
+        self._classname = TRAINING_START_PROCESS_CLASS_NAME
         self._main_training_process = AlgorithmProcessInterface()
         self.external_callback(callback)
 
@@ -27,7 +29,7 @@ class TrainingStartProcess(AlgorithmProcessInterface):
 
     @staticmethod
     def job(callback_code, **kwargs):
-        TrainingStartProcess._job_logger_info("TrainingStartProcess", **kwargs)
+        TrainingStartProcess._job_logger_info(TRAINING_START_PROCESS_CLASS_NAME, **kwargs)
         settings = pre_training_helper(callback_code=callback_code, **kwargs)
         if settings is not None:
             AlgorithmsDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
