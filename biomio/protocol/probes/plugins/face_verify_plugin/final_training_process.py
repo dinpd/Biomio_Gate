@@ -17,7 +17,8 @@ class FinalTrainingProcess(AlgorithmProcessInterface):
     def handler(self, result):
         raise NotImplementedError
 
-    def job(self, callback_code, **kwargs):
+    @staticmethod
+    def job(callback_code, **kwargs):
         data = kwargs["data"]
         sources = dict()
         for k in data['clusters_list']:
