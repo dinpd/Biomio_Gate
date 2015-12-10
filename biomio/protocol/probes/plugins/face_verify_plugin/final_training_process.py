@@ -32,8 +32,10 @@ class FinalTrainingProcess(AlgorithmProcessInterface):
         }
         result = {
             'algo_result': res_record,
-            'temp_data_path': kwargs['temp_data_path'],
-            'probe_id': kwargs['userID']
+            'temp_image_path': kwargs['general_data']['data_path'],
+            'probe_id': kwargs['general_data']['probe_id'],
+            'try_type': kwargs['general_data']['try_type'],
+            'ai_code': kwargs['general_data']['ai_code']
         }
         logger.info('Status::The database updated.')
         result_training_helper(callback_code=callback_code, **result)

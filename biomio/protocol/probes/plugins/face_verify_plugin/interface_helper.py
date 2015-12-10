@@ -62,7 +62,10 @@ def pre_training_helper(images, probe_id, settings, callback_code, try_type, ai_
         store_test_photo_helper(image_paths)
 
         settings.update({'data': image_paths})
-        settings.update({'data_path': temp_image_path})
+        settings.update({'general_data': {'data_path': temp_image_path,
+                                          'ai_code': ai_code,
+                                          'try_type': try_type,
+                                          'probe_id': probe_id}})
         return settings
     except:
         final_helper(temp_image_path, probe_id, error, callback_code, result, ai_response_type, try_type, ai_code)
