@@ -19,6 +19,7 @@ class FinalTrainingProcess(AlgorithmProcessInterface):
 
     @staticmethod
     def job(callback_code, **kwargs):
+        FinalTrainingProcess._job_logger_info(FINAL_TRAINING_PROCESS_CLASS_NAME, **kwargs)
         data = kwargs["data"]
         sources = dict()
         for k in data['clusters_list']:
