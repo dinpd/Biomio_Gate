@@ -17,6 +17,9 @@ MYSQL_TRAINING_DATA_TABLE_NAME = 'TrainingData'
 MYSQL_CHANGES_TABLE_NAME = 'UILog'
 MYSQL_POLICIES_TABLE_NAME = 'Policies'
 MYSQL_DEVICE_INFORMATION_TABLE_NAME = 'UserServices'
+# Identification Data Tables
+IDEN_USER_HASH_TABLE_NAME = 'IdentificationUsersBucketsData'
+IDEN_HASH_DATA_TABLE_NAME = 'IdentificationHashData'
 
 # Redis Constants
 REDIS_APP_AUTH_KEY = 'auth:%s'
