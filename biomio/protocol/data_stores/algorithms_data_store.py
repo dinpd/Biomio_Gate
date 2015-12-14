@@ -12,11 +12,7 @@ class AlgorithmsDataStore:
     _lock = Lock()
 
     def __init__(self):
-        self._lru_redis = RedisStorage.lru_instance()
         self._persistence_redis = RedisStorage.persistence_instance()
-
-        from biomio.worker.worker_interface import WorkerInterface
-        self._worker = WorkerInterface.instance()
 
     @classmethod
     def instance(cls):
