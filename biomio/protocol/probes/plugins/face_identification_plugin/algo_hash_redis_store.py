@@ -1,6 +1,6 @@
 from biomio.utils.biomio_decorators import inherit_docstring_from
 from biomio.protocol.storage.redis_storage import RedisStorage
-from biomio.constants import IDEN_HASH_DATA_TABLE_NAME, IDEN_USER_HASH_TABLE_NAME
+from biomio.constants import MYSQL_IDENTIFICATION_HASH_DATA_TABLE_NAME, IDEN_USER_HASH_TABLE_NAME
 from biomio.worker.worker_interface import WorkerInterface
 from nearpy.storage import Storage
 from threading import Lock
@@ -11,7 +11,7 @@ class AlgorithmsHashRedisStackStore(Storage):
 
     def __init__(self, redis_id):
         self._ihr_redis = RedisStorage.ihr_instance(redis_id)
-        self._hash_data_table_name = IDEN_HASH_DATA_TABLE_NAME
+        self._hash_data_table_name = MYSQL_IDENTIFICATION_HASH_DATA_TABLE_NAME
         self._user_hash_table_name = IDEN_USER_HASH_TABLE_NAME
 
         self._worker = WorkerInterface.instance()

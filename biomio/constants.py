@@ -20,8 +20,8 @@ MYSQL_CHANGES_TABLE_NAME = 'UILog'
 MYSQL_POLICIES_TABLE_NAME = 'Policies'
 MYSQL_DEVICE_INFORMATION_TABLE_NAME = 'UserServices'
 # Identification Data Tables
-IDEN_USER_HASH_TABLE_NAME = 'IdentificationUsersBucketsData'
-IDEN_HASH_DATA_TABLE_NAME = 'IdentificationHashData'
+MYSQL_IDENTIFICATION_USER_HASH_TABLE_NAME = 'IdentificationUsersBucketsData'
+MYSQL_IDENTIFICATION_HASH_DATA_TABLE_NAME = 'IdentificationHashData'
 
 # Redis Constants
 REDIS_APP_AUTH_KEY = 'auth:%s'
@@ -49,6 +49,9 @@ REDIS_VERIFICATION_RETIES_COUNT_KEY = 'verification_retries_count:%s'
 
 REDIS_ACTIVE_PROBE_DEVICES = 'active_probes_list'
 REDIS_ACTIVE_CLIENT_CONNECTIONS = 'active_clients_list'
+
+REDIS_IDENTIFICATION_USERS_DATA_KEY = 'identification_users_data:%s'
+REDIS_IDENTIFICATION_HASH_DATA_KEY = 'identification_hash_data:%s'
 
 # Other constants
 REDIS_CONFIG_MAX_MEMORY_OPTION_KEY = 'maxmemory'
@@ -82,7 +85,6 @@ TRAINING_GATE_AI_TYPES_MAP = {
     TRAINING_VOICE_TYPE: 'voice'
 }
 
-
 AUTH_CANCELED_STATUS = 'canceled'
 AUTH_CANCELED_MESSAGE = 'Authentication was canceled'
 AUTH_FAILED_STATUS = 'failed'
@@ -109,7 +111,6 @@ TRAINING_TYPES_AI_RESPONSE = {
     'fingerprints': ['0', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
     'voice': '0'
 }
-
 
 PROBE_APP_TYPE_PREFIX = 'probe'
 GENERAL_SUBSCRIBE_PATTERN = '__keyspace*:{redis_key_pattern}'
