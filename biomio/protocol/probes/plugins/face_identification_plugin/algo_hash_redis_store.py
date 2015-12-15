@@ -1,11 +1,12 @@
-from biomio.utils.biomio_decorators import inherit_docstring_from
-from biomio.protocol.storage.redis_storage import RedisStorage
 from biomio.constants import IDEN_HASH_DATA_TABLE_NAME, IDEN_USER_HASH_TABLE_NAME
+from biomio.protocol.storage.redis_storage import RedisStorage
 from biomio.worker.worker_interface import WorkerInterface
-from nearpy.storage import Storage
 from threading import Lock
 
-class AlgorithmsHashRedisStackStore(Storage):
+REDIS_IDENTIFICATION_BUCKET_KEY = 'identification_hash:%s:%s'
+HASH_BUCKET_KEY_FORMAT = "bucket_key:%s:%s"
+
+class AlgorithmsHashRedisStackStore:
     _instance = None
     _lock = Lock()
 
@@ -23,63 +24,21 @@ class AlgorithmsHashRedisStackStore(Storage):
                 cls._instance = AlgorithmsHashRedisStackStore(redis_id)
         return cls._instance
 
-    @inherit_docstring_from(Storage)
-    def store_vector(self, hash_name, bucket_key, v, data):
-        pass
+    def store_vectors(self, hash_data_list, data, callback):
+        user_hash_data = []
+        hash_keys_data = {}
+        for hash_name, hash_buckets in hash_data_list:
+            for key, value in hash_buckets:
+                bucket_key = HASH_BUCKET_KEY_FORMAT % (hash_name, key)
+                user_hash_data.append((data, bucket_key))
+                values = hash_keys_data.get(bucket_key, [])
+                values.append((value, data))
+                hash_keys_data[bucket_key] = values
+        # TODO: Database store data
 
-    @inherit_docstring_from(Storage)
     def get_bucket(self, hash_name, bucket_key):
-        """
-            Internal method which gets data from LRU Redis. If it exists there then callback is executed with this data.
-            If not - we run worker job to get data from MySQL and save it into Redis.
-        :param key: str Generated Redis Key.
-        :param table_class_name: str Pony MySQL Entity class name.
-        :param object_id: str ID of the object to get data from MySQL.
-        :param callback: function that must be executed after we got data.
-        """
-        result = self._ihr_redis.get_data(key)
-        if result is not None:
-            try:
-                result = ast.literal_eval(result)
-            except ValueError as e:
-                logger.exception(e)
-                result = {}
-            callback(result)
-        else:
-            self._run_storage_job(self._worker.GET_JOB, callback, table_class_name=table_class_name,
-                                  object_id=object_id, to_dict=to_dict)
-
-    @inherit_docstring_from(Storage)
-    def clean_buckets(self, hash_name):
-        pass
-
-    @inherit_docstring_from(Storage)
-    def clean_all_buckets(self):
-        pass
-
-    @inherit_docstring_from(Storage)
-    def store_hash_configuration(self, lshash):
-        pass
-
-    @inherit_docstring_from(Storage)
-    def load_hash_configuration(self, hash_name):
-        pass
-
-    def clean_vectors_by_data(self, hash_name, data, bucket_keys=[]):
-        pass
-
-    def clean_all_vectors(self, hash_name, data):
-        """
-            Removes all records from user_hash and hash_data tables.
-
-        :param hash_name:
-        :param data:
-        :return:
-        """
-        pass
-
-    def dump(self):
-        pass
+        bucket_key = HASH_BUCKET_KEY_FORMAT % (hash_name, bucket_key)
+        return self._ihr_redis.get_data(bucket_key)
 
     def _select_data_by_ids(self, table_class_name, object_ids, callback):
         """
