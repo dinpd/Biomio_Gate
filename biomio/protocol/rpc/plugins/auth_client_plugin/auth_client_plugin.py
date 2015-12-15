@@ -1,10 +1,10 @@
 import logging
 import requests
 from requests.exceptions import HTTPError
+from biomio.protocol.data_stores.email_data_store import EmailDataStore
 
 import biomio.protocol.rpc.plugins.base_rpc_plugin as base_rpc_plugin
 from biomio.constants import REST_BIOAUTH_LOGIN
-from biomio.protocol.data_stores.email_data_store import EmailDataStore
 from biomio.protocol.rpc.plugins.pgp_extension_plugin.pgp_extension_jobs import assign_user_to_application_job
 from biomio.protocol.rpc.rpcutils import rpc_call_with_auth, rpc_call, get_store_data, parse_email_data
 from biomio.protocol.settings import settings
@@ -21,7 +21,7 @@ class AuthClientPlugin(base_rpc_plugin.BaseRpcPlugin):
     def identify_user(self, on_behalf_of):
         email = parse_email_data(on_behalf_of)
         email_data = get_store_data(self.client_auth_data_store, object_id=email)
-        return email_data.get(self.client_auth_data_store.USER_ATTR) if email_data is not None else None
+        return email_data.get(self.client_auth_data_store.USER_ID_ATTR) if email_data is not None else None
 
     @inherit_docstring_from(base_rpc_plugin.BaseRpcPlugin)
     def assign_user_to_application(self, app_id, user_id):

@@ -4,22 +4,24 @@ TABLES_MODULE = 'mysql_data_entities'
 
 APPS_TABLE_CLASS_NAME = 'Application'
 USERS_TABLE_CLASS_NAME = 'UserInformation'
-EMAILS_TABLE_CLASS_NAME = 'EmailsData'
+EMAILS_TABLE_CLASS_NAME = 'Email'
 REDIS_CHANGES_CLASS_NAME = 'ChangesTable'
 TRAINING_DATA_TABLE_CLASS_NAME = 'TrainingData'
 POLICY_DATA_TABLE_CLASS_NAME = 'Policy'
 DEVICE_INFORMATION_TABLE_CLASS_NAME = 'DeviceInformation'
+PGP_KEYS_DATA_TABLE_CLASS_NAME = 'PgpKeysData'
 
 MYSQL_APPS_TABLE_NAME = 'Applications'
-MYSQL_EMAILS_TABLE_NAME = 'EmailsData'
+MYSQL_EMAILS_TABLE_NAME = 'Emails'
+MYSQL_PGP_KEYS_TABLE_NAME = 'PgpKeysData'
 MYSQL_USERS_TABLE_NAME = 'Profiles'
 MYSQL_TRAINING_DATA_TABLE_NAME = 'TrainingData'
 MYSQL_CHANGES_TABLE_NAME = 'UILog'
 MYSQL_POLICIES_TABLE_NAME = 'Policies'
 MYSQL_DEVICE_INFORMATION_TABLE_NAME = 'UserServices'
 # Identification Data Tables
-IDEN_USER_HASH_TABLE_NAME = 'IdentificationUsersBucketsData'
-IDEN_HASH_DATA_TABLE_NAME = 'IdentificationHashData'
+MYSQL_IDENTIFICATION_USER_HASH_TABLE_NAME = 'IdentificationUsersBucketsData'
+MYSQL_IDENTIFICATION_HASH_DATA_TABLE_NAME = 'IdentificationHashData'
 
 # Redis Constants
 REDIS_APP_AUTH_KEY = 'auth:%s'
@@ -27,6 +29,7 @@ REDIS_APP_CONNECTION_KEY = 'connection:%s'
 REDIS_APPLICATION_KEY = 'application:%s'
 REDIS_USER_KEY = 'user:%s'
 REDIS_EMAILS_KEY = 'email:%s'
+REDIS_PGP_DATA_KEY = 'pgp_data:%s'
 REDIS_SESSION_KEY = 'token:%s'
 REDIS_JOB_RESULT_KEY = 'job_result:%s:%s'
 REDIS_DO_NOT_STORE_RESULT_KEY = 'do_not_store:%s'
@@ -47,6 +50,9 @@ REDIS_VERIFICATION_RETIES_COUNT_KEY = 'verification_retries_count:%s'
 REDIS_ACTIVE_PROBE_DEVICES = 'active_probes_list'
 REDIS_ACTIVE_CLIENT_CONNECTIONS = 'active_clients_list'
 
+REDIS_IDENTIFICATION_USERS_DATA_KEY = 'identification_users_data:%s'
+REDIS_IDENTIFICATION_HASH_DATA_KEY = 'identification_hash_data:%s'
+
 # Other constants
 REDIS_CONFIG_MAX_MEMORY_OPTION_KEY = 'maxmemory'
 REDIS_CONFIG_MEMORY_SAMPLES_OPTION_KEY = 'maxmemory-samples'
@@ -57,9 +63,9 @@ MODULES_CLASSES_BY_TABLE_NAMES = {
         module_name='biomio.protocol.data_stores.application_data_store',
         class_name='ApplicationDataStore'
     ),
-    MYSQL_EMAILS_TABLE_NAME: dict(
-        module_name='biomio.protocol.data_stores.email_data_store',
-        class_name='EmailDataStore'
+    MYSQL_PGP_KEYS_TABLE_NAME: dict(
+        module_name='biomio.protocol.data_stores.pgp_keys_data_store',
+        class_name='PgpKeysDataStore'
     )
 }
 
@@ -78,7 +84,6 @@ TRAINING_GATE_AI_TYPES_MAP = {
     TRAINING_FINGER_TYPE: 'fingerprints',
     TRAINING_VOICE_TYPE: 'voice'
 }
-
 
 AUTH_CANCELED_STATUS = 'canceled'
 AUTH_CANCELED_MESSAGE = 'Authentication was canceled'
@@ -106,7 +111,6 @@ TRAINING_TYPES_AI_RESPONSE = {
     'fingerprints': ['0', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
     'voice': '0'
 }
-
 
 PROBE_APP_TYPE_PREFIX = 'probe'
 GENERAL_SUBSCRIBE_PATTERN = '__keyspace*:{redis_key_pattern}'

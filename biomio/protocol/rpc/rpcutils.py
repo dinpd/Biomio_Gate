@@ -186,7 +186,7 @@ def rpc_call_with_auth(rpc_func):
 
 
 @greenado.generator
-def get_store_data(data_store_instance, object_id, key=None):
+def get_store_data(data_store_instance, object_id, key=None, specific_method=None):
     """
     Takes data using DataStore class instance synchronously.
     :param data_store_instance: instance of the required DataStore.
@@ -197,7 +197,10 @@ def get_store_data(data_store_instance, object_id, key=None):
     """
     value = None
     try:
-        result = yield tornado.gen.Task(data_store_instance.get_data, str(object_id))
+        if specific_method is None:
+            result = yield tornado.gen.Task(data_store_instance.get_data, str(object_id))
+        else:
+            result = yield tornado.gen.Task(getattr(data_store_instance, specific_method), str(object_id))
         if key is not None and result is not None:
             value = result.get(key)
         else:
