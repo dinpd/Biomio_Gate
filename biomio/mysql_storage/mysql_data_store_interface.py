@@ -82,7 +82,8 @@ class MySQLDataStoreInterface:
                                                   add_object_pk=add_object_id, set_attr=set_attr)
 
     @staticmethod
-    def get_object(table_name, object_id, return_dict=False, module_name=TABLES_MODULE):
+    def get_object(table_name, object_id, return_dict=False, module_name=TABLES_MODULE, custom_search_attr=None,
+                   **additional_query_params):
         """
             Returns single object for given table_name
         :param module_name: string name of the module
@@ -93,7 +94,8 @@ class MySQLDataStoreInterface:
 
         """
         return MySQLDataStore.instance().get_object(module_name=module_name, table_name=table_name, object_id=object_id,
-                                                    return_dict=return_dict)
+                                                    return_dict=return_dict, custom_search_attr=custom_search_attr,
+                                                    **additional_query_params)
 
     @staticmethod
     def select_data_by_ids(table_name, object_ids, module_name=TABLES_MODULE):

@@ -4,14 +4,16 @@ TABLES_MODULE = 'mysql_data_entities'
 
 APPS_TABLE_CLASS_NAME = 'Application'
 USERS_TABLE_CLASS_NAME = 'UserInformation'
-EMAILS_TABLE_CLASS_NAME = 'EmailsData'
+EMAILS_TABLE_CLASS_NAME = 'Email'
 REDIS_CHANGES_CLASS_NAME = 'ChangesTable'
 TRAINING_DATA_TABLE_CLASS_NAME = 'TrainingData'
 POLICY_DATA_TABLE_CLASS_NAME = 'Policy'
 DEVICE_INFORMATION_TABLE_CLASS_NAME = 'DeviceInformation'
+PGP_KEYS_DATA_TABLE_CLASS_NAME = 'PgpKeysData'
 
 MYSQL_APPS_TABLE_NAME = 'Applications'
-MYSQL_EMAILS_TABLE_NAME = 'EmailsData'
+MYSQL_EMAILS_TABLE_NAME = 'Emails'
+MYSQL_PGP_KEYS_TABLE_NAME = 'PgpKeysData'
 MYSQL_USERS_TABLE_NAME = 'Profiles'
 MYSQL_TRAINING_DATA_TABLE_NAME = 'TrainingData'
 MYSQL_CHANGES_TABLE_NAME = 'UILog'
@@ -27,6 +29,7 @@ REDIS_APP_CONNECTION_KEY = 'connection:%s'
 REDIS_APPLICATION_KEY = 'application:%s'
 REDIS_USER_KEY = 'user:%s'
 REDIS_EMAILS_KEY = 'email:%s'
+REDIS_PGP_DATA_KEY = 'pgp_data:%s'
 REDIS_SESSION_KEY = 'token:%s'
 REDIS_JOB_RESULT_KEY = 'job_result:%s:%s'
 REDIS_DO_NOT_STORE_RESULT_KEY = 'do_not_store:%s'
@@ -57,9 +60,9 @@ MODULES_CLASSES_BY_TABLE_NAMES = {
         module_name='biomio.protocol.data_stores.application_data_store',
         class_name='ApplicationDataStore'
     ),
-    MYSQL_EMAILS_TABLE_NAME: dict(
-        module_name='biomio.protocol.data_stores.email_data_store',
-        class_name='EmailDataStore'
+    MYSQL_PGP_KEYS_TABLE_NAME: dict(
+        module_name='biomio.protocol.data_stores.pgp_keys_data_store',
+        class_name='PgpKeysDataStore'
     )
 }
 

@@ -5,7 +5,8 @@ import abc
 from pony.orm.ormtypes import LongStr
 from biomio.constants import REDIS_USER_KEY, REDIS_EMAILS_KEY, REDIS_APPLICATION_KEY, MYSQL_APPS_TABLE_NAME, \
     MYSQL_EMAILS_TABLE_NAME, MYSQL_USERS_TABLE_NAME, MYSQL_TRAINING_DATA_TABLE_NAME, MYSQL_CHANGES_TABLE_NAME, \
-    MYSQL_POLICIES_TABLE_NAME, REDIS_USER_POLICY_KEY, MYSQL_DEVICE_INFORMATION_TABLE_NAME, REDIS_DEVICE_INFORMATION_KEY
+    MYSQL_POLICIES_TABLE_NAME, REDIS_USER_POLICY_KEY, MYSQL_DEVICE_INFORMATION_TABLE_NAME, REDIS_DEVICE_INFORMATION_KEY, \
+    MYSQL_PGP_KEYS_TABLE_NAME, REDIS_PGP_DATA_KEY
 from biomio.utils.biomio_decorators import inherit_docstring_from
 
 database = pny.Database()
@@ -66,7 +67,7 @@ class UserInformation(BaseEntityClass, database.Entity):
     id = pny.PrimaryKey(int, auto=True)
     api_id = pny.Required(int, default=1, lazy=True)
     name = pny.Required(str, 50, default='test_name', lazy=True)
-    emails = pny.Set('EmailsData')
+    emails = pny.Set('PgpKeysData')
     phones = pny.Optional(str, 255, default='[]', lazy=True)
     password = pny.Required(str, 50, default='test_pass', lazy=True)
     temp_pass = pny.Optional(str, 50, default='test_temp_pass', lazy=True)
@@ -102,13 +103,14 @@ class UserInformation(BaseEntityClass, database.Entity):
         pass
 
 
-class EmailsData(BaseEntityClass, database.Entity):
+class Email(BaseEntityClass, database.Entity):
     _table_ = MYSQL_EMAILS_TABLE_NAME
-    email = pny.PrimaryKey(str, auto=False)
-    pass_phrase = pny.Optional(str)
-    public_pgp_key = pny.Optional(LongStr, lazy=False)
-    private_pgp_key = pny.Optional(LongStr, lazy=False, nullable=True)
-    user = pny.Required(UserInformation)
+    profileId = pny.Required(int)
+    email = pny.Required(str)
+    verified = pny.Optional(bool, default=False)
+    primary = pny.Optional(bool, default=False)
+    extension = pny.Optional(bool, default=False)
+    dateCreated = pny.Required(datetime.datetime, default=lambda: datetime.datetime.now(), lazy=True)
 
     @inherit_docstring_from(BaseEntityClass)
     def get_redis_key(self):
@@ -122,11 +124,7 @@ class EmailsData(BaseEntityClass, database.Entity):
     @staticmethod
     @inherit_docstring_from(BaseEntityClass)
     def create_record(**kwargs):
-        if 'user' in kwargs:
-            search_query = {UserInformation.get_unique_search_attribute(): kwargs.get('user')}
-            user = UserInformation.get(**search_query)
-            kwargs.update({'user': user})
-        EmailsData(**kwargs)
+        pass
 
     @staticmethod
     @inherit_docstring_from(BaseEntityClass)
@@ -136,8 +134,46 @@ class EmailsData(BaseEntityClass, database.Entity):
     @staticmethod
     @inherit_docstring_from(BaseEntityClass)
     def update_record(record_id, **kwargs):
-        search_query = {EmailsData.get_unique_search_attribute(): record_id}
-        email_data = EmailsData.get(**search_query)
+        pass
+
+
+class PgpKeysData(BaseEntityClass, database.Entity):
+    _table_ = MYSQL_PGP_KEYS_TABLE_NAME
+    email = pny.PrimaryKey(str, auto=False)
+    pass_phrase = pny.Optional(str)
+    public_pgp_key = pny.Optional(LongStr, lazy=False)
+    private_pgp_key = pny.Optional(LongStr, lazy=False, nullable=True)
+    user = pny.Required(UserInformation)
+    is_primary = pny.Optional(bool, default=False)
+
+    @inherit_docstring_from(BaseEntityClass)
+    def get_redis_key(self):
+        return REDIS_PGP_DATA_KEY % self.email
+
+    @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
+    def get_unique_search_attribute():
+        return 'email'
+
+    @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
+    def create_record(**kwargs):
+        if 'user' in kwargs:
+            search_query = {UserInformation.get_unique_search_attribute(): kwargs.get('user')}
+            user = UserInformation.get(**search_query)
+            kwargs.update({'user': user})
+        PgpKeysData(**kwargs)
+
+    @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
+    def get_table_name():
+        return MYSQL_PGP_KEYS_TABLE_NAME
+
+    @staticmethod
+    @inherit_docstring_from(BaseEntityClass)
+    def update_record(record_id, **kwargs):
+        search_query = {PgpKeysData.get_unique_search_attribute(): record_id}
+        email_data = PgpKeysData.get(**search_query)
 
         for key, value in kwargs.iteritems():
             if not hasattr(email_data, key):
