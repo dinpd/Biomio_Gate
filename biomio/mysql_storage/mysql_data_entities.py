@@ -125,8 +125,8 @@ class Email(BaseEntityClass, database.Entity):
     email = pny.Required(str)
     verified = pny.Optional(bool, default=False)
     primary = pny.Optional(bool, default=False)
-    extension = pny.Optional(bool, default=False)
-    dateCreated = pny.Required(datetime.datetime, default=lambda: datetime.datetime.now(), lazy=True)
+    extention = pny.Optional(bool, default=False)
+    date_created = pny.Required(datetime.datetime, default=lambda: datetime.datetime.now(), lazy=True)
 
     @inherit_docstring_from(BaseEntityClass)
     def get_redis_key(self):
@@ -165,7 +165,6 @@ class PgpKeysData(BaseEntityClass, database.Entity):
     public_pgp_key = pny.Optional(LongStr, lazy=False)
     private_pgp_key = pny.Optional(LongStr, lazy=False, nullable=True)
     user = pny.Required(UserInformation)
-    is_primary = pny.Optional(bool, default=False)
 
     @inherit_docstring_from(BaseEntityClass)
     def get_redis_key(self):
