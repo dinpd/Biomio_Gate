@@ -1,11 +1,10 @@
 from biomio.algorithms.interfaces import AlgorithmProcessInterface, logger
-from biomio.algorithms.recognition.processes.defs import STATUS_RESULT, STATUS_ERROR, \
-    ERROR_FORMAT, INTERNAL_TRAINING_ERROR, UNKNOWN_ERROR
-from biomio.constants import REDIS_DO_NOT_STORE_RESULT_KEY
+from biomio.algorithms.recognition.processes.defs import STATUS_RESULT, STATUS_ERROR
+from biomio.algorithms.recognition.processes.handling import save_temp_data, load_temp_data
+from biomio.algorithms.recognition.processes.messages import create_result_message
 from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
-from biomio.algorithms.datastructs import get_data_structure, wNearPyHash, NearPyHashSettings
-from messages import create_result_message
-from handling import save_temp_data, load_temp_data
+from biomio.constants import REDIS_DO_NOT_STORE_RESULT_KEY
+from biomio.algorithms.datastructs import wNearPyHash
 
 UPDATE_DATA_STRUCTURE_PROCESS_CLASS_NAME = "UpdateDataStructureProcess"
 
@@ -17,8 +16,7 @@ class InitIdentificationUpdateProcess(AlgorithmProcessInterface):
     def __init__(self, worker):
         AlgorithmProcessInterface.__init__(self, worker=worker)
         self._classname = UPDATE_DATA_STRUCTURE_PROCESS_CLASS_NAME
-        self.db_settings = NearPyHashSettings()
-        self.db_settings.dimension = 64
+        self.db_settings = dict()
         self._update_data_process = AlgorithmProcessInterface()
 
     def set_update_data_hash_process(self, process):
@@ -67,7 +65,6 @@ class InitIdentificationUpdateProcess(AlgorithmProcessInterface):
             'ai_code': kwargs['general_data']['ai_code']
         }
         temp_data_path = kwargs['general_data']['temp_data_path']
-        # result_training_helper(callback_code=callback_code, **result)
         iden_process_data = save_temp_data(result, temp_data_path)
         return create_result_message({'data_file': iden_process_data}, 'update_hash')
 

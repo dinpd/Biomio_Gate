@@ -1,8 +1,8 @@
-from biomio.algorithms.interfaces import AlgorithmProcessInterface, logger
-from biomio.algorithms.datastructs import get_data_structure
-from algo_hash_redis_store import AlgorithmsHashRedisStackStore
-from biomio.constants import REDIS_DO_NOT_STORE_RESULT_KEY
 from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
+from biomio.algorithms.interfaces import AlgorithmProcessInterface, logger
+from algo_hash_redis_store import AlgorithmsHashRedisStackStore
+from biomio.algorithms.datastructs import get_data_structure
+from biomio.constants import REDIS_DO_NOT_STORE_RESULT_KEY
 
 UPDATE_DATA_STRUCTURE_PROCESS_CLASS_NAME = "UpdateDataStructureProcess"
 
