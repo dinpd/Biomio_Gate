@@ -144,7 +144,6 @@ class PgpKeysData(BaseEntityClass, database.Entity):
     public_pgp_key = pny.Optional(LongStr, lazy=False)
     private_pgp_key = pny.Optional(LongStr, lazy=False, nullable=True)
     user = pny.Required(UserInformation)
-    is_primary = pny.Optional(bool, default=False)
 
     @inherit_docstring_from(BaseEntityClass)
     def get_redis_key(self):
