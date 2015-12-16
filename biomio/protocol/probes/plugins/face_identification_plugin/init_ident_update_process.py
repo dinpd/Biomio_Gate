@@ -3,7 +3,7 @@ from biomio.algorithms.recognition.processes.defs import STATUS_RESULT, STATUS_E
     ERROR_FORMAT, INTERNAL_TRAINING_ERROR, UNKNOWN_ERROR
 from biomio.constants import REDIS_DO_NOT_STORE_RESULT_KEY
 from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
-from biomio.algorithms.datastructs import get_data_structure, NearPyHash, NearPyHashSettings
+from biomio.algorithms.datastructs import get_data_structure, wNearPyHash, NearPyHashSettings
 from messages import create_result_message
 from handling import save_temp_data, load_temp_data
 
@@ -33,17 +33,17 @@ class InitIdentificationUpdateProcess(AlgorithmProcessInterface):
                 database = data['database']
                 del data['database']
                 for inx, cluster in database.iteritems():
-                    ddict = {
+                    settings = {
                         "database": inx,
                         "template": cluster,
                         "uuid": data['userID'],
                         "data_settings": data.copy(),
                         "settings": {
-                            "database_type": NearPyHash.type(),
+                            "database_type": wNearPyHash.type(),
                             "settings":  self.db_settings
                         }
                     }
-                    self._update_data_process.run(worker=self._worker, **ddict)
+                    self._update_data_process.run(worker=self._worker, **settings)
 
     @staticmethod
     def job(callback_code, **kwargs):

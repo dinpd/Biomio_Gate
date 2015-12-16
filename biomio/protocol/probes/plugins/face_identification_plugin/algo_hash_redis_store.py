@@ -1,10 +1,12 @@
-from biomio.constants import MYSQL_IDENTIFICATION_HASH_DATA_TABLE_NAME, IDEN_USER_HASH_TABLE_NAME
+from biomio.constants import MYSQL_IDENTIFICATION_HASH_DATA_TABLE_NAME, MYSQL_IDENTIFICATION_USER_HASH_TABLE_NAME
 from biomio.protocol.storage.redis_storage import RedisStorage
 from biomio.worker.worker_interface import WorkerInterface
+from database_actions import delete_data, create_records, select_records_by_ids
 from threading import Lock
 
 REDIS_IDENTIFICATION_BUCKET_KEY = 'identification_hash:%s:%s'
 HASH_BUCKET_KEY_FORMAT = "bucket_key:%s:%s"
+
 
 class AlgorithmsHashRedisStackStore:
     _instance = None
@@ -13,7 +15,7 @@ class AlgorithmsHashRedisStackStore:
     def __init__(self, redis_id):
         self._ihr_redis = RedisStorage.ihr_instance(redis_id)
         self._hash_data_table_name = MYSQL_IDENTIFICATION_HASH_DATA_TABLE_NAME
-        self._user_hash_table_name = IDEN_USER_HASH_TABLE_NAME
+        self._user_hash_table_name = MYSQL_IDENTIFICATION_USER_HASH_TABLE_NAME
 
         self._worker = WorkerInterface.instance()
 
@@ -34,7 +36,8 @@ class AlgorithmsHashRedisStackStore:
                 values = hash_keys_data.get(bucket_key, [])
                 values.append((value, data))
                 hash_keys_data[bucket_key] = values
-        # TODO: Database store data
+        records = select_records_by_ids(self._user_hash_table_name, [data], True)
+        delete_data(self._user_hash_table_name, [data])
 
     def get_bucket(self, hash_name, bucket_key):
         bucket_key = HASH_BUCKET_KEY_FORMAT % (hash_name, bucket_key)
