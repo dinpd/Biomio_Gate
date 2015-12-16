@@ -126,7 +126,7 @@ class Email(BaseEntityClass, database.Entity):
     verified = pny.Optional(bool, default=False)
     primary = pny.Optional(bool, default=False)
     extention = pny.Optional(bool, default=False)
-    dateCreated = pny.Required(datetime.datetime, default=lambda: datetime.datetime.now(), lazy=True)
+    date_created = pny.Required(datetime.datetime, default=lambda: datetime.datetime.now(), lazy=True)
 
     @inherit_docstring_from(BaseEntityClass)
     def get_redis_key(self):
