@@ -125,7 +125,7 @@ class Email(BaseEntityClass, database.Entity):
     email = pny.Required(str)
     verified = pny.Optional(bool, default=False)
     primary = pny.Optional(bool, default=False)
-    extension = pny.Optional(bool, default=False)
+    extention = pny.Optional(bool, default=False)
     dateCreated = pny.Required(datetime.datetime, default=lambda: datetime.datetime.now(), lazy=True)
 
     @inherit_docstring_from(BaseEntityClass)
