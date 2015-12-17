@@ -27,7 +27,7 @@ class UpdateDataStructureProcess(AlgorithmProcessInterface):
         self._handler_logger_info(result)
         if result is not None:
             buckets = result['data']
-            redis_store = result['store']
+            redis_store = 0 # result['store']
             AlgorithmsHashRedisStackStore.instance(redis_store).store_vectors(buckets, result['uuid'],
                                                                               self._internal_handler)
 

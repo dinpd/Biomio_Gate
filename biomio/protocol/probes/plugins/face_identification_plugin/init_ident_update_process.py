@@ -6,7 +6,7 @@ from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStor
 from biomio.constants import REDIS_DO_NOT_STORE_RESULT_KEY
 from biomio.algorithms.datastructs import wNearPyHash
 
-UPDATE_DATA_STRUCTURE_PROCESS_CLASS_NAME = "UpdateDataStructureProcess"
+INIT_IDENTIFICATION_UPDATE_PROCESS_CLASS_NAME = "InitIdentificationUpdateProcess"
 
 def job(callback_code, **kwargs):
     InitIdentificationUpdateProcess.job(callback_code, **kwargs)
@@ -15,7 +15,7 @@ def job(callback_code, **kwargs):
 class InitIdentificationUpdateProcess(AlgorithmProcessInterface):
     def __init__(self, worker):
         AlgorithmProcessInterface.__init__(self, worker=worker)
-        self._classname = UPDATE_DATA_STRUCTURE_PROCESS_CLASS_NAME
+        self._classname = INIT_IDENTIFICATION_UPDATE_PROCESS_CLASS_NAME
         self.db_settings = dict()
         self._update_data_process = AlgorithmProcessInterface()
 
@@ -45,7 +45,7 @@ class InitIdentificationUpdateProcess(AlgorithmProcessInterface):
 
     @staticmethod
     def job(callback_code, **kwargs):
-        InitIdentificationUpdateProcess._job_logger_info(UPDATE_DATA_STRUCTURE_PROCESS_CLASS_NAME, **kwargs)
+        InitIdentificationUpdateProcess._job_logger_info(INIT_IDENTIFICATION_UPDATE_PROCESS_CLASS_NAME, **kwargs)
         record = InitIdentificationUpdateProcess.process(**kwargs)
         AlgorithmsDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
                                                         record_dict=record, callback_code=callback_code)
@@ -64,7 +64,7 @@ class InitIdentificationUpdateProcess(AlgorithmProcessInterface):
             'try_type': kwargs['general_data']['try_type'],
             'ai_code': kwargs['general_data']['ai_code']
         }
-        temp_data_path = kwargs['general_data']['temp_data_path']
+        temp_data_path = kwargs['temp_data_path']
         iden_process_data = save_temp_data(result, temp_data_path)
         return create_result_message({'data_file': iden_process_data}, 'update_hash')
 
