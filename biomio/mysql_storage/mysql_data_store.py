@@ -89,7 +89,7 @@ class MySQLDataStore:
         table_class = self.get_table_class(module_name, table_name)
         database.execute("DELETE FROM %s WHERE %s IN %s" % (table_class.get_table_name(),
                                                             table_class.get_unique_search_attribute(),
-                                                            "('%s)" % "','".join(object_ids)))
+                                                            "(%s)" % "','".join(object_ids)))
 
     @pny.db_session
     def create_multiple_records(self, module_name, table_name, values, update=False):
