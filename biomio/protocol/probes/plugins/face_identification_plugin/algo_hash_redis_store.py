@@ -2,6 +2,7 @@ from biomio.constants import MYSQL_IDENTIFICATION_HASH_DATA_TABLE_NAME, MYSQL_ID
 from biomio.protocol.storage.redis_storage import RedisStorage
 from biomio.worker.worker_interface import WorkerInterface
 from database_actions import delete_data, create_records, select_records_by_ids
+from biomio.algorithms.logger import logger
 from threading import Lock
 
 REDIS_IDENTIFICATION_BUCKET_KEY = 'identification_hash:%s:%s'
@@ -37,6 +38,7 @@ class AlgorithmsHashRedisStackStore:
                 values.append((value, data))
                 hash_keys_data[bucket_key] = values
         records = select_records_by_ids(self._user_hash_table_name, [data], True)
+        logger.debug(records)
         delete_data(self._user_hash_table_name, [data])
 
     def get_bucket(self, hash_name, bucket_key):
