@@ -39,7 +39,9 @@ class AlgorithmsHashRedisStackStore:
                 hash_keys_data[bucket_key] = values
         records = select_records_by_ids(self._user_hash_table_name, [data], True)
         logger.debug(records)
-        delete_data(self._user_hash_table_name, [data])
+        if len(records) > 0:
+            delete_data(self._user_hash_table_name, [data])
+        create_records(self._user_hash_table_name, tuple(user_hash_data))
 
     def get_bucket(self, hash_name, bucket_key):
         bucket_key = HASH_BUCKET_KEY_FORMAT % (hash_name, bucket_key)
