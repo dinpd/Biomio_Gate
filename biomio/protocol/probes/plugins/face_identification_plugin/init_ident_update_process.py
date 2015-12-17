@@ -4,7 +4,7 @@ from biomio.algorithms.recognition.processes.handling import save_temp_data, loa
 from biomio.algorithms.recognition.processes.messages import create_result_message
 from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
 from biomio.constants import REDIS_DO_NOT_STORE_RESULT_KEY
-from biomio.algorithms.datastructs import wNearPyHash
+from biomio.algorithms.datastructs import wNearPyHash, DEFAULT_NEAR_PY_HASH_SETTINGS
 
 INIT_IDENTIFICATION_UPDATE_PROCESS_CLASS_NAME = "InitIdentificationUpdateProcess"
 
@@ -16,23 +16,24 @@ class InitIdentificationUpdateProcess(AlgorithmProcessInterface):
     def __init__(self, worker):
         AlgorithmProcessInterface.__init__(self, worker=worker)
         self._classname = INIT_IDENTIFICATION_UPDATE_PROCESS_CLASS_NAME
-        self.db_settings = dict()
+        self.db_settings = DEFAULT_NEAR_PY_HASH_SETTINGS
         self._update_data_process = AlgorithmProcessInterface()
 
     def set_update_data_hash_process(self, process):
         self._update_data_process = process
 
     def handler(self, result):
+        self._handler_logger_info(result)
         if result is not None:
             if result['status'] == STATUS_ERROR:
                 pass
             elif result['status'] == STATUS_RESULT:
-                data = load_temp_data(result['data']['data_file'])
+                data = load_temp_data(result['data']['data_file'], remove=True)
                 database = data['database']
                 del data['database']
                 for inx, cluster in database.iteritems():
                     settings = {
-                        "database": inx,
+                        "database": 0,
                         "template": cluster,
                         "uuid": data['userID'],
                         "data_settings": data.copy(),
@@ -52,6 +53,7 @@ class InitIdentificationUpdateProcess(AlgorithmProcessInterface):
 
     @staticmethod
     def process(**kwargs):
+        InitIdentificationUpdateProcess._process_logger_info(INIT_IDENTIFICATION_UPDATE_PROCESS_CLASS_NAME, **kwargs)
         sources = dict()
         for k in kwargs['clusters_list']:
             sources[k] = kwargs[k]

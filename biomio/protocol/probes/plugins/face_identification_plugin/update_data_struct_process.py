@@ -27,14 +27,14 @@ class UpdateDataStructureProcess(AlgorithmProcessInterface):
         self._handler_logger_info(result)
         if result is not None:
             buckets = result['data']
-            redis_store = 0 # result['store']
+            redis_store = result['store']
             AlgorithmsHashRedisStackStore.instance(redis_store).store_vectors(buckets, result['uuid'],
                                                                               self._internal_handler)
 
     @staticmethod
     def job(callback_code, **kwargs):
-        redis_store = kwargs['database']
         UpdateDataStructureProcess._job_logger_info(UPDATE_DATA_STRUCTURE_PROCESS_CLASS_NAME, **kwargs)
+        redis_store = kwargs['database']
         database_store = get_data_structure(kwargs['settings']['database_type'])(kwargs['settings']['settings'])
         buckets = database_store.hash_vectors(kwargs['template'], kwargs['uuid'])
         record = {'data': buckets,
