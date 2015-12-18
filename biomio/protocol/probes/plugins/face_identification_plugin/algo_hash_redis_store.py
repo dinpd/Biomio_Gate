@@ -53,7 +53,8 @@ class AlgorithmsHashRedisStackStore:
             logger.debug("before")
             logger.debug(hash_buckets)
             for key, value in hash_buckets.iteritems():
-                hash_buckets[key] = [v for v in value if v[1] != str(data)]
+                hash_data = deserialize(value['hash_data'])
+                hash_buckets[key] = [v for v in hash_data if v[1] != str(data)]
             logger.debug("after")
             logger.debug(hash_buckets)
             logger.debug("before!!!")
