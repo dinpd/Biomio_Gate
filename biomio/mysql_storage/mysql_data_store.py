@@ -93,7 +93,11 @@ class MySQLDataStore:
                                              "('%s')" % "','".join(object_ids)))
         result = {}
         for obj in objects:
-            result.update({getattr(obj, obj.get_unique_search_attribute()): obj.to_dict()})
+            if hasattr(obj, 'date_created'):
+                obj_dict = obj.to_dict(exclude='date_created')
+            else:
+                obj_dict = obj.to_dict()
+            result.update({getattr(obj, obj.get_unique_search_attribute()): obj_dict})
         return result
 
     @pny.db_session
