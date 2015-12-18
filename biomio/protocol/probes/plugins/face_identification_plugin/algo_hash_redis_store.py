@@ -3,6 +3,7 @@ from biomio.protocol.storage.redis_storage import RedisStorage
 from biomio.worker.worker_interface import WorkerInterface
 from database_actions import delete_data, create_records, select_records_by_ids
 from biomio.algorithms.logger import logger
+from defs import serialize, deserialize
 from threading import Lock
 
 REDIS_IDENTIFICATION_BUCKET_KEY = 'identification_hash:%s:%s'
@@ -66,7 +67,7 @@ class AlgorithmsHashRedisStackStore:
             if len(hash_buckets.keys()) > 0:
                 hash_buckets_list = []
                 for key, value in hash_buckets.iteritems():
-                    hash_buckets_list.append((key, value))
+                    hash_buckets_list.append((key, serialize(value)))
                 create_records(self._hash_data_table_name, tuple(hash_buckets_list), True)
         create_records(self._user_hash_table_name, tuple(user_hash_data))
 
