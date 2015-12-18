@@ -63,7 +63,11 @@ class AlgorithmsHashRedisStackStore:
                 hash_buckets[key] = values
             logger.debug("after!!!")
             logger.debug(hash_buckets)
-
+            if len(hash_buckets.keys()) > 0:
+                hash_buckets_list = []
+                for key, value in hash_buckets.iteritems():
+                    hash_buckets_list.append((key, value))
+                create_records(self._hash_data_table_name, tuple(hash_buckets_list), True)
         create_records(self._user_hash_table_name, tuple(user_hash_data))
 
     def get_bucket(self, hash_name, bucket_key):
