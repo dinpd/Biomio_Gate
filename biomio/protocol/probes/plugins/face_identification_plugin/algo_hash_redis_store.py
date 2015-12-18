@@ -59,9 +59,14 @@ class AlgorithmsHashRedisStackStore:
                     values.append(v)
                 hash_buckets[key] = values
             if len(hash_buckets.keys()) > 0:
+                remove_keys_list = []
                 hash_buckets_list = []
                 for key, value in hash_buckets.iteritems():
-                    hash_buckets_list.append((str(key), serialize(value)))
+                    if len(value) > 0:
+                        hash_buckets_list.append((str(key), serialize(value)))
+                    else:
+                        remove_keys_list.append(str(key))
+                delete_data(self._hash_data_table_name, remove_keys_list)
                 create_records(self._hash_data_table_name, tuple(hash_buckets_list), True)
         create_records(self._user_hash_table_name, tuple(user_hash_data))
 
