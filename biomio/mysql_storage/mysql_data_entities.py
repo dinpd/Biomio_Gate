@@ -480,7 +480,7 @@ class IdentificationUsersBucketsData(BaseEntityClass, database.Entity):
 class IdentificationHashData(BaseEntityClass, database.Entity):
     _table_ = MYSQL_IDENTIFICATION_HASH_DATA_TABLE_NAME
     bucket_key = pny.Required(str, unique=True)
-    values = pny.Required(LongStr, lazy=False)
+    hash_data = pny.Required(LongStr, lazy=False)
 
     @staticmethod
     @inherit_docstring_from(BaseEntityClass)
@@ -515,4 +515,4 @@ class IdentificationHashData(BaseEntityClass, database.Entity):
     @staticmethod
     @inherit_docstring_from(BaseEntityClass)
     def get_create_update_attr():
-        return ['bucket_key', 'values']
+        return ['bucket_key', 'hash_data']
