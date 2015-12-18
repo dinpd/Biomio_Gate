@@ -49,6 +49,21 @@ class AlgorithmsHashRedisStackStore:
                     loaded_buckets.append(str(record['bucket_key']))
             hash_buckets = select_records_by_ids(self._hash_data_table_name, loaded_buckets)
             delete_data(self._user_hash_table_name, [str(data)])
+            logger.debug("before")
+            logger.debug(hash_buckets)
+            for key, value in hash_buckets.iteritems():
+                hash_buckets[key] = [v for v in value if v[1] != str(data)]
+            logger.debug("after")
+            logger.debug(hash_buckets)
+            logger.debug("before!!!")
+            for key, value in hash_keys_data.iteritems():
+                values = hash_buckets.get(key, [])
+                for v in value:
+                    values.append(v)
+                hash_buckets[key] = values
+            logger.debug("after!!!")
+            logger.debug(hash_buckets)
+
         create_records(self._user_hash_table_name, tuple(user_hash_data))
 
     def get_bucket(self, hash_name, bucket_key):
