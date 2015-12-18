@@ -29,18 +29,26 @@ class AlgorithmsHashRedisStackStore:
 
     def store_vectors(self, hash_data_list, data, callback):
         user_hash_data = []
+        local_buckets_list = []
         hash_keys_data = {}
         for hash_name, hash_buckets in hash_data_list:
             for key, value in hash_buckets:
                 bucket_key = HASH_BUCKET_KEY_FORMAT % (hash_name, key)
-                user_hash_data.append((data, bucket_key))
-                values = hash_keys_data.get(bucket_key, [])
-                values.append((value, data))
-                hash_keys_data[bucket_key] = values
-        records = select_records_by_ids(self._user_hash_table_name, [data], True)
-        logger.debug(records)
-        if len(records) > 0:
-            delete_data(self._user_hash_table_name, [data])
+                if not local_buckets_list.__contains__(bucket_key):
+                    local_buckets_list.append(bucket_key)
+                    user_hash_data.append((str(data), str(bucket_key)))
+                values = hash_keys_data.get(str(bucket_key), [])
+                values.append((value, str(data)))
+                hash_keys_data[str(bucket_key)] = values
+
+        user_records = select_records_by_ids(self._user_hash_table_name, [str(data)], True)
+        if len(user_records['records']) > 0:
+            loaded_buckets = []
+            for record in user_records['records']:
+                if not loaded_buckets.__contains__(str(record['bucket_key'])):
+                    loaded_buckets.append(str(record['bucket_key']))
+            hash_buckets = select_records_by_ids(self._hash_data_table_name, loaded_buckets)
+            delete_data(self._user_hash_table_name, [str(data)])
         create_records(self._user_hash_table_name, tuple(user_hash_data))
 
     def get_bucket(self, hash_name, bucket_key):

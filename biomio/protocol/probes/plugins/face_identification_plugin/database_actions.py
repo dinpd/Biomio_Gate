@@ -2,7 +2,7 @@ from biomio.algorithms.logger import logger
 from biomio.mysql_storage.mysql_data_store_interface import MySQLDataStoreInterface
 
 
-def select_records_by_ids(table_class_name, object_ids, flat_result):
+def select_records_by_ids(table_class_name, object_ids, flat_result=False):
     logger.info('Getting records for table class - %s, with object_ids - %s' % (table_class_name, object_ids))
     try:
         records = MySQLDataStoreInterface.select_data_by_ids(table_name=table_class_name,
