@@ -50,24 +50,23 @@ class AlgorithmsHashRedisStackStore:
                     loaded_buckets.append(str(record['bucket_key']))
             hash_buckets = select_records_by_ids(self._hash_data_table_name, loaded_buckets)
             delete_data(self._user_hash_table_name, [str(data)])
-            logger.debug("before")
-            logger.debug(hash_buckets)
             for key, value in hash_buckets.iteritems():
-                hash_buckets[key] = [v for v in value if v[1] != str(data)]
-            logger.debug("after")
-            logger.debug(hash_buckets)
-            logger.debug("before!!!")
+                hash_data = deserialize(value['hash_data'])
+                hash_buckets[key] = [v for v in hash_data if v[1] != str(data)]
             for key, value in hash_keys_data.iteritems():
                 values = hash_buckets.get(key, [])
                 for v in value:
                     values.append(v)
                 hash_buckets[key] = values
-            logger.debug("after!!!")
-            logger.debug(hash_buckets)
             if len(hash_buckets.keys()) > 0:
+                remove_keys_list = []
                 hash_buckets_list = []
                 for key, value in hash_buckets.iteritems():
-                    hash_buckets_list.append((key, serialize(value)))
+                    if len(value) > 0:
+                        hash_buckets_list.append((str(key), serialize(value)))
+                    else:
+                        remove_keys_list.append(str(key))
+                delete_data(self._hash_data_table_name, remove_keys_list)
                 create_records(self._hash_data_table_name, tuple(hash_buckets_list), True)
         create_records(self._user_hash_table_name, tuple(user_hash_data))
 
