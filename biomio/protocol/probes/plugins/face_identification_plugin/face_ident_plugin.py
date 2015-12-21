@@ -42,7 +42,7 @@ class FaceIdentificationPlugin(base_probe_plugin.BaseProbePlugin):
         retries_key = REDIS_VERIFICATION_RETIES_COUNT_KEY % data['probe_id']
         if not redis_instance.exists(retries_key):
             redis_instance.store_counter_value(key=retries_key, counter=self._max_verification_attempts)
-        self._algorithm.apply(self._probe_callback,
+        self._algorithm.apply(callback=self._probe_callback,
                               kwargs_list_for_results_gatherer=kwargs_list_for_results_gatherer, **data)
 
     @inherit_docstring_from(base_probe_plugin.BaseProbePlugin)
