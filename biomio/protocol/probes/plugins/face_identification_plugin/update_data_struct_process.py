@@ -46,8 +46,8 @@ class UpdateDataStructureProcess(AlgorithmProcessInterface):
         logger.debug(buckets)
         AlgorithmsHashRedisStackStore.instance(redis_store).store_vectors(buckets, record['uuid'], None)
         result = {'result': True}
-        AlgorithmsDataStore.instance().store_job_result(key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
-                                                        result=result)
+        AlgorithmsDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
+                                                        record_dict=result, callback_code=callback_code)
 
     @staticmethod
     def process(**kwargs):

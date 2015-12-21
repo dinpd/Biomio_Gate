@@ -209,8 +209,8 @@ def ind_final_helper(temp_image_path, probe_id, error, callback_code, result, ai
         worker_logger.info('Job was finished with internal algorithm error %s ' % error)
     else:
         AlgorithmsDataStore.instance().delete_data(key=REDiS_TRAINING_RETRIES_COUNT_KEY % probe_id)
-        AlgorithmsDataStore.instance().store_job_result(key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
-                                                        result=res_dict)
+        AlgorithmsDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
+                                                        record_dict=res_dict, callback_code=callback_code)
 
 def final_helper(temp_image_path, probe_id, error, callback_code, result, ai_response_type, try_type, ai_code):
     shutil.rmtree(temp_image_path)
