@@ -33,6 +33,8 @@ class IdentificationPAInterface(AlgorithmInterface):
             worker.run_job(result_send_job, callback=self._callback, **res)
 
     def training(self, callback=None, **kwargs):
+        self._result_count = 0
+        self._store_results = []
         mode = kwargs.get("mode", TRAINING_FULL)
         self._callback = callback
         worker = WorkerInterface.instance()
