@@ -1,6 +1,8 @@
 from biomio.algorithms.recognition.processes import (MainTrainingProcess, TrainingProcess, DataDetectionProcess,
                                                      RotationDetectionProcess, RotationResultProcess,
                                                      ClusterMatchingProcess)
+from biomio.algorithms.recognition.processes.defs import REDIS_CLUSTER_JOB_ACTION, REDIS_TEMPLATE_RESULT, \
+    REDIS_GENERAL_DATA
 from biomio.algorithms.recognition.processes.iden_process import IdentificationProcess
 from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
 from init_ident_update_process import InitIdentificationUpdateProcess
@@ -29,6 +31,10 @@ class IdentificationPAInterface(AlgorithmInterface):
         self._result_count -= 1
         self._store_results.append(result)
         if self._result_count == 0:
+            for idx in range(0, 6, 1):
+                AlgorithmsDataStore.instance().delete_data(REDIS_CLUSTER_JOB_ACTION % idx)
+            AlgorithmsDataStore.instance().delete_data(REDIS_TEMPLATE_RESULT % result['userID'])
+            AlgorithmsDataStore.instance().delete_data(REDIS_GENERAL_DATA % result['userID'])
             res = self._store_results[0]
             res['result'] = self._store_results[0]['result'] and self._store_results[1]['result']
             worker = WorkerInterface.instance()
