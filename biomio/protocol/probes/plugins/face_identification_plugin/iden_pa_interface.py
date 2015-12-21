@@ -79,6 +79,7 @@ class IdentificationPAInterface(AlgorithmInterface):
     def apply(self, callback=None, **kwargs):
         self._callback = callback
         worker = WorkerInterface.instance()
+        training_start_process = TrainingStartProcess(self._interface_callback)
         main_process = MainTrainingProcess(TEMP_DATA_PATH, worker)
         training_process = TrainingProcess(TEMP_DATA_PATH, worker)
         data_detect_process = DataDetectionProcess(TEMP_DATA_PATH, worker)
@@ -87,6 +88,7 @@ class IdentificationPAInterface(AlgorithmInterface):
         ident_start_process = IdentificationStartProcess(worker)
         identification_process = IdentificationProcess()
 
+        training_start_process.set_main_training_process(main_process)
         main_process.set_data_training_process(training_process)
         training_process.set_data_detection_process(data_detect_process)
         training_process.set_data_rotation_process(rotation_detect_process)
@@ -95,4 +97,4 @@ class IdentificationPAInterface(AlgorithmInterface):
         data_detect_process.set_final_training_process(ident_start_process)
         ident_start_process.set_identification_process(identification_process)
 
-        main_process.process(**kwargs)
+        training_start_process.run(worker, **kwargs)
