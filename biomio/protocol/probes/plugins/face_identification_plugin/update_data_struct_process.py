@@ -1,3 +1,4 @@
+from biomio.constants import REDIS_PROBE_RESULT_KEY, TRAINING_SUCCESS_STATUS, TRAINING_SUCCESS_MESSAGE
 from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
 from biomio.algorithms.interfaces import AlgorithmProcessInterface, logger
 from algo_hash_redis_store import AlgorithmsHashRedisStackStore
@@ -42,10 +43,11 @@ class UpdateDataStructureProcess(AlgorithmProcessInterface):
                   'uuid': kwargs['uuid'],
                   'data_settings': kwargs['data_settings']
                   }
-        # AlgorithmsDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
-        #                                                 record_dict=record, callback_code=callback_code)
         logger.debug(buckets)
         AlgorithmsHashRedisStackStore.instance(redis_store).store_vectors(buckets, record['uuid'], None)
+        result = {'result': True}
+        AlgorithmsDataStore.instance().store_job_result(key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
+                                                        result=result)
 
     @staticmethod
     def process(**kwargs):

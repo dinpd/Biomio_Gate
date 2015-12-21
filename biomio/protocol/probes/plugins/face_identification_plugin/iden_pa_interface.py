@@ -1,6 +1,7 @@
 from biomio.algorithms.recognition.processes import (MainTrainingProcess, TrainingProcess, DataDetectionProcess,
                                                      RotationDetectionProcess, RotationResultProcess,
                                                      ClusterMatchingProcess)
+from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
 from init_ident_update_process import InitIdentificationUpdateProcess
 from update_data_struct_process import UpdateDataStructureProcess
 from biomio.algorithms.interfaces import AlgorithmInterface
@@ -8,7 +9,13 @@ from biomio.worker.worker_interface import WorkerInterface
 from training_start_process import TrainingStartProcess
 from final_training_process import FinalTrainingProcess
 from transfer_data_process import TransferDataProcess
+from interface_helper import tell_ai_training_results
+from biomio.constants import REDIS_PROBE_RESULT_KEY
 from defs import TRAINING_FULL, TEMP_DATA_PATH
+
+def result_send_job(callback_code, **kwargs):
+    AlgorithmsDataStore.instance().store_data(key=REDIS_PROBE_RESULT_KEY % callback_code, result=kwargs['result'])
+    tell_ai_training_results(kwargs['result'], kwargs['ai_response_type'], kwargs['try_type'], kwargs['ai_code'])
 
 class IdentificationPAInterface(AlgorithmInterface):
     def __init__(self):
@@ -20,8 +27,10 @@ class IdentificationPAInterface(AlgorithmInterface):
         self._result_count -= 1
         self._store_results.append(result)
         if self._result_count == 0:
-            if self._callback is not None:
-                self._callback(self._store_results)
+            res = self._store_results[0]
+            res['result'] = self._store_results[0]['result'] and self._store_results[1]['result']
+            worker = WorkerInterface.instance()
+            worker.run_job(result_send_job, callback=self._callback, **res)
 
     def training(self, callback=None, **kwargs):
         mode = kwargs.get("mode", TRAINING_FULL)

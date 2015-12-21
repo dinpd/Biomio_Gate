@@ -1,5 +1,5 @@
 from biomio.algorithms.interfaces import AlgorithmProcessInterface, logger
-from interface_helper import result_training_helper
+from interface_helper import result_training_helper, ind_final_helper
 
 
 FINAL_TRAINING_PROCESS_CLASS_NAME = "FinalTrainingProcess"
@@ -38,7 +38,7 @@ class FinalTrainingProcess(AlgorithmProcessInterface):
             'ai_code': kwargs['general_data']['ai_code']
         }
         logger.info('Status::The database updated.')
-        result_training_helper(callback_code=callback_code, **result)
+        result_training_helper(callback_code=callback_code, final_func=ind_final_helper, **result)
 
     @staticmethod
     def process(**kwargs):

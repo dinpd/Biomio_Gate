@@ -4,7 +4,7 @@ from biomio.constants import REDIS_PROBE_RESULT_KEY, REDIS_RESULTS_COUNTER_KEY, 
     REDIS_UPDATE_TRAINING_KEY, REDIS_VERIFICATION_RETIES_COUNT_KEY, REDiS_TRAINING_RETRIES_COUNT_KEY, \
     TRAINING_RETRY_STATUS, TRAINING_RETRY_MESSAGE, TRAINING_SUCCESS_STATUS, TRAINING_SUCCESS_MESSAGE, \
     TRAINING_FAILED_STATUS, TRAINING_FAILED_MESSAGE, TRAINING_MAX_RETRIES_STATUS, TRAINING_MAX_RETRIES_MESSAGE, \
-    TRAINING_STARTED_STATUS, TRAINING_STARTED_MESSAGE
+    TRAINING_STARTED_STATUS, TRAINING_STARTED_MESSAGE, REDIS_DO_NOT_STORE_RESULT_KEY
 from biomio.mysql_storage.mysql_data_store_interface import MySQLDataStoreInterface
 from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
 from biomio.protocol.probes.plugins.face_verify_plugin.defs import APP_ROOT
@@ -72,7 +72,7 @@ def pre_training_helper(images, probe_id, settings, callback_code, try_type, ai_
         return None
 
 
-def result_training_helper(algo_result, callback_code, probe_id, temp_image_path, try_type, ai_code):
+def result_training_helper(algo_result, callback_code, probe_id, temp_image_path, try_type, ai_code, final_func):
     ai_response_type = dict()
     ai_response_type.update({'status': TRAINING_SUCCESS_STATUS, 'message': TRAINING_SUCCESS_MESSAGE})
     result = False
@@ -177,8 +177,40 @@ def result_training_helper(algo_result, callback_code, probe_id, temp_image_path
     except Exception as e:
         worker_logger.exception(e)
     finally:
-        final_helper(temp_image_path, probe_id, error, callback_code, result, ai_response_type, try_type, ai_code)
+        final_func(temp_image_path, probe_id, error, callback_code, result, ai_response_type, try_type, ai_code)
 
+
+def ind_final_helper(temp_image_path, probe_id, error, callback_code, result, ai_response_type, try_type, ai_code):
+    shutil.rmtree(temp_image_path)
+    res_dict = {
+        'result': result,
+        'ai_response_type': ai_response_type,
+        'try_type': try_type,
+        'ai_code': ai_code
+    }
+    if error is not None:
+        retries_count = AlgorithmsDataStore.instance().decrement_int_value(
+            REDiS_TRAINING_RETRIES_COUNT_KEY % probe_id)
+        if retries_count == 0:
+            AlgorithmsDataStore.instance().delete_data(key=REDiS_TRAINING_RETRIES_COUNT_KEY % probe_id)
+            worker_logger.debug('Maximum training attempts reached...')
+            res_dict['result'] = False
+            ai_response_type.update(dict(
+                status=TRAINING_MAX_RETRIES_STATUS,
+                message=TRAINING_MAX_RETRIES_MESSAGE
+            ))
+            # _tell_ai_training_results(result, ai_response_type, try_type, ai_code)
+        else:
+            AlgorithmsDataStore.instance().store_data(key=REDIS_UPDATE_TRAINING_KEY % probe_id, error=error)
+            res_dict['result'] = False
+            res_dict['error'] = error
+        AlgorithmsDataStore.instance().store_job_result(key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
+                                                        result=res_dict)
+        worker_logger.info('Job was finished with internal algorithm error %s ' % error)
+    else:
+        AlgorithmsDataStore.instance().delete_data(key=REDiS_TRAINING_RETRIES_COUNT_KEY % probe_id)
+        AlgorithmsDataStore.instance().store_job_result(key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
+                                                        result=res_dict)
 
 def final_helper(temp_image_path, probe_id, error, callback_code, result, ai_response_type, try_type, ai_code):
     shutil.rmtree(temp_image_path)
@@ -202,7 +234,7 @@ def final_helper(temp_image_path, probe_id, error, callback_code, result, ai_res
     else:
         AlgorithmsDataStore.instance().delete_data(key=REDiS_TRAINING_RETRIES_COUNT_KEY % probe_id)
         AlgorithmsDataStore.instance().store_data(key=REDIS_PROBE_RESULT_KEY % callback_code, result=result)
-    _tell_ai_training_results(result, ai_response_type, try_type, ai_code)
+    tell_ai_training_results(result, ai_response_type, try_type, ai_code)
 
 
 def store_verification_results(result, callback_code, probe_id):
@@ -248,7 +280,7 @@ def store_test_photo_helper(image_paths):
         shutil.copyfile(path, os.path.join(TEST_PHOTO_PATH, os.path.basename(path)))
 
 
-def _tell_ai_training_results(result, ai_response_type, try_type, ai_code):
+def tell_ai_training_results(result, ai_response_type, try_type, ai_code):
     if isinstance(result, bool) and result:
         ai_response_type.update(get_ai_training_response(try_type))
     try:
