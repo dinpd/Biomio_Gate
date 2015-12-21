@@ -17,20 +17,17 @@ class UpdateDataStructureProcess(AlgorithmProcessInterface):
         self.external_callback(callback)
         self._classname = UPDATE_DATA_STRUCTURE_PROCESS_CLASS_NAME
         self._count = 0
+        self._internal_result = {}
 
     def _internal_handler(self, result):
         logger.debug(result)
         self._count -= 1
+        self._internal_result['result'] = self._internal_result.get('result', True) and result['result']
         if self._count == 0:
-            self._callback(result)
+            self._callback(self._internal_result)
 
     def handler(self, result):
-        self._handler_logger_info(result)
-        if result is not None:
-            buckets = result['data']
-            redis_store = result['store']
-            AlgorithmsHashRedisStackStore.instance(redis_store).store_vectors(buckets, result['uuid'],
-                                                                              self._internal_handler)
+        raise NotImplementedError
 
     @staticmethod
     def job(callback_code, **kwargs):
@@ -55,4 +52,6 @@ class UpdateDataStructureProcess(AlgorithmProcessInterface):
 
     def run(self, worker, kwargs_list_for_results_gatherer=None, **kwargs):
         self._count += 1
-        self._run(worker, job, kwargs_list_for_results_gatherer, **kwargs)
+        if worker is not None:
+            worker.run_job(job, callback=self._internal_handler,
+                           kwargs_list_for_results_gatherer=kwargs_list_for_results_gatherer, **kwargs)
