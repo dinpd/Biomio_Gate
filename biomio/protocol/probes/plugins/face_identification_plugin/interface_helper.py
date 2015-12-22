@@ -72,6 +72,36 @@ def pre_training_helper(images, probe_id, settings, callback_code, try_type, ai_
         return None
 
 
+def pre_identification_helper(images, probe_id, settings, callback_code):
+    worker_logger.info('Running verification for user - %s, with given parameters - %s' % (settings.get('userID'),
+                                                                                           settings))
+    if AlgorithmsDataStore.instance().exists(key=REDIS_JOB_RESULTS_ERROR % callback_code):
+        worker_logger.info('Job interrupted because of job_results_error key existence.')
+        return
+    database = _get_algo_db(probe_id=probe_id)
+    settings.update({'database': database})
+    temp_image_path = tempfile.mkdtemp(dir=APP_ROOT)
+    try:
+        image_paths = []
+        for image in images:
+            fd, temp_image = tempfile.mkstemp(dir=temp_image_path)
+            os.close(fd)
+            photo_data = binascii.a2b_base64(str(image))
+            with open(temp_image, 'wb') as f:
+                f.write(photo_data)
+            image_paths.append(temp_image)
+
+        # Store photos for test purposes
+        store_test_photo_helper(image_paths)
+
+        settings.update({'data': image_paths})
+        settings.update({'general_data': {'data_path': temp_image_path,
+                                          'probe_id': probe_id}})
+        return settings
+    except:
+        return None
+
+
 def result_training_helper(algo_result, callback_code, probe_id, temp_image_path, try_type, ai_code, final_func):
     ai_response_type = dict()
     ai_response_type.update({'status': TRAINING_SUCCESS_STATUS, 'message': TRAINING_SUCCESS_MESSAGE})
