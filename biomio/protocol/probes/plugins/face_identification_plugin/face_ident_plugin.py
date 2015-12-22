@@ -33,17 +33,14 @@ class FaceIdentificationPlugin(base_probe_plugin.BaseProbePlugin):
     def run_verification(self, data, callback=None):
         self._callback = callback
         self._data_validator(data)
-        data.update({'settings': self._settings})
-        kwargs_list_for_results_gatherer = []
-        for image in data.get('samples'):
-            kwargs_list_for_results_gatherer.append({'image': str(image)})
+        normalized_images = [str(image) for image in data.get('samples')]
         del data['samples']
+        data.update({'images': normalized_images, 'settings': self._settings})
         redis_instance = RedisStorage.persistence_instance()
         retries_key = REDIS_VERIFICATION_RETIES_COUNT_KEY % data['probe_id']
         if not redis_instance.exists(retries_key):
             redis_instance.store_counter_value(key=retries_key, counter=self._max_verification_attempts)
-        self._algorithm.apply(callback=self._probe_callback,
-                              kwargs_list_for_results_gatherer=kwargs_list_for_results_gatherer, **data)
+        self._algorithm.apply(callback=self._probe_callback, **data)
 
     @inherit_docstring_from(base_probe_plugin.BaseProbePlugin)
     def check_resources(self, resources, plugin_auth_config, training=False):
