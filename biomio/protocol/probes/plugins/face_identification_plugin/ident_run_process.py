@@ -1,8 +1,8 @@
 from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
-from biomio.algorithms.interfaces import AlgorithmProcessInterface
+from biomio.algorithms.interfaces import AlgorithmProcessInterface, logger
 from biomio.constants import REDIS_DO_NOT_STORE_RESULT_KEY
 from biomio.algorithms.datastructs import wNearPyHash
-
+from handling import load_temp_data
 
 IDENTIFICATION_RUN_PROCESS_CLASS_NAME = "IdentificationRunProcess"
 
@@ -21,7 +21,8 @@ class IdentificationRunProcess(AlgorithmProcessInterface):
 
     def handler(self, result):
         self._handler_logger_info(result)
-        data = result["data"]
+        data = load_temp_data(result['data_file'], remove=True)
+        logger.debug(data)
         test_size = 0
         settings = {
             "settings": {

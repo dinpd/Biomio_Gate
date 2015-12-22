@@ -79,7 +79,6 @@ def pre_identification_helper(images, probe_id, settings, callback_code):
         worker_logger.info('Job interrupted because of job_results_error key existence.')
         return
     database = _get_algo_db(probe_id=probe_id)
-    settings.update({'database': database})
     temp_image_path = tempfile.mkdtemp(dir=APP_ROOT)
     try:
         image_paths = []
