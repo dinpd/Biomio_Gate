@@ -112,7 +112,7 @@ class TryRequestsSimulator(tornado.web.RequestHandler):
         )
         request_body = request_body.split('&')
         for request_param in request_body:
-            param_attrs = request_param.splt('=')
+            param_attrs = request_param.split('=')
             try_param = try_data.get(param_attrs[0])
             if isinstance(try_param, list):
                 try_param.append(param_attrs[1])
