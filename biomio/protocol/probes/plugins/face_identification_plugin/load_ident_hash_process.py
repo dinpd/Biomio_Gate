@@ -1,0 +1,87 @@
+from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
+from biomio.algorithms.interfaces import AlgorithmProcessInterface
+from algo_hash_redis_store import AlgorithmsHashRedisStackStore
+from biomio.algorithms.datastructs import get_data_structure
+from biomio.constants import REDIS_DO_NOT_STORE_RESULT_KEY, REDIS_PARTIAL_RESULTS_KEY, REDIS_RESULTS_COUNTER_KEY
+from biomio.algorithms.recognition.processes.messages import create_result_message, create_error_message
+from biomio.algorithms.recognition.processes.defs import INTERNAL_TRAINING_ERROR
+
+LOAD_IDENTIFICATION_HASH_PROCESS_CLASS_NAME = "LoadIdentificationHashProcess"
+
+def job(callback_code, **kwargs):
+    LoadIdentificationHashProcess.job(callback_code, **kwargs)
+
+
+class LoadIdentificationHashProcess(AlgorithmProcessInterface):
+    def __init__(self, worker):
+        AlgorithmProcessInterface.__init__(self, worker=worker)
+        self._classname = LOAD_IDENTIFICATION_HASH_PROCESS_CLASS_NAME
+        self._ident_estimate_process = AlgorithmProcessInterface()
+
+    def set_identification_estimate_process(self, process):
+        self._ident_estimate_process = process
+
+    def handler(self, result):
+        self._handler_logger_info(result)
+        if result is not None:
+            self._ident_estimate_process.run(self._worker, **result['data'])
+
+    @staticmethod
+    def job(callback_code, **kwargs):
+        LoadIdentificationHashProcess._job_logger_info(LOAD_IDENTIFICATION_HASH_PROCESS_CLASS_NAME, **kwargs)
+        record = LoadIdentificationHashProcess.process(**kwargs)
+        AlgorithmsDataStore.instance().append_value_to_list(key=REDIS_PARTIAL_RESULTS_KEY % callback_code,
+                                                            value=record)
+        results_counter = AlgorithmsDataStore.instance().decrement_int_value(REDIS_RESULTS_COUNTER_KEY %
+                                                                             callback_code)
+        if results_counter <= 0:
+            gathered_results = AlgorithmsDataStore.instance().get_stored_list(REDIS_PARTIAL_RESULTS_KEY %
+                                                                              callback_code)
+            if results_counter < 0:
+                result = create_error_message(INTERNAL_TRAINING_ERROR, "jobs_counter", "Number of jobs is incorrect.")
+            else:
+                result = create_result_message({'results': gathered_results}, 'estimation')
+            AlgorithmsDataStore.instance().delete_data(key=REDIS_RESULTS_COUNTER_KEY % callback_code)
+            AlgorithmsDataStore.instance().delete_data(key=REDIS_PARTIAL_RESULTS_KEY % callback_code)
+            AlgorithmsDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
+                                                            record_dict=result, callback_code=callback_code)
+
+    @staticmethod
+    def process(**kwargs):
+        LoadIdentificationHashProcess._process_logger_info(LOAD_IDENTIFICATION_HASH_PROCESS_CLASS_NAME, **kwargs)
+        """
+
+        :param kwargs:
+        :return: dict
+            "cluster_size": length of cluster of the test image,
+            "cluster_id": cluster ID,
+            "candidates_size": number of found candidates,
+            "candidates_score": dict
+                <key>: <value>, where <key> - ID of database,
+                                      <value> - number of candidates for this database
+        """
+        cluster = kwargs['cluster']
+        db = {
+            "cluster_size": len(cluster),
+            "cluster_id": kwargs["cluster_id"],
+            "candidates_size": 0,
+            "candidates_score": {}
+        }
+        redis_store = kwargs['database']
+        # TODO: Read provider_id from kwargs
+        user_ids = ['0000000000000', '0000000000001', '0000000000002']
+        AlgorithmsHashRedisStackStore.instance(redis_store).load_data(user_ids=user_ids)
+        database_store = get_data_structure(
+            kwargs['settings']['database_type'])(kwargs['settings']['settings'],
+                                                 storage=AlgorithmsHashRedisStackStore.instance(redis_store))
+        for desc in cluster:
+            buckets = database_store.neighbours(desc)
+            db["candidates_size"] += len(buckets)
+            for item in buckets:
+                lcount = db["candidates_score"].get(item[1], 0)
+                lcount += 1
+                db["candidates_score"][item[1]] = lcount
+        return db
+
+    def run(self, worker, kwargs_list_for_results_gatherer=None, **kwargs):
+        self._run(worker, job, kwargs_list_for_results_gatherer, **kwargs)

@@ -71,9 +71,26 @@ class AlgorithmsHashRedisStackStore:
         if len(user_hash_data) > 0:
             create_records(self._user_hash_table_name, tuple(user_hash_data))
 
+    def load_data(self, user_ids=None, user_group_id=None):
+        if user_ids is None:
+            user_ids = select_records_by_ids("", [user_group_id], True)
+        if len(user_ids) > 0:
+            data_user_ids = [str(user_id) for user_id in user_ids]
+            user_records = select_records_by_ids(self._user_hash_table_name, data_user_ids, True)
+            if len(user_records['records']) > 0:
+                loaded_buckets = []
+                for record in user_records['records']:
+                    if not loaded_buckets.__contains__(str(record['bucket_key'])):
+                        loaded_buckets.append(str(record['bucket_key']))
+
+                hash_buckets = select_records_by_ids(self._hash_data_table_name, loaded_buckets)
+                for key, value in hash_buckets.iteritems():
+                    hash_data = deserialize(value['hash_data'])
+                    self._ihr_redis.store_data(key=key, **{'data': hash_data})
+
     def get_bucket(self, hash_name, bucket_key):
         bucket_key = HASH_BUCKET_KEY_FORMAT % (hash_name, bucket_key)
-        return self._ihr_redis.get_data(bucket_key)
+        return self._ihr_redis.get_data(bucket_key)['data']
 
     def _select_data_by_ids(self, table_class_name, object_ids, callback):
         """

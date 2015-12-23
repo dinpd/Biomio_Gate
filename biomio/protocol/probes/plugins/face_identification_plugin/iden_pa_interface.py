@@ -3,13 +3,15 @@ from biomio.algorithms.recognition.processes import (MainTrainingProcess, Traini
                                                      ClusterMatchingProcess)
 from biomio.algorithms.recognition.processes.defs import REDIS_CLUSTER_JOB_ACTION, REDIS_TEMPLATE_RESULT, \
     REDIS_GENERAL_DATA
-from biomio.algorithms.recognition.processes.iden_process import IdentificationProcess
 from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
 from init_ident_update_process import InitIdentificationUpdateProcess
 from update_data_struct_process import UpdateDataStructureProcess
+from load_ident_hash_process import LoadIdentificationHashProcess
 from biomio.algorithms.interfaces import AlgorithmInterface
+from final_ident_process import FinalIdentificationProcess
 from biomio.worker.worker_interface import WorkerInterface
 from ident_start_process import IdentificationStartProcess
+from iden_rest_est_process import IdentificationREProcess
 from training_start_process import TrainingStartProcess
 from final_training_process import FinalTrainingProcess
 from ident_run_process import IdentificationRunProcess
@@ -87,7 +89,9 @@ class IdentificationPAInterface(AlgorithmInterface):
         rotation_detect_process = RotationDetectionProcess(TEMP_DATA_PATH, worker)
         rotation_result_process = RotationResultProcess(TEMP_DATA_PATH, worker)
         ident_run_process = IdentificationRunProcess(worker)
-        identification_process = IdentificationProcess()
+        load_ident_hash_process = LoadIdentificationHashProcess(worker)
+        identify_re_process = IdentificationREProcess(worker)
+        final_ident_process = FinalIdentificationProcess(self._interface_callback)
 
         identify_start_process.set_main_training_process(main_process)
         main_process.set_data_training_process(training_process)
@@ -96,6 +100,8 @@ class IdentificationPAInterface(AlgorithmInterface):
         rotation_detect_process.set_rotation_result_process(rotation_result_process)
         rotation_result_process.set_data_detection_process(data_detect_process)
         data_detect_process.set_final_training_process(ident_run_process)
-        ident_run_process.set_identification_process(identification_process)
+        ident_run_process.set_identification_process(load_ident_hash_process)
+        load_ident_hash_process.set_identification_estimate_process(identify_re_process)
+        identify_re_process.set_final_identification_process(final_ident_process)
 
         identify_start_process.run(worker, **kwargs)

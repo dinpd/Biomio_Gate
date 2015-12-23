@@ -1,4 +1,3 @@
-from biomio.constants import REDIS_PROBE_RESULT_KEY, TRAINING_SUCCESS_STATUS, TRAINING_SUCCESS_MESSAGE
 from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
 from biomio.algorithms.interfaces import AlgorithmProcessInterface, logger
 from algo_hash_redis_store import AlgorithmsHashRedisStackStore
