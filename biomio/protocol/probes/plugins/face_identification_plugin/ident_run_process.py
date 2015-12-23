@@ -1,8 +1,8 @@
 from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
+from biomio.algorithms.recognition.processes.handling import load_temp_data
 from biomio.algorithms.interfaces import AlgorithmProcessInterface, logger
 from biomio.constants import REDIS_DO_NOT_STORE_RESULT_KEY
 from biomio.algorithms.datastructs import wNearPyHash
-from handling import load_temp_data
 
 IDENTIFICATION_RUN_PROCESS_CLASS_NAME = "IdentificationRunProcess"
 
@@ -31,7 +31,7 @@ class IdentificationRunProcess(AlgorithmProcessInterface):
             }
         }
         jobs_list = []
-        for inx, cluster in enumerate(data):
+        for inx, cluster in data['clusters'].iteritems():
             test_size += len(cluster)
             jobs_list.append({
                 "cluster": cluster,
