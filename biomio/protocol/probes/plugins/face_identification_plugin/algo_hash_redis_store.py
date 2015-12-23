@@ -87,7 +87,7 @@ class AlgorithmsHashRedisStackStore:
                 for key, value in hash_buckets.iteritems():
                     hash_data = deserialize(value['hash_data'])
                     if self._ihr_redis.exists(str(key)):
-                        self._ihr_redis.delete_data(key)
+                        self._ihr_redis.delete_data(str(key))
                     self._ihr_redis.store_data(key=str(key), **{'data': hash_data})
 
     def get_bucket(self, hash_name, bucket_key):

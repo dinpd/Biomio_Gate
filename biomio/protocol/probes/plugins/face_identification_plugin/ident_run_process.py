@@ -35,7 +35,7 @@ class IdentificationRunProcess(AlgorithmProcessInterface):
             test_size += len(cluster)
             jobs_list.append({
                 "cluster": cluster,
-                "database": int(inx),
+                "database": int(0),
                 "cluster_id": int(inx)
             })
         self._identification_process.run(self._worker, kwargs_list_for_results_gatherer=jobs_list, **settings)

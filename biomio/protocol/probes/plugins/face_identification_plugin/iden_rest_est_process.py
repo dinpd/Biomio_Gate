@@ -1,6 +1,7 @@
 from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
 from biomio.algorithms.interfaces import AlgorithmProcessInterface
 from biomio.constants import REDIS_DO_NOT_STORE_RESULT_KEY
+import ast
 
 IDENTIFICATION_RE_PROCESS_CLASS_NAME = "IdentificationREProcess"
 
@@ -48,7 +49,7 @@ class IdentificationREProcess(AlgorithmProcessInterface):
             "test_size": numbers of descriptors in test dataset
         :return:
         """
-        results = kwargs["results"]
+        results = [ast.literal_eval(val) for val in kwargs["results"]]
         if len(results) > 0:
             db_score = {}
             gsum = 0
