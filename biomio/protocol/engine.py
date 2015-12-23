@@ -650,8 +650,6 @@ class BiomioProtocol:
         :param status_message: Status string for next message.
         """
         logger.info('CLOSING CONNECTION...')
-        if self._last_received_message:
-            TriesSimulatorManager.instance().remove_active_connection(app_id=self._last_received_message.header.appId)
         self._stop_connection_timer_callback()
 
         if not is_closed_by_client:
@@ -672,7 +670,8 @@ class BiomioProtocol:
             if self._session and self._session.is_open:
                 SessionManager.instance().close_session(session=self._session)
 
-        for bioauth_flow in self.bioauth_flows.values():
+        for app_id, bioauth_flow in self.bioauth_flows.iteritems():
+            TriesSimulatorManager.instance().remove_active_connection(app_id=app_id)
             bioauth_flow.shutdown()
 
         # Close connection

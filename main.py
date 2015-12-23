@@ -97,11 +97,30 @@ class TryRequestsSimulator(tornado.web.RequestHandler):
         with open('./tries_simulator.html') as f:
             simulator_html = f.read()
         if len(simulator_html):
+            if not len(active_devices_list):
+                active_devices_list = self._simulator_option_value % ('No active devices', 'No active devices')
             simulator_html = simulator_html.format(active_devices_list=active_devices_list)
         self.write(simulator_html)
 
     def post(self, *args, **kwargs):
-        logger.debug('~~~!!! %s' % self.request.body)
+        request_body = self.request.body
+        logger.debug('TRY SIMULATOR: Request Body: %s' % request_body)
+        try_data = dict(
+            condition='any',
+            auth_types=[],
+            app_id=''
+        )
+        request_body = request_body.split('&')
+        for request_param in request_body:
+            param_attrs = request_param.splt('=')
+            try_param = try_data.get(param_attrs[0])
+            if isinstance(try_param, list):
+                try_param.append(param_attrs[1])
+            else:
+                try_param = param_attrs[1]
+            try_data.update({param_attrs[0]: try_param})
+        if try_data.get('app_id') != 'No active devices':
+            TriesSimulatorManager.instance().send_try_request(**try_data)
         self.get(*args, **kwargs)
 
 

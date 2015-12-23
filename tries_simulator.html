@@ -4,15 +4,15 @@
     <meta charset="UTF-8">
     <title></title>
 </head>
-<body>
+<body style="text-align: center">
 <form action="" method="post">
     <div>
-        <input name="face_input" type="checkbox" value="Face" checked>
+        <input name="auth_types" type="checkbox" value="face" checked>Face
         <br>
-        <input name="finger_input" type="checkbox" value="Fingerprint">
+        <input name="auth_types" type="checkbox" value="fp">Fingerprint
     </div>
     <div>
-        <select name="device_select">
+        <select name="app_id">
             {active_devices_list}
         </select>
     </div>
@@ -20,6 +20,9 @@
         <input type="radio" name="condition" value="any" checked>Any
         <br>
         <input type="radio" name="condition" value="all" checked>All
+    </div>
+    <div>
+        <input type="submit" value="Send Try">
     </div>
 </form>
 </body>
