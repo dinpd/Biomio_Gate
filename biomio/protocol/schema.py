@@ -77,7 +77,7 @@ BIOMIO_protocol_json_schema = {
             "type": "object",
             "required": ["rType", "rProperties"],
             "properties": {
-                "rType": {"enum": ["fp-scanner", "mic", "front-cam", "back-cam", "input", "interact"]},
+                "rType": {"enum": ["fp-scanner", "mic", "front-cam", "back-cam", "input", "interact", "location"]},
                 "rProperties": {"type": "string"}
             }
         },
@@ -85,7 +85,7 @@ BIOMIO_protocol_json_schema = {
             "type": "object",
             "required": ["tType", "resource", "samples"],
             "properties": {
-                "tType": {"enum": ["fp", "face", "palm", "voice", "push_button", "pin_code"]},
+                "tType": {"enum": ["fp", "face", "palm", "voice", "push_button", "pin_code", "location"]},
                 "resource": {"$ref": "#/definitions/resource"},
                 "samples": {"type": "number"}
             }
