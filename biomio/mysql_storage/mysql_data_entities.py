@@ -124,7 +124,7 @@ class Email(BaseEntityClass, database.Entity):
     @staticmethod
     @inherit_docstring_from(BaseEntityClass)
     def create_record(**kwargs):
-        pass
+        Email(**kwargs)
 
     @staticmethod
     @inherit_docstring_from(BaseEntityClass)
