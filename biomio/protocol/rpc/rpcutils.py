@@ -22,6 +22,8 @@ USER_ID_ARG = 'user_id'
 WAIT_CALLBACK_ARG = 'wait_callback'
 BIOAUTH_FLOW_INSTANCE_ARG = 'bioauth_flow'
 APP_ID_ATG = 'app_id'
+ON_BEHALF_OF_ARG = 'on_behalf_of'
+SENDER_ARG = 'sender'
 
 
 def _check_rpc_arguments(callable_func, current_kwargs):
@@ -46,7 +48,8 @@ def _check_rpc_arguments(callable_func, current_kwargs):
 
     required_args = _get_required_args(callable_func)
 
-    implicit_params_list = [USER_ID_ARG, CALLBACK_ARG, WAIT_CALLBACK_ARG, BIOAUTH_FLOW_INSTANCE_ARG, APP_ID_ATG]
+    implicit_params_list = [USER_ID_ARG, CALLBACK_ARG, WAIT_CALLBACK_ARG, BIOAUTH_FLOW_INSTANCE_ARG, APP_ID_ATG,
+                            ON_BEHALF_OF_ARG, SENDER_ARG]
     for k, v in current_kwargs.iteritems():
         if k in implicit_params_list and k not in required_args:
             continue

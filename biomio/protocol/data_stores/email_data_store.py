@@ -45,7 +45,10 @@ class EmailDataStore(BaseDataStore):
 
     @inherit_docstring_from(BaseDataStore)
     def store_data(self, email, **kwargs):
-        pass
+        if 'email' not in kwargs:
+            kwargs.update({'email': email})
+        self._store_lru_data(key=self.get_data_key(email), table_class_name=self._table_class_name, object_id=email,
+                             **kwargs)
 
     @inherit_docstring_from(BaseDataStore)
     def select_data_by_ids(self, emails, callback):

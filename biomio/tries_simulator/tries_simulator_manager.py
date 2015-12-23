@@ -14,10 +14,10 @@ class TriesSimulatorManager:
     )
 
     _try_resources_by_type = dict(
-        face=dict(rType='front-cam', properties="1280x720"),
-        fp=dict(rType='fp-scanner', properties=""),
-        push_button=dict(rType='interact', properties=""),
-        pin_code=dict(rType='input', properties="")
+        face=dict(rType='front-cam', rProperties="1280x720"),
+        fp=dict(rType='fp-scanner', rProperties=""),
+        push_button=dict(rType='interact', rProperties=""),
+        pin_code=dict(rType='input', rProperties="")
     )
 
     def __init__(self):

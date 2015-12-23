@@ -1,4 +1,5 @@
 import ast
+from datetime import datetime
 from biomio.protocol.data_stores.email_data_store import EmailDataStore
 import biomio.protocol.rpc.plugins.base_rpc_plugin as base_rpc_plugin
 from biomio.protocol.data_stores.pgp_keys_data_store import PgpKeysDataStore
@@ -48,7 +49,17 @@ class ExtensionPlugin(base_rpc_plugin.BaseRpcPlugin):
         return result
 
     @rpc_call
-    def get_users_public_pgp_keys(self, emails):
+    def get_users_public_pgp_keys(self, on_behalf_of, sender, emails):
+        if on_behalf_of != sender:
+            sender_data = get_store_data(self.email_data_store, object_id=sender)
+            if sender_data is None or 'error' in sender_data:
+                base_account_data = get_store_data(self.email_data_store, object_id=on_behalf_of)
+                record_kwargs = {
+                    self.email_data_store.USER_ID_ATTR: int(base_account_data.get(self.email_data_store.USER_ID_ATTR)),
+                    'extention': True,
+                    'verified': True
+                }
+                self.email_data_store.store_data(email=sender, **record_kwargs)
         emails = parse_email_data(emails).split(',')
         public_pgp_keys = []
         pgp_emails_data = select_store_data(self.pgp_data_store, emails)

@@ -752,6 +752,7 @@ class BiomioProtocol:
 
             user_key = ''
             if hasattr(input_msg.msg, 'onBehalfOf'):
+                data['on_behalf_of'] = str(input_msg.msg.onBehalfOf)
                 user_key = str(input_msg.msg.onBehalfOf)
             namespace = str(input_msg.msg.namespace)
             req_plugin = self._rpc_handler.get_plugin_instance(namespace=namespace)
