@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+</head>
+<body>
+<form action="" method="post">
+    <div>
+        <input name="face_input" type="checkbox" value="Face" checked>
+        <br>
+        <input name="finger_input" type="checkbox" value="Fingerprint">
+    </div>
+    <div>
+        <select name="device_select">
+            {active_devices_list}
+        </select>
+    </div>
+    <div>
+        <input type="radio" name="condition" value="any" checked>Any
+        <br>
+        <input type="radio" name="condition" value="all" checked>All
+    </div>
+</form>
+</body>
+</html>

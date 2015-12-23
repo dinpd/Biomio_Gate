@@ -10,6 +10,7 @@ import tornado.gen
 import traceback
 from biomio.protocol.data_stores.condition_data_store import ConditionDataStore
 from biomio.protocol.probes.probe_plugin_manager import ProbePluginManager
+from biomio.protocol.rpc.app_connection_manager import AppConnectionManager
 from biomio.protocol.rpc.plugins.pgp_extension_plugin.pgp_extension_jobs import generate_pgp_keys_job
 
 from biomio.protocol.settings import settings
@@ -18,6 +19,7 @@ from biomio.protocol.connectionhandler import ConnectionTimeoutHandler
 from biomio.protocol.rpc.bioauthflow import BioauthFlow
 
 import logging
+from biomio.tries_simulator.tries_simulator_manager import TriesSimulatorManager
 from biomio.worker.worker_interface import WorkerInterface
 
 logger = logging.getLogger(__name__)
@@ -81,6 +83,26 @@ class InitialProbeRestHandler(tornado.web.RequestHandler):
         self.write('<html><head><title>BIOMIO: Initial Probes</title></head><body>'
                    'Please, use BIOMIO probe application to input initial probes. PROBE_ID - %s'
                    '</body></html>' % self.get_query_argument('device_id'))
+
+
+class TryRequestsSimulator(tornado.web.RequestHandler):
+
+    _simulator_option_value = '<option value="%s">%s</option>'
+
+    def get(self, *args, **kwargs):
+        active_devices = TriesSimulatorManager.instance().get_active_connections()
+        active_devices_list = ''
+        for active_device in active_devices:
+            active_devices_list += self._simulator_option_value % (active_device, active_device)
+        with open('./tries_simulator.html') as f:
+            simulator_html = f.read()
+        if len(simulator_html):
+            simulator_html = simulator_html.format(active_devices_list=active_devices_list)
+        self.write(simulator_html)
+
+    def post(self, *args, **kwargs):
+        logger.debug('~~~!!! %s' % self.request.body)
+        self.get(*args, **kwargs)
 
 
 class NewEmailPGPKeysHandler(tornado.web.RequestHandler):
@@ -151,7 +173,8 @@ class HttpApplication(tornado.web.Application):
             (r'/new_email/(?P<email>[\w.%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4})', NewEmailPGPKeysHandler),
             (r'/set_try_type/(?P<try_type>[\w\-]+)', SetTryTypeHandler),
             (r'/set_keypoints_coff/(?P<coff>\d+\.\d{2})', SetKeypointsCoffHandler),
-            (r'/set_condition.*', SetUserCondition)
+            (r'/set_condition.*', SetUserCondition),
+            (r'/tries_simulator.*', TryRequestsSimulator)
         ]
         tornado.web.Application.__init__(self, handlers)
 

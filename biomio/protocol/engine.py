@@ -24,6 +24,7 @@ from biomio.protocol.probes.policymanager import PolicyManager
 from biomio.protocol.probes.policies.fixedorderpolicy import FIELD_AUTH_TYPE, FIELD_SAMPLES_NUM
 from biomio.protocol.rpc.bioauthflow import BioauthFlow, STATE_AUTH_TRAINING_STARTED
 from biomio.protocol.probes.proberequest import ProbeRequest
+from biomio.tries_simulator.tries_simulator_manager import TriesSimulatorManager
 
 logger = logging.getLogger(__name__)
 
@@ -340,6 +341,7 @@ def ready(e):
     app_type = str(e.request.header.appType)
     app_id = str(e.request.header.appId)
     if app_type.startswith(PROBE_APP_TYPE_PREFIX) and app_id not in e.protocol_instance.bioauth_flows:
+        TriesSimulatorManager.instance().add_active_connection(app_id=app_id, connection_instance=e.protocol_instance)
         auth_wait_callback = e.protocol_instance.try_probe
         cancel_auth_callback = e.protocol_instance.cancel_auth
         bioauth_flow = BioauthFlow(app_type=app_type, app_id=app_id,
@@ -648,6 +650,8 @@ class BiomioProtocol:
         :param status_message: Status string for next message.
         """
         logger.info('CLOSING CONNECTION...')
+        if self._last_received_message:
+            TriesSimulatorManager.instance().remove_active_connection(app_id=self._last_received_message.header.appId)
         self._stop_connection_timer_callback()
 
         if not is_closed_by_client:
