@@ -44,6 +44,8 @@ class UpdateDataStructureProcess(AlgorithmProcessInterface):
             settings['projection_name'] += str(kwargs['cluster_id'])
         database_store = get_data_structure(kwargs['hash_settings']['database_type'])(settings)
         if not os.path.exists(settings_path):
+            if not os.path.exists(kwargs['hash_settings']['hash_config_path']):
+                os.mkdir(kwargs['hash_settings']['hash_config_path'])
             save_json(settings_path, database_store.get_config())
 
         buckets = database_store.hash_vectors(kwargs['template'], kwargs['uuid'])
