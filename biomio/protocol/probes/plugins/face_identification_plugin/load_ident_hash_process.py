@@ -74,15 +74,16 @@ class LoadIdentificationHashProcess(AlgorithmProcessInterface):
         # TODO: Read provider_id from kwargs
         user_ids = ['0000000000000', '0000000000001', '0000000000002']
         AlgorithmsHashRedisStackStore.instance(redis_store).load_data(user_ids=user_ids)
-        settings = kwargs['settings']['settings']
-        settings_path = os.path.join(kwargs['settings']['hash_config_path'], HASH_SETTINGS_FILE % kwargs['cluster_id'])
+        settings = kwargs['hash_settings']['settings']
+        settings_path = os.path.join(kwargs['hash_settings']['hash_config_path'],
+                                     HASH_SETTINGS_FILE % kwargs['cluster_id'])
         if os.path.exists(settings_path):
             settings = load_json(settings_path)
         else:
             settings['projection_name'] = settings['projection_name'] + kwargs['cluster_id']
         database_store = get_data_structure(
-            kwargs['settings']['database_type'])(settings,
-                                                 storage=AlgorithmsHashRedisStackStore.instance(redis_store))
+            kwargs['hash_settings']['database_type'])(settings,
+                                                      storage=AlgorithmsHashRedisStackStore.instance(redis_store))
         if not os.path.exists(settings_path):
             save_json(settings_path, database_store.get_config())
         for desc in cluster:
