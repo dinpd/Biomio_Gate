@@ -85,6 +85,8 @@ class LoadIdentificationHashProcess(AlgorithmProcessInterface):
             kwargs['hash_settings']['database_type'])(settings,
                                                       storage=AlgorithmsHashRedisStackStore.instance(redis_store))
         if not os.path.exists(settings_path):
+            if not os.path.exists(kwargs['hash_settings']['hash_config_path']):
+                os.mkdir(kwargs['hash_settings']['hash_config_path'])
             save_json(settings_path, database_store.get_config())
         for desc in cluster:
             buckets = database_store.neighbours(desc)
