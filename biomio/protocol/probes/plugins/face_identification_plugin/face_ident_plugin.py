@@ -1,5 +1,6 @@
 from biomio.protocol.probes.plugins.face_identification_plugin.iden_pa_interface import IdentificationPAInterface
 from biomio.constants import REDIS_VERIFICATION_RETIES_COUNT_KEY, REDiS_TRAINING_RETRIES_COUNT_KEY
+from biomio.protocol.probes.plugins.face_identification_plugin.defs import get_plugin_dir
 import biomio.protocol.probes.plugins.base_probe_plugin as base_probe_plugin
 from biomio.utils.biomio_decorators import inherit_docstring_from
 from biomio.protocol.storage.redis_storage import RedisStorage
@@ -35,7 +36,8 @@ class FaceIdentificationPlugin(base_probe_plugin.BaseProbePlugin):
         self._data_validator(data)
         normalized_images = [str(image) for image in data.get('samples')]
         del data['samples']
-        data.update({'images': normalized_images, 'settings': self._settings})
+        data.update({'images': normalized_images, 'settings': self._settings,
+                     'hash_config_path': get_plugin_dir("settings")})
         redis_instance = RedisStorage.persistence_instance()
         retries_key = REDIS_VERIFICATION_RETIES_COUNT_KEY % data['probe_id']
         if not redis_instance.exists(retries_key):

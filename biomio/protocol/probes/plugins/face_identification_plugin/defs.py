@@ -3,6 +3,11 @@ import os
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 TEMP_DATA_PATH = os.path.join(APP_ROOT, "temp_results")
 
+HASH_SETTINGS_FILE = "hash_settings_%s.json"
+
+def get_plugin_dir(name):
+    return os.path.join(APP_ROOT, name)
+
 TRAINING_FULL = "training::full"
 TRAINING_HASH = "training::hash"
 

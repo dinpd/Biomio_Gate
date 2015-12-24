@@ -5,6 +5,9 @@ from biomio.algorithms.datastructs import get_data_structure
 from biomio.constants import REDIS_DO_NOT_STORE_RESULT_KEY, REDIS_PARTIAL_RESULTS_KEY, REDIS_RESULTS_COUNTER_KEY
 from biomio.algorithms.recognition.processes.messages import create_result_message, create_error_message
 from biomio.algorithms.recognition.processes.defs import INTERNAL_TRAINING_ERROR
+from biomio.algorithms.tools import load_json, save_json
+from defs import HASH_SETTINGS_FILE
+import os
 
 LOAD_IDENTIFICATION_HASH_PROCESS_CLASS_NAME = "LoadIdentificationHashProcess"
 
@@ -71,9 +74,17 @@ class LoadIdentificationHashProcess(AlgorithmProcessInterface):
         # TODO: Read provider_id from kwargs
         user_ids = ['0000000000000', '0000000000001', '0000000000002']
         AlgorithmsHashRedisStackStore.instance(redis_store).load_data(user_ids=user_ids)
+        settings = kwargs['settings']['settings']
+        settings_path = os.path.join(kwargs['settings']['hash_config_path'], HASH_SETTINGS_FILE % kwargs['cluster_id'])
+        if os.path.exists(settings_path):
+            settings = load_json(settings_path)
+        else:
+            settings['projection_name'] = settings['projection_name'] + kwargs['cluster_id']
         database_store = get_data_structure(
-            kwargs['settings']['database_type'])(kwargs['settings']['settings'],
+            kwargs['settings']['database_type'])(settings,
                                                  storage=AlgorithmsHashRedisStackStore.instance(redis_store))
+        if not os.path.exists(settings_path):
+            save_json(settings_path, database_store.get_config())
         for desc in cluster:
             buckets = database_store.neighbours(desc)
             db["candidates_size"] += len(buckets)

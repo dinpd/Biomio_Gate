@@ -1,8 +1,8 @@
+from biomio.algorithms.datastructs import wNearPyHash, DEFAULT_NEAR_PY_HASH_SETTINGS
 from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
 from biomio.algorithms.recognition.processes.handling import load_temp_data
 from biomio.algorithms.interfaces import AlgorithmProcessInterface, logger
 from biomio.constants import REDIS_DO_NOT_STORE_RESULT_KEY
-from biomio.algorithms.datastructs import wNearPyHash
 
 IDENTIFICATION_RUN_PROCESS_CLASS_NAME = "IdentificationRunProcess"
 
@@ -25,9 +25,10 @@ class IdentificationRunProcess(AlgorithmProcessInterface):
         logger.debug(data)
         test_size = 0
         settings = {
-            "settings": {
+            "hash_settings": {
                 "database_type": wNearPyHash.type(),
-                "settings": {}
+                "settings": DEFAULT_NEAR_PY_HASH_SETTINGS,
+                "hash_config_path": data['hash_config_path']
             }
         }
         jobs_list = []
