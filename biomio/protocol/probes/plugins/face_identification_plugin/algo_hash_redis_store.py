@@ -92,7 +92,11 @@ class AlgorithmsHashRedisStackStore:
 
     def get_bucket(self, hash_name, bucket_key):
         bucket_key = HASH_BUCKET_KEY_FORMAT % (hash_name, bucket_key)
-        return self._ihr_redis.get_data(bucket_key)['data']
+        data = self._ihr_redis.get_data(bucket_key)
+        if data is not None:
+            return data['data']
+        else:
+            return []
 
     def _select_data_by_ids(self, table_class_name, object_ids, callback):
         """
