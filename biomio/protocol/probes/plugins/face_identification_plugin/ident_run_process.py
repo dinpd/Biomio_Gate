@@ -28,7 +28,7 @@ class IdentificationRunProcess(AlgorithmProcessInterface):
             "hash_settings": {
                 "database_type": wNearPyHash.type(),
                 "settings": DEFAULT_NEAR_PY_HASH_SETTINGS,
-                "hash_config_path": data['hash_config_path']
+                "hash_config_path": data['general_data']['hash_config_path']
             }
         }
         jobs_list = []
