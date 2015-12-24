@@ -80,7 +80,7 @@ class LoadIdentificationHashProcess(AlgorithmProcessInterface):
         if os.path.exists(settings_path):
             settings = load_json(settings_path)
         else:
-            settings['projection_name'] = settings['projection_name'] + kwargs['cluster_id']
+            settings['projection_name'] += str(kwargs['cluster_id'])
         database_store = get_data_structure(
             kwargs['hash_settings']['database_type'])(settings,
                                                       storage=AlgorithmsHashRedisStackStore.instance(redis_store))

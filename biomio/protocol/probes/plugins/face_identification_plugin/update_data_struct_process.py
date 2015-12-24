@@ -3,6 +3,9 @@ from biomio.algorithms.interfaces import AlgorithmProcessInterface, logger
 from algo_hash_redis_store import AlgorithmsHashRedisStackStore
 from biomio.algorithms.datastructs import get_data_structure
 from biomio.constants import REDIS_DO_NOT_STORE_RESULT_KEY
+from biomio.algorithms.tools import load_json, save_json
+from defs import HASH_SETTINGS_FILE
+import os
 
 UPDATE_DATA_STRUCTURE_PROCESS_CLASS_NAME = "UpdateDataStructureProcess"
 
@@ -32,7 +35,17 @@ class UpdateDataStructureProcess(AlgorithmProcessInterface):
     def job(callback_code, **kwargs):
         UpdateDataStructureProcess._job_logger_info(UPDATE_DATA_STRUCTURE_PROCESS_CLASS_NAME, **kwargs)
         redis_store = kwargs['database']
-        database_store = get_data_structure(kwargs['settings']['database_type'])(kwargs['settings']['settings'])
+        settings = kwargs['hash_settings']['settings'].copy()
+        settings_path = os.path.join(kwargs['hash_settings']['hash_config_path'],
+                                     HASH_SETTINGS_FILE % kwargs['cluster_id'])
+        if os.path.exists(settings_path):
+            settings = load_json(settings_path)
+        else:
+            settings['projection_name'] += str(kwargs['cluster_id'])
+        database_store = get_data_structure(kwargs['hash_settings']['database_type'])(settings)
+        if not os.path.exists(settings_path):
+            save_json(settings_path, database_store.get_config())
+
         buckets = database_store.hash_vectors(kwargs['template'], kwargs['uuid'])
         record = {'data': buckets,
                   'store': redis_store,

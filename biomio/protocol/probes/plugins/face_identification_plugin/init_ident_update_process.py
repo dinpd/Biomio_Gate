@@ -34,10 +34,11 @@ class InitIdentificationUpdateProcess(AlgorithmProcessInterface):
                 for inx, cluster in database.iteritems():
                     settings = {
                         "database": 0,
+                        "cluster_id": inx,
                         "template": cluster,
                         "uuid": data['userID'],
                         "data_settings": data.copy(),
-                        "settings": {
+                        "hash_settings": {
                             "database_type": wNearPyHash.type(),
                             "settings":  self.db_settings
                         }
