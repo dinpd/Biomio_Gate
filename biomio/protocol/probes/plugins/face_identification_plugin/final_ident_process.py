@@ -1,6 +1,6 @@
+from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
 from biomio.algorithms.interfaces import AlgorithmProcessInterface, logger
-from interface_helper import result_training_helper, ind_final_helper
-
+from biomio.constants import REDIS_DO_NOT_STORE_RESULT_KEY
 
 FINAL_IDENTIFICATION_PROCESS_CLASS_NAME = "FinalIdentificationProcess"
 
@@ -20,25 +20,17 @@ class FinalIdentificationProcess(AlgorithmProcessInterface):
     @staticmethod
     def job(callback_code, **kwargs):
         FinalIdentificationProcess._job_logger_info(FINAL_IDENTIFICATION_PROCESS_CLASS_NAME, **kwargs)
-        # data = kwargs["data"]
-        sources = dict()
-        for k in kwargs['clusters_list']:
-            sources[k] = kwargs[k]
-        res_record = {
-            'status': "update",
-            'algoID': kwargs['algoID'],
-            'userID': kwargs['userID'],
-            'database': sources
+        max_count = 0
+        max_key = ""
+        for key, count in kwargs['candidates_score'].iteritems():
+            if max_count < count:
+                max_count = count
+                max_key = key
+        record = {
+            'result': max_key
         }
-        result = {
-            'algo_result': res_record,
-            'temp_image_path': kwargs['general_data']['data_path'],
-            'probe_id': kwargs['general_data']['probe_id'],
-            'try_type': kwargs['general_data']['try_type'],
-            'ai_code': kwargs['general_data']['ai_code']
-        }
-        logger.info('Status::The database updated.')
-        result_training_helper(callback_code=callback_code, final_func=ind_final_helper, **result)
+        AlgorithmsDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
+                                                        record_dict=record, callback_code=callback_code)
 
     @staticmethod
     def process(**kwargs):

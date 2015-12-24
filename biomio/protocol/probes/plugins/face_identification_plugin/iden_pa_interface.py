@@ -24,13 +24,16 @@ def result_send_job(callback_code, **kwargs):
     AlgorithmsDataStore.instance().store_data(key=REDIS_PROBE_RESULT_KEY % callback_code, result=kwargs['result'])
     tell_ai_training_results(kwargs['result'], kwargs['ai_response_type'], kwargs['try_type'], kwargs['ai_code'])
 
+def result_identification_job(callback_code, **kwargs):
+    AlgorithmsDataStore.instance().store_data(key=REDIS_PROBE_RESULT_KEY % callback_code, result=kwargs['result'])
+
 class IdentificationPAInterface(AlgorithmInterface):
     def __init__(self):
         self._callback = None
         self._result_count = 0
         self._store_results = []
 
-    def _interface_callback(self, result):
+    def _interface_training_callback(self, result):
         self._result_count -= 1
         self._store_results.append(result)
         if self._result_count == 0:
@@ -43,13 +46,17 @@ class IdentificationPAInterface(AlgorithmInterface):
             worker = WorkerInterface.instance()
             worker.run_job(result_send_job, callback=self._callback, **res)
 
+    def _interface_apply_callback(self, result):
+        worker = WorkerInterface.instance()
+        worker.run_job(result_identification_job, callback=self._callback, **result)
+
     def training(self, callback=None, **kwargs):
         self._result_count = 0
         self._store_results = []
         mode = kwargs.get("mode", TRAINING_FULL)
         self._callback = callback
         worker = WorkerInterface.instance()
-        training_start_process = TrainingStartProcess(self._interface_callback)
+        training_start_process = TrainingStartProcess(self._interface_training_callback)
         main_process = MainTrainingProcess(TEMP_DATA_PATH, worker)
         training_process = TrainingProcess(TEMP_DATA_PATH, worker)
         data_detect_process = DataDetectionProcess(TEMP_DATA_PATH, worker)
@@ -58,7 +65,7 @@ class IdentificationPAInterface(AlgorithmInterface):
         cluster_matching_process = ClusterMatchingProcess(worker)
         transfer_data_process = TransferDataProcess(worker)
         init_ident_process = InitIdentificationUpdateProcess(worker)
-        update_data_process = UpdateDataStructureProcess(self._interface_callback)
+        update_data_process = UpdateDataStructureProcess(self._interface_training_callback)
 
         training_start_process.set_main_training_process(main_process)
         main_process.set_data_training_process(training_process)
@@ -71,7 +78,7 @@ class IdentificationPAInterface(AlgorithmInterface):
         cluster_matching_process.set_final_training_process(transfer_data_process)
         if mode == TRAINING_FULL:
             self._result_count += 1
-            final_training_process = FinalTrainingProcess(self._interface_callback)
+            final_training_process = FinalTrainingProcess(self._interface_training_callback)
             transfer_data_process.add_transfer_process(final_training_process)
         self._result_count += 1
         transfer_data_process.add_transfer_process(init_ident_process)
@@ -82,7 +89,7 @@ class IdentificationPAInterface(AlgorithmInterface):
     def apply(self, callback=None, **kwargs):
         self._callback = callback
         worker = WorkerInterface.instance()
-        identify_start_process = IdentificationStartProcess(self._interface_callback)
+        identify_start_process = IdentificationStartProcess(self._interface_apply_callback)
         main_process = MainTrainingProcess(TEMP_DATA_PATH, worker)
         training_process = TrainingProcess(TEMP_DATA_PATH, worker)
         data_detect_process = DataDetectionProcess(TEMP_DATA_PATH, worker)
@@ -91,7 +98,7 @@ class IdentificationPAInterface(AlgorithmInterface):
         ident_run_process = IdentificationRunProcess(worker)
         load_ident_hash_process = LoadIdentificationHashProcess(worker)
         identify_re_process = IdentificationREProcess(worker)
-        final_ident_process = FinalIdentificationProcess(self._interface_callback)
+        final_ident_process = FinalIdentificationProcess(self._interface_apply_callback)
 
         identify_start_process.set_main_training_process(main_process)
         main_process.set_data_training_process(training_process)
