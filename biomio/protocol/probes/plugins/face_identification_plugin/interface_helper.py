@@ -72,13 +72,12 @@ def pre_training_helper(images, probe_id, settings, callback_code, try_type, ai_
         return None
 
 
-def pre_identification_helper(images, probe_id, settings, callback_code):
+def pre_identification_helper(images, probe_id, settings, hash_config_path, callback_code):
     worker_logger.info('Running verification for user - %s, with given parameters - %s' % (settings.get('userID'),
                                                                                            settings))
     if AlgorithmsDataStore.instance().exists(key=REDIS_JOB_RESULTS_ERROR % callback_code):
         worker_logger.info('Job interrupted because of job_results_error key existence.')
         return
-    database = _get_algo_db(probe_id=probe_id)
     temp_image_path = tempfile.mkdtemp(dir=APP_ROOT)
     try:
         image_paths = []
@@ -95,6 +94,7 @@ def pre_identification_helper(images, probe_id, settings, callback_code):
 
         settings.update({'data': image_paths})
         settings.update({'general_data': {'data_path': temp_image_path,
+                                          'hash_config_path': hash_config_path,
                                           'probe_id': probe_id}})
         return settings
     except:

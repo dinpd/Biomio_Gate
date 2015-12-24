@@ -55,7 +55,7 @@ class IdentificationREProcess(AlgorithmProcessInterface):
             gsum = 0
             test_size = 0
             for result in results:
-                test_size += len(result['cluster_size'])
+                test_size += result['cluster_size']
             for result in results:
                 res_score = result.get("candidates_score", {})
                 gsum += result.get("candidates_size", 0)
