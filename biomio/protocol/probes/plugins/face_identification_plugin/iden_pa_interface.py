@@ -86,8 +86,8 @@ class IdentificationPAInterface(AlgorithmInterface):
 
         for idx in range(0, 6, 1):
             AlgorithmsDataStore.instance().delete_data(REDIS_CLUSTER_JOB_ACTION % idx)
-        AlgorithmsDataStore.instance().delete_data(REDIS_TEMPLATE_RESULT % result['userID'])
-        AlgorithmsDataStore.instance().delete_data(REDIS_GENERAL_DATA % result['userID'])
+        AlgorithmsDataStore.instance().delete_data(REDIS_TEMPLATE_RESULT % kwargs['settings']['userID'])
+        AlgorithmsDataStore.instance().delete_data(REDIS_GENERAL_DATA % kwargs['settings']['userID'])
 
         training_start_process.run(worker, **kwargs)
 
