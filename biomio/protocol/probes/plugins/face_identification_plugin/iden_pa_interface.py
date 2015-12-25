@@ -84,6 +84,11 @@ class IdentificationPAInterface(AlgorithmInterface):
         transfer_data_process.add_transfer_process(init_ident_process)
         init_ident_process.set_update_data_hash_process(update_data_process)
 
+        for idx in range(0, 6, 1):
+            AlgorithmsDataStore.instance().delete_data(REDIS_CLUSTER_JOB_ACTION % idx)
+        AlgorithmsDataStore.instance().delete_data(REDIS_TEMPLATE_RESULT % result['userID'])
+        AlgorithmsDataStore.instance().delete_data(REDIS_GENERAL_DATA % result['userID'])
+
         training_start_process.run(worker, **kwargs)
 
     def apply(self, callback=None, **kwargs):
