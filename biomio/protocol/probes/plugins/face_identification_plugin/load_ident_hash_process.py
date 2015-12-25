@@ -73,7 +73,6 @@ class LoadIdentificationHashProcess(AlgorithmProcessInterface):
         redis_store = kwargs['database']
         # TODO: Read provider_id from kwargs
         user_ids = ['0000000000000', '0000000000001', '0000000000002']
-        AlgorithmsHashRedisStackStore.instance(redis_store).load_data(user_ids=user_ids)
         settings = kwargs['hash_settings']['settings']
         settings_path = os.path.join(kwargs['hash_settings']['hash_config_path'],
                                      HASH_SETTINGS_FILE % kwargs['cluster_id'])
@@ -84,6 +83,8 @@ class LoadIdentificationHashProcess(AlgorithmProcessInterface):
         database_store = get_data_structure(
             kwargs['hash_settings']['database_type'])(settings,
                                                       storage=AlgorithmsHashRedisStackStore.instance(redis_store))
+        hash_keys = database_store.hash_list()
+        AlgorithmsHashRedisStackStore.instance(redis_store).load_data(user_ids=user_ids, include_only_from=hash_keys)
         if not os.path.exists(settings_path):
             if not os.path.exists(kwargs['hash_settings']['hash_config_path']):
                 os.mkdir(kwargs['hash_settings']['hash_config_path'])

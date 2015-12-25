@@ -5,6 +5,7 @@ from database_actions import delete_data, create_records, select_records_by_ids
 from biomio.algorithms.logger import logger
 from defs import serialize, deserialize
 from threading import Lock
+import ast
 
 REDIS_IDENTIFICATION_BUCKET_KEY = 'identification_hash:%s:%s'
 HASH_BUCKET_KEY_FORMAT = "bucket_key:%s:%s"
@@ -73,7 +74,7 @@ class AlgorithmsHashRedisStackStore:
         if len(user_hash_data) > 0:
             create_records(self._user_hash_table_name, tuple(user_hash_data))
 
-    def load_data(self, user_ids=None, user_group_id=None):
+    def load_data(self, user_ids=None, user_group_id=None, include_only_from=None):
         if user_ids is None:
             user_ids = select_records_by_ids("", [user_group_id], True)
         if len(user_ids) > 0:
@@ -83,7 +84,11 @@ class AlgorithmsHashRedisStackStore:
                 loaded_buckets = []
                 for record in user_records['records']:
                     if not loaded_buckets.__contains__(str(record['bucket_key'])):
-                        loaded_buckets.append(str(record['bucket_key']))
+                        if include_only_from is not None:
+                            if include_only_from.__contains__(self._buckets_hash(str(record['bucket_key']))):
+                                loaded_buckets.append(str(record['bucket_key']))
+                        else:
+                            loaded_buckets.append(str(record['bucket_key']))
 
                 hash_buckets = select_records_by_ids(self._hash_data_table_name, loaded_buckets)
                 for key, value in hash_buckets.iteritems():
@@ -92,10 +97,19 @@ class AlgorithmsHashRedisStackStore:
                         self._ihr_redis.delete_data(str(key))
                     self._ihr_redis.store_data(key=str(key), **{'data': hash_data})
 
+    @staticmethod
+    def _buckets_hash(key):
+        parts = key.split(':')
+        if len(parts) == 3:
+            return parts[1]
+        else:
+            return ""
+
     def get_bucket(self, hash_name, bucket_key):
         bucket_key = HASH_BUCKET_KEY_FORMAT % (hash_name, bucket_key)
         data = self._ihr_redis.get_data(bucket_key)
         if data is not None:
+            data = ast.literal_eval(data)
             return data['data']
         else:
             return []
