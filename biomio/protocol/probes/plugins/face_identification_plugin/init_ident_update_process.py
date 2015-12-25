@@ -1,10 +1,11 @@
 from biomio.algorithms.interfaces import AlgorithmProcessInterface, logger
 from biomio.algorithms.recognition.processes.defs import STATUS_RESULT, STATUS_ERROR
 from biomio.algorithms.recognition.processes.handling import save_temp_data, load_temp_data
+from biomio.algorithms.datastructs import wNearPyHash, DEFAULT_NEAR_PY_HASH_SETTINGS
 from biomio.algorithms.recognition.processes.messages import create_result_message
 from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
 from biomio.constants import REDIS_DO_NOT_STORE_RESULT_KEY
-from biomio.algorithms.datastructs import wNearPyHash, DEFAULT_NEAR_PY_HASH_SETTINGS
+from defs import get_plugin_dir
 
 INIT_IDENTIFICATION_UPDATE_PROCESS_CLASS_NAME = "InitIdentificationUpdateProcess"
 
@@ -40,7 +41,8 @@ class InitIdentificationUpdateProcess(AlgorithmProcessInterface):
                         "data_settings": data.copy(),
                         "hash_settings": {
                             "database_type": wNearPyHash.type(),
-                            "settings":  self.db_settings
+                            "settings":  self.db_settings,
+                            "hash_config_path": get_plugin_dir("settings")
                         }
                     }
                     self._update_data_process.run(worker=self._worker, **settings)
