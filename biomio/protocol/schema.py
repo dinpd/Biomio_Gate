@@ -77,7 +77,8 @@ BIOMIO_protocol_json_schema = {
             "type": "object",
             "required": ["rType", "rProperties"],
             "properties": {
-                "rType": {"enum": ["fp-scanner", "mic", "front-cam", "back-cam", "input", "interact", "location"]},
+                "rType": {"enum": ["fp-scanner", "mic", "front-cam", "back-cam", "input",
+                                   "ldap_connection", "location", "interact"]},
                 "rProperties": {"type": "string"}
             }
         },
@@ -85,7 +86,8 @@ BIOMIO_protocol_json_schema = {
             "type": "object",
             "required": ["tType", "resource", "samples"],
             "properties": {
-                "tType": {"enum": ["fp", "face", "palm", "voice", "push_button", "pin_code", "location"]},
+                "tType": {"enum": ["fp", "face", "palm", "voice", "ldap_check", "text_input", "location",
+                                   "push_button", "pin_code"]},
                 "resource": {"$ref": "#/definitions/resource"},
                 "samples": {"type": "number"}
             }
@@ -118,8 +120,10 @@ BIOMIO_protocol_json_schema = {
             "required": ["oid", "resource", "authTimeout"],
             "properties": {
                 "oid": { "enum": ["try"] },
+                "try_id": {"type": "string"},
                 "authTimeout": {"type": "number"},
                 "policy": {"$ref": "#/definitions/policy"},
+                "try_info": {"type": "string"},
                 "resource": {
                     "type": "array",
                     "items": {"$ref": "#/definitions/resourceItem"}
@@ -245,7 +249,8 @@ BIOMIO_protocol_json_schema = {
             "required": ["oid", "probeStatus"],
             "properties": {
                 "oid": { "enum": ["probe"] },
-                "probeId": {"type": "number"},
+                "try_id": {"type": "string"},
+                "tType": {"type": "string"},
                 "probeData": {
                     "oneOf": [
                         {"$ref": "#/definitions/imageSamples"},

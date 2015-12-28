@@ -232,9 +232,9 @@ class MessageHandler:
             e.protocol_instance.current_probe_request = None
         else:
             current_probe_request = e.protocol_instance.current_probe_request
-            if current_probe_request.add_next_sample(probe_id=e.request.msg.probeId,
+            if current_probe_request.add_next_sample(probe_id=e.request.msg.tType,
                                                      samples_list=e.request.msg.probeData.samples):
-                if current_probe_request.has_pending_probes(current_probe_id=e.request.msg.probeId):
+                if current_probe_request.has_pending_probes(current_probe_id=e.request.msg.tType):
                     next_state = STATE_GETTING_PROBES
                 else:
                     message = e.protocol_instance.create_next_message(
@@ -386,6 +386,7 @@ def probe_trying(e):
             message = e.protocol_instance.create_next_message(
                 request_seq=e.request.header.seq,
                 oid='try',
+                try_id='fake_try_id',
                 resource=resources,
                 policy=policy,
                 authTimeout=settings.bioauth_timeout,
