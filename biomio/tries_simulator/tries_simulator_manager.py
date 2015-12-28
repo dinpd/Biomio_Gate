@@ -9,6 +9,7 @@ class TriesSimulatorManager:
         oid='try',
         resource=[],
         policy=dict(condition='any'),
+        try_id='fake_try_id',
         authTimeout=300,
         message='Authentication'
     )
