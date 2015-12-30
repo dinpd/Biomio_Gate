@@ -1,4 +1,6 @@
 from threading import Lock
+from os import urandom
+from hashlib import sha1
 
 
 class TriesSimulatorManager:
@@ -9,6 +11,7 @@ class TriesSimulatorManager:
         oid='try',
         resource=[],
         policy=dict(condition='any'),
+        try_id=sha1(urandom(32)).hexdigest()[:8],
         authTimeout=300,
         message='Authentication'
     )
