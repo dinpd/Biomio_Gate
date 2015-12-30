@@ -28,7 +28,7 @@ class ProbeRequest:
     def add_probe(self, auth_type, samples):
         """
         Add new probe to count.
-        :param probe_type: Probe type string (as defined in scheme 'face-photo', 'fp-scan', etc).
+        :param auth_type: Probe type string (as defined in scheme 'face-photo', 'fp-scan', etc).
         :param samples: List of samples of he given type.
         """
         if auth_type not in self.sample_count_by_probe_type:
