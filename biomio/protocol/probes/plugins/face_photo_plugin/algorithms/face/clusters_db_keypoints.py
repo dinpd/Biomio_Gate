@@ -1,11 +1,8 @@
 from __future__ import absolute_import
-import itertools
-
 from biomio.protocol.probes.plugins.face_photo_plugin.algorithms.face.clusters_keypoints import ClustersMatchingDetector
 from biomio.algorithms.cvtools.types import listToNumpy_ndarray, numpy_ndarrayToList
-from biomio.algorithms.features import matcherForDetector, dtypeForDetector
+from biomio.algorithms.recognition.estimation import ClusterDBEstimation
 from biomio.algorithms.recognition.keypoints import verifying
-from biomio.algorithms.features.matchers import Matcher
 import logger
 
 
@@ -61,33 +58,8 @@ class ClustersDBMatchingDetector(ClustersMatchingDetector):
                 } for (i, data) in enumerate(self._database)
             }
 
-    def _probability(self, matcher, source, test):
-        dtype = dtypeForDetector(self.kodsettings.detector_type)
-        matches = matcher.knnMatch(listToNumpy_ndarray(test, dtype),
-                                   listToNumpy_ndarray(source, dtype), k=1)
-        ms = sum(
-            itertools.imap(
-                lambda v: len(v) >= 1 and v[0].distance < self.kodsettings.neighbours_distance, matches
-            )
-        )
-        return ms / (1.0 * len(matches))
-
     @verifying
     def verify(self, data):
-        matcher = Matcher(matcherForDetector(self.kodsettings.detector_type))
-        tprob = 0
-        for d in self._database:
-            prob = [0, 0]
-            for i, source in enumerate(d['clusters']):
-                test = data['clusters'][i]
-                if (test is None) or (source is None) or (len(test) == 0) or (len(source) == 0):
-                    logger.algo_logger.debug("Cluster #%d: Invalid" % (i + 1))
-                else:
-                    _prob = 100 * self._probability(matcher, source, test)
-                    prob[0] += _prob
-                    prob[1] += 1
-                    logger.algo_logger.debug("Cluster #%d (Size: %d): %f%%" % (i + 1, len(source), _prob))
-            logger.algo_logger.debug("Total for image: %f%%" % (prob[0]/prob[1]))
-            tprob += (prob[0] / prob[1])
-        logger.algo_logger.debug("Total: %d%%" % (tprob / len(self._database)))
-        return tprob / len(self._database)
+        estimation = ClusterDBEstimation(self.kodsettings.detector_type,
+                                         self.kodsettings.neighbours_distance)
+        return estimation.estimate_verification(data, self._database)
