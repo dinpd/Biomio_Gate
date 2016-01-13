@@ -114,6 +114,7 @@ TRAINING_TYPES_AI_RESPONSE = {
 }
 
 
+HYBRID_APP_TYPE_PREFIX = 'hybrid'
 PROBE_APP_TYPE_PREFIX = 'probe'
 GENERAL_SUBSCRIBE_PATTERN = '__keyspace*:{redis_key_pattern}'
 

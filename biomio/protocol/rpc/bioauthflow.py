@@ -45,9 +45,10 @@ def on_reset(e):
 
 def on_request(e):
     flow = e.bioauth_flow
+    current_resources = e.current_resources
 
     if flow.is_extension_owner():
-        flow.auth_connection.start_auth()
+        flow.auth_connection.start_auth(current_resources=current_resources)
 
     return STATE_AUTH_WAIT
 
@@ -109,7 +110,7 @@ def on_state_changed(e):
 def on_auth_wait(e):
     flow = e.bioauth_flow
 
-    if flow.is_probe_owner():
+    if flow.is_probe_owner() or flow.is_hybrid_app():
         flow.try_probe_callback(message="Authentication")
 
 
@@ -122,7 +123,7 @@ def on_auth_training(e):
 def on_auth_finished(e):
     flow = e.bioauth_flow
 
-    if flow.is_extension_owner():
+    if flow.is_extension_owner() or flow.is_hybrid_app():
         flow.rpc_callback()
 
     if flow.is_probe_owner():
@@ -314,7 +315,7 @@ class BioauthFlow:
         self._store_state()
 
     @tornado.gen.engine
-    def request_auth(self, verification_started_callback, callback):
+    def request_auth(self, verification_started_callback, current_resources=None, callback=None):
         """
         Should be called for extension to request biometric authentication from probe.
         """
@@ -322,7 +323,7 @@ class BioauthFlow:
         self.rpc_callback = callback  # Store callback to call later in STATE_AUTH_FINISHED state
         data_dict = {}
         self.auth_connection.store_data(**data_dict)
-        self._state_machine_instance.request(bioauth_flow=self)
+        self._state_machine_instance.request(bioauth_flow=self, current_resources=current_resources)
         self._store_state()
 
     def auth_started(self, resource_list=None):
@@ -409,6 +410,9 @@ class BioauthFlow:
 
     def is_extension_owner(self):
         return not self.auth_connection.is_probe_owner()
+
+    def is_hybrid_app(self):
+        return self.auth_connection.is_hybrid_app()
 
     @classmethod
     def start_training(cls, probe_id, code):

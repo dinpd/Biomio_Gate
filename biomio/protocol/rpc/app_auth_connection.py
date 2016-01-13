@@ -1,4 +1,4 @@
-from biomio.constants import PROBE_APP_TYPE_PREFIX
+from biomio.constants import PROBE_APP_TYPE_PREFIX, HYBRID_APP_TYPE_PREFIX
 from biomio.protocol.data_stores.device_information_store import DeviceInformationStore
 from biomio.protocol.rpc.app_connection_listener import AppConnectionListener
 from biomio.protocol.rpc.app_connection_manager import AppConnectionManager
@@ -28,6 +28,7 @@ class AppAuthConnection:
         self._push_notifications_callback = push_notification_callback(
             'Please open the app to proceed with Verification.')
         self._push_notifications_clear_callback = push_notification_callback('', clear=True)
+        self._current_resources = None
 
     def is_probe_owner(self):
         """
@@ -36,7 +37,15 @@ class AppAuthConnection:
         """
         return self._app_type.lower().startswith(PROBE_APP_TYPE_PREFIX)
 
+    def is_hybrid_app(self):
+        return self._app_type.lower().startswith(HYBRID_APP_TYPE_PREFIX)
+
     def _set_keys_for_connected_app(self):
+        if self.is_hybrid_app():
+            new_app_key = self._connection_listener.auth_key(extension_id=self._app_id, probe_id=self._app_id)
+            self._app_key = new_app_key
+            self.store_data(state='auth_wait')
+            return
         if 'code_' in self._app_id:
             app_id = self._app_id
         else:
@@ -152,8 +161,9 @@ class AppAuthConnection:
         self._remove_disconnected_app_keys()
         self._connection_listener.unsubscribe()
 
-    def start_auth(self):
+    def start_auth(self, current_resources=None):
         if not self.is_probe_owner():
+            self._current_resources = current_resources
             self._set_keys_for_connected_app()
 
     def end_auth(self):
