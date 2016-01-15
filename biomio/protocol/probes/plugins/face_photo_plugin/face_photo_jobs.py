@@ -347,7 +347,7 @@ def training_job(images, probe_id, settings, callback_code, try_type, ai_code):
         else:
             RedisStorage.persistence_instance().delete_data(key=REDiS_TRAINING_RETRIES_COUNT_KEY % probe_id)
             RedisStorage.persistence_instance().store_data(key=REDIS_PROBE_RESULT_KEY % callback_code, result=result)
-        _tell_ai_training_results(result, ai_response_type, try_type, ai_code)
+        _tell_ai_training_results(result, ai_response_type, try_type.split('_')[0], ai_code)
     worker_logger.info('training finished for user - %s, with result - %s' % (settings.get('userID'), result))
 
 

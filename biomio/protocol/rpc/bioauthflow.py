@@ -383,6 +383,10 @@ class BioauthFlow:
             training_result = False
             error = None
             for probe_type, samples in samples_by_probe_type.iteritems():
+                if self._app_user is not None:
+                    new_probe_type = '%s_%s' % (probe_type, self._app_user)
+                    if new_probe_type in ProbePluginManager.instance().get_available_auth_types():
+                        probe_type = new_probe_type
                 data = dict(try_type=probe_type, ai_code=ai_code, samples=samples, probe_id=self.app_id)
                 result = yield tornado.gen.Task(
                     ProbePluginManager.instance().get_plugin_by_auth_type(probe_type).run_training, data)
