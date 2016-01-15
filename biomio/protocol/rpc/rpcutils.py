@@ -24,6 +24,7 @@ BIOAUTH_FLOW_INSTANCE_ARG = 'bioauth_flow'
 APP_ID_ATG = 'app_id'
 ON_BEHALF_OF_ARG = 'on_behalf_of'
 SENDER_ARG = 'sender'
+CURRENT_RESOURCES_ARG = 'current_resources'
 
 
 def _check_rpc_arguments(callable_func, current_kwargs):
@@ -49,7 +50,7 @@ def _check_rpc_arguments(callable_func, current_kwargs):
     required_args = _get_required_args(callable_func)
 
     implicit_params_list = [USER_ID_ARG, CALLBACK_ARG, WAIT_CALLBACK_ARG, BIOAUTH_FLOW_INSTANCE_ARG, APP_ID_ATG,
-                            ON_BEHALF_OF_ARG, SENDER_ARG]
+                            ON_BEHALF_OF_ARG, SENDER_ARG, CURRENT_RESOURCES_ARG]
     for k, v in current_kwargs.iteritems():
         if k in implicit_params_list and k not in required_args:
             continue
@@ -97,10 +98,12 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
     wait_callback = callable_kwargs.get(WAIT_CALLBACK_ARG, None)
     callback = callable_kwargs.get(CALLBACK_ARG, None)
     bioauth_flow = callable_kwargs.get(BIOAUTH_FLOW_INSTANCE_ARG, None)
+    current_resources = callable_kwargs.get(CURRENT_RESOURCES_ARG, None)
 
     # Send RPC message with inprogress state
     try:
-        wait_callback()
+        if wait_callback is not None:
+            wait_callback()
     except Exception as e:
         logger.exception(msg="RPC call with auth error - could not send rpc inprogress status: %s" % str(e))
         callback(result={"error": "Internal server error"}, status='fail')
@@ -115,7 +118,8 @@ def _is_biometric_data_valid(callable_func, callable_args, callable_kwargs):
                 callback(result={"error": error_msg}, status='fail')
                 return
 
-        future = tornado.gen.Task(bioauth_flow.request_auth, get_verification_started_callback(callback=callback))
+        future = tornado.gen.Task(bioauth_flow.request_auth, get_verification_started_callback(callback=callback),
+                                  current_resources)
         greenado.gyield(future)
 
         # TODO: check for current auth state

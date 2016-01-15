@@ -19,9 +19,10 @@ class AuthClientPlugin(base_rpc_plugin.BaseRpcPlugin):
 
     @inherit_docstring_from(base_rpc_plugin.BaseRpcPlugin)
     def identify_user(self, on_behalf_of):
-        email = parse_email_data(on_behalf_of)
-        email_data = get_store_data(self.client_auth_data_store, object_id=email)
-        return email_data.get(self.client_auth_data_store.USER_ID_ATTR) if email_data is not None else None
+        return on_behalf_of
+        # email = parse_email_data(on_behalf_of)
+        # email_data = get_store_data(self.client_auth_data_store, object_id=email)
+        # return email_data.get(self.client_auth_data_store.USER_ID_ATTR) if email_data is not None else None
 
     @inherit_docstring_from(base_rpc_plugin.BaseRpcPlugin)
     def assign_user_to_application(self, app_id, user_id):

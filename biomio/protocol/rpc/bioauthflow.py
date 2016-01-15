@@ -111,7 +111,7 @@ def on_auth_wait(e):
     flow = e.bioauth_flow
 
     if flow.is_probe_owner() or flow.is_hybrid_app():
-        flow.try_probe_callback(message="Authentication")
+        flow.try_probe_callback(message="Authentication", current_resources=flow.auth_connection._current_resources)
 
 
 def on_auth_training(e):

@@ -341,6 +341,7 @@ BIOMIO_protocol_json_schema = {
             "required": ["oid", "namespace", "call"],
             "properties": {
                 "oid": { "enum": ["rpcReq"] },
+                "session_id": {"type": "string"},
                 "onBehalfOf": {"type": "string"},
                 "namespace": {"type": "string"},
                 "call": {"type": "string"},
@@ -352,6 +353,7 @@ BIOMIO_protocol_json_schema = {
             "required": ["oid", "namespace", "call", "data"],
             "properties": {
                 "oid": { "enum": ["rpcResp"] },
+                "session_id": {"type": "string"},
                 "onBehalfOf": {"type": "string"},
                 "namespace": {"type": "string"},
                 "call": {"type": "string"},
