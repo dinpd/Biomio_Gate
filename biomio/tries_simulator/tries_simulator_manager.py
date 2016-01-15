@@ -22,7 +22,7 @@ class TriesSimulatorManager:
         fp=dict(rType='fp-scanner', rProperties=""),
         push_button=dict(rType='interact', rProperties=""),
         pin_code=dict(rType='input', rProperties="%s" % randint(100000, 999999)),
-        location=dict(rType='location', rProperties="200"),
+        location=dict(rType='location', rProperties="100"),
         credit_card=dict(rType='back-cam', rProperties=""),
     )
 

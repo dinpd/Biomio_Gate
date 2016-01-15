@@ -386,80 +386,80 @@ class DeviceInformation(BaseEntityClass, database.Entity):
         return REDIS_DEVICE_INFORMATION_KEY % self.device_token
 
 
-class WebResource(BaseEntityClass, database.Entity):
-    _table_ = MYSQL_WEB_RESOURCES_TABLE_NAME
-    resource_id = pny.PrimaryKey(str, auto=False)
-    provider_id = pny.Required(int)
-    title = pny.Optional(str)
-    domain = pny.Optional(str)
-    logo_url = pny.Optional(str)
-    web_hook_url = pny.Optional(str)
-    date_created = pny.Required(datetime.datetime, default=lambda: datetime.datetime.now(), lazy=True)
-    date_modified = pny.Required(datetime.datetime, default=lambda: datetime.datetime.now(), auto=True, lazy=True)
-
-    @staticmethod
-    @inherit_docstring_from(BaseEntityClass)
-    def get_table_name():
-        return MYSQL_WEB_RESOURCES_TABLE_NAME
-
-    @staticmethod
-    @inherit_docstring_from(BaseEntityClass)
-    def get_unique_search_attribute():
-        return 'resource_id'
-
-    @staticmethod
-    @inherit_docstring_from(BaseEntityClass)
-    def create_record(**kwargs):
-        WebResource(**kwargs)
-
-    @staticmethod
-    @inherit_docstring_from(BaseEntityClass)
-    def update_record(record_id, **kwargs):
-        search_query = {WebResource.get_unique_search_attribute(): record_id}
-        web_resource = WebResource.get(**search_query)
-        if web_resource is not None:
-            for key, value in kwargs.iteritems():
-                if not hasattr(web_resource, key):
-                    continue
-                setattr(web_resource, key, value)
-
-    @inherit_docstring_from(BaseEntityClass)
-    def get_redis_key(self):
-        return REDIS_WEB_RESOURCE_KEY
-
-
-class ProviderUser(BaseEntityClass, database.Entity):
-    _table_ = MYSQL_PROVIDER_USERS_TABLE_NAME
-    provider_id = pny.Required(int)
-    user_id = pny.Required(int)
-    date_created = pny.Required(datetime.datetime, default=lambda: datetime.datetime.now(), lazy=True)
-
-    @staticmethod
-    @inherit_docstring_from(BaseEntityClass)
-    def get_table_name():
-        return MYSQL_PROVIDER_USERS_TABLE_NAME
-
-    @staticmethod
-    @inherit_docstring_from(BaseEntityClass)
-    def get_unique_search_attribute():
-        return 'provider_id'
-
-    @staticmethod
-    @inherit_docstring_from(BaseEntityClass)
-    def create_record(**kwargs):
-        ProviderUser(**kwargs)
-
-    @staticmethod
-    @inherit_docstring_from(BaseEntityClass)
-    def update_record(record_id, **kwargs):
-        search_query = {ProviderUser.get_unique_search_attribute(): record_id}
-        provider_user = ProviderUser.get(**search_query)
-        if provider_user is not None:
-            for key, value in kwargs.iteritems():
-                if not hasattr(provider_user, key):
-                    continue
-                setattr(provider_user, key, value)
-
-    @inherit_docstring_from(BaseEntityClass)
-    def get_redis_key(self):
-        return REDIS_PROVIDER_USER_KEY
+# class WebResource(BaseEntityClass, database.Entity):
+#     _table_ = MYSQL_WEB_RESOURCES_TABLE_NAME
+#     resource_id = pny.PrimaryKey(str, auto=False)
+#     provider_id = pny.Required(int)
+#     title = pny.Optional(str)
+#     domain = pny.Optional(str)
+#     logo_url = pny.Optional(str)
+#     web_hook_url = pny.Optional(str)
+#     date_created = pny.Required(datetime.datetime, default=lambda: datetime.datetime.now(), lazy=True)
+#     date_modified = pny.Required(datetime.datetime, default=lambda: datetime.datetime.now(), auto=True, lazy=True)
+#
+#     @staticmethod
+#     @inherit_docstring_from(BaseEntityClass)
+#     def get_table_name():
+#         return MYSQL_WEB_RESOURCES_TABLE_NAME
+#
+#     @staticmethod
+#     @inherit_docstring_from(BaseEntityClass)
+#     def get_unique_search_attribute():
+#         return 'resource_id'
+#
+#     @staticmethod
+#     @inherit_docstring_from(BaseEntityClass)
+#     def create_record(**kwargs):
+#         WebResource(**kwargs)
+#
+#     @staticmethod
+#     @inherit_docstring_from(BaseEntityClass)
+#     def update_record(record_id, **kwargs):
+#         search_query = {WebResource.get_unique_search_attribute(): record_id}
+#         web_resource = WebResource.get(**search_query)
+#         if web_resource is not None:
+#             for key, value in kwargs.iteritems():
+#                 if not hasattr(web_resource, key):
+#                     continue
+#                 setattr(web_resource, key, value)
+#
+#     @inherit_docstring_from(BaseEntityClass)
+#     def get_redis_key(self):
+#         return REDIS_WEB_RESOURCE_KEY
+#
+#
+# class ProviderUser(BaseEntityClass, database.Entity):
+#     _table_ = MYSQL_PROVIDER_USERS_TABLE_NAME
+#     provider_id = pny.Required(int)
+#     user_id = pny.Required(int)
+#     date_created = pny.Required(datetime.datetime, default=lambda: datetime.datetime.now(), lazy=True)
+#
+#     @staticmethod
+#     @inherit_docstring_from(BaseEntityClass)
+#     def get_table_name():
+#         return MYSQL_PROVIDER_USERS_TABLE_NAME
+#
+#     @staticmethod
+#     @inherit_docstring_from(BaseEntityClass)
+#     def get_unique_search_attribute():
+#         return 'provider_id'
+#
+#     @staticmethod
+#     @inherit_docstring_from(BaseEntityClass)
+#     def create_record(**kwargs):
+#         ProviderUser(**kwargs)
+#
+#     @staticmethod
+#     @inherit_docstring_from(BaseEntityClass)
+#     def update_record(record_id, **kwargs):
+#         search_query = {ProviderUser.get_unique_search_attribute(): record_id}
+#         provider_user = ProviderUser.get(**search_query)
+#         if provider_user is not None:
+#             for key, value in kwargs.iteritems():
+#                 if not hasattr(provider_user, key):
+#                     continue
+#                 setattr(provider_user, key, value)
+#
+#     @inherit_docstring_from(BaseEntityClass)
+#     def get_redis_key(self):
+#         return REDIS_PROVIDER_USER_KEY
