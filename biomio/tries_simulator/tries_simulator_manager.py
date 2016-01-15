@@ -1,3 +1,4 @@
+from random import randint
 from threading import Lock
 from os import urandom
 from hashlib import sha1
@@ -20,7 +21,9 @@ class TriesSimulatorManager:
         face=dict(rType='front-cam', rProperties="1280x720"),
         fp=dict(rType='fp-scanner', rProperties=""),
         push_button=dict(rType='interact', rProperties=""),
-        pin_code=dict(rType='input', rProperties="")
+        pin_code=dict(rType='input', rProperties="%s" % randint(100000, 999999)),
+        location=dict(rType='location', rProperties="200"),
+        credit_card=dict(rType='back-cam', rProperties=""),
     )
 
     def __init__(self):
