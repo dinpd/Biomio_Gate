@@ -1,6 +1,8 @@
 from itertools import izip
 from functools import wraps
 import logging
+from os import urandom
+from hashlib import sha1
 
 from jsonschema import ValidationError
 import tornado.gen
@@ -231,10 +233,11 @@ class MessageHandler:
             next_state = STATE_READY
             e.protocol_instance.current_probe_request = None
         else:
+            tType = str(e.request.msg.tType)
             current_probe_request = e.protocol_instance.current_probe_request
-            if current_probe_request.add_next_sample(auth_type=e.request.msg.tType,
+            if current_probe_request.add_next_sample(auth_type=tType,
                                                      samples_list=e.request.msg.probeData.samples):
-                if current_probe_request.has_pending_probes(auth_type=e.request.msg.tType):
+                if current_probe_request.has_pending_probes(auth_type=tType):
                     next_state = STATE_GETTING_PROBES
                 else:
                     message = e.protocol_instance.create_next_message(
@@ -344,9 +347,13 @@ def ready(e):
         TriesSimulatorManager.instance().add_active_connection(app_id=app_id, connection_instance=e.protocol_instance)
         auth_wait_callback = e.protocol_instance.try_probe
         cancel_auth_callback = e.protocol_instance.cancel_auth
+        app_users = e.protocol_instance.app_users
+        if isinstance(app_users, list):
+            app_users = app_users[0]
         bioauth_flow = BioauthFlow(app_type=app_type, app_id=app_id,
                                    try_probe_callback=auth_wait_callback,
-                                   cancel_auth_callback=cancel_auth_callback, auto_initialize=False)
+                                   cancel_auth_callback=cancel_auth_callback, auto_initialize=False,
+                                   app_user=app_users)
         e.protocol_instance.bioauth_flows.update({app_id: bioauth_flow})
         if bioauth_flow.is_probe_owner():
             e.protocol_instance.policy = PolicyManager.get_policy_for_app(app_id=app_id)
@@ -386,7 +393,7 @@ def probe_trying(e):
             message = e.protocol_instance.create_next_message(
                 request_seq=e.request.header.seq,
                 oid='try',
-                try_id='fake_try_id',
+                try_id=sha1(urandom(32)).hexdigest()[:8],
                 resource=resources,
                 policy=policy,
                 authTimeout=settings.bioauth_timeout,

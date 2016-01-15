@@ -156,6 +156,7 @@ class SetUserCondition(tornado.web.RequestHandler):
             user_id = request_body.get('user_id')
             condition = request_body.get('condition')
             auth_types = request_body.get('auth_types')
+            face_algo_type = request_body.get('face_algo_type', '')
             missing_params = []
             if user_id is None:
                 missing_params.append('user_id')
@@ -168,9 +169,8 @@ class SetUserCondition(tornado.web.RequestHandler):
                 self.set_status(400)
                 self.finish('{"error":"Missing parameter(s): %s"}' % ','.join(missing_params))
             else:
-                ConditionDataStore.instance().store_data(user_id=request_body.get('user_id'),
-                                                         condition=request_body.get('condition'),
-                                                         auth_types=request_body.get('auth_types'))
+                ConditionDataStore.instance().store_data(user_id=user_id, condition=condition, auth_types=auth_types,
+                                                         face_algo_type=face_algo_type)
         except ValueError as e:
             self.clear()
             self.set_status(400)

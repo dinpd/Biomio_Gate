@@ -237,9 +237,10 @@ def _store_state(e):
 
 
 class BioauthFlow:
-    def __init__(self, app_type, app_id, try_probe_callback, cancel_auth_callback, auto_initialize=True):
+    def __init__(self, app_type, app_id, try_probe_callback, cancel_auth_callback, auto_initialize=True, app_user=None):
         self.app_type = app_type
         self.app_id = app_id
+        self._app_user = app_user
         self.rpc_callback = None
         self.try_probe_callback = try_probe_callback
         self.cancel_auth_callback = cancel_auth_callback
@@ -346,6 +347,10 @@ class BioauthFlow:
         max_retries = False
 
         for probe_type, samples_list in samples_by_probe_type.iteritems():
+            if self._app_user is not None:
+                new_probe_type = '%s_%s' % (probe_type, self._app_user)
+                if new_probe_type in ProbePluginManager.instance().get_available_auth_types():
+                    probe_type = new_probe_type
             data = dict(samples=samples_list, probe_id=self.app_id)
             result = yield tornado.gen.Task(
                 ProbePluginManager.instance().get_plugin_by_auth_type(probe_type).run_verification, data)
