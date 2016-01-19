@@ -205,9 +205,10 @@ class AppAuthConnection:
         return result
 
     def _remove_disconnected_app_keys(self, clear_related_keys=True):
-        app_id = self._app_id if self.is_probe_owner() else self._app_id.split('_')[1]
+        is_probe = self.is_probe_owner() or self.is_hybrid_app()
+        app_id = self._app_id if is_probe else self._app_id.split('_')[1]
         self.clear_related_keys = clear_related_keys
-        AppConnectionManager.get_connected_apps(app_id=app_id, probe_device=self.is_probe_owner(),
+        AppConnectionManager.get_connected_apps(app_id=app_id, probe_device=is_probe,
                                                 callback=self._get_disconnect_apps_callback())
 
     def get_client_id(self):
@@ -221,7 +222,7 @@ class AppAuthConnection:
                 app_ids = app_ids.get('result') if app_ids is not None else []
                 logger.debug('App ids to remove connections for: %s' % app_ids)
                 for app_id in app_ids:
-                    if not self.is_probe_owner():
+                    if not self.is_probe_owner() and not self.is_hybrid_app():
                         logger.debug('DISCONNECTED')
                         DeviceInformationStore.instance().get_data(app_id=app_id,
                                                                    callback=self._push_notifications_clear_callback)

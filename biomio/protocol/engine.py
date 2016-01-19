@@ -7,7 +7,8 @@ from hashlib import sha1
 from jsonschema import ValidationError
 import tornado.gen
 import greenado
-from biomio.constants import REDiS_TRAINING_RETRIES_COUNT_KEY, REDIS_VERIFICATION_RETIES_COUNT_KEY
+from biomio.constants import REDiS_TRAINING_RETRIES_COUNT_KEY, REDIS_VERIFICATION_RETIES_COUNT_KEY, \
+    HYBRID_APP_TYPE_PREFIX
 from biomio.constants import PROBE_APP_TYPE_PREFIX
 from biomio.protocol.data_stores.condition_data_store import ConditionDataStore
 from biomio.protocol.data_stores.device_information_store import DeviceInformationStore
@@ -343,7 +344,7 @@ def app_registered(e):
 def ready(e):
     app_type = str(e.request.header.appType)
     app_id = str(e.request.header.appId)
-    if app_type.startswith(PROBE_APP_TYPE_PREFIX) and app_id not in e.protocol_instance.bioauth_flows:
+    if (app_type.startswith(PROBE_APP_TYPE_PREFIX) or app_type.startswith(HYBRID_APP_TYPE_PREFIX)) and app_id not in e.protocol_instance.bioauth_flows:
         TriesSimulatorManager.instance().add_active_connection(app_id=app_id, connection_instance=e.protocol_instance)
         auth_wait_callback = e.protocol_instance.try_probe
         cancel_auth_callback = e.protocol_instance.cancel_auth
@@ -374,7 +375,7 @@ def probe_trying(e):
         is_training = flow.is_current_state(STATE_AUTH_TRAINING_STARTED)
         policy, resources = PolicyEngineManager.instance().generate_try_resources(
             device_resources=current_resources, user_id=app_users,
-            training=is_training, current_resources=current_resources)
+            training=is_training)
         if not is_training:
             flow.auth_started(resource_list=e.protocol_instance.available_resources)
         if resources:
@@ -393,8 +394,8 @@ def probe_trying(e):
             if hasattr(e, 'message'):
                 try_message_str = e.message
             try_id = sha1(urandom(32)).hexdigest()[:8]
-            if self._session_id is not None:
-                try_id = '%s##%s' % (try_id, self._session_id)
+            if e.protocol_instance._session_id is not None:
+                try_id = '%s##%s' % (try_id, e.protocol_instance._session_id)
             message = e.protocol_instance.create_next_message(
                 request_seq=e.request.header.seq,
                 oid='try',
