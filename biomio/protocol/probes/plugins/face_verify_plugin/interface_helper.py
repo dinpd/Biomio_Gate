@@ -243,9 +243,13 @@ def store_test_photo_helper(image_paths):
         #             os.unlink(file_path)
         #     except Exception, e:
         #         print e
+    TEST_IMAGE_FOLDER = tempfile.mkdtemp(dir=TEST_PHOTO_PATH)
+
+    if not os.path.exists(TEST_IMAGE_FOLDER):
+        os.makedirs(TEST_IMAGE_FOLDER)
 
     for path in image_paths:
-        shutil.copyfile(path, os.path.join(TEST_PHOTO_PATH, os.path.basename(path)))
+        shutil.copyfile(path, os.path.join(TEST_IMAGE_FOLDER, os.path.basename(path)))
 
 
 def _tell_ai_training_results(result, ai_response_type, try_type, ai_code):
