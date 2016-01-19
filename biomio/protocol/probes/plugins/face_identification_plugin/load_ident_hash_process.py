@@ -1,10 +1,11 @@
+from biomio.constants import REDIS_DO_NOT_STORE_RESULT_KEY, REDIS_PARTIAL_RESULTS_KEY, REDIS_RESULTS_COUNTER_KEY
+from biomio.algorithms.recognition.processes.messages import create_result_message, create_error_message
 from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
+from biomio.algorithms.recognition.processes.defs import INTERNAL_TRAINING_ERROR
+from biomio.protocol.data_stores.provider_user_store import ProviderUserStore
 from biomio.algorithms.interfaces import AlgorithmProcessInterface
 from algo_hash_redis_store import AlgorithmsHashRedisStackStore
 from biomio.algorithms.datastructs import get_data_structure
-from biomio.constants import REDIS_DO_NOT_STORE_RESULT_KEY, REDIS_PARTIAL_RESULTS_KEY, REDIS_RESULTS_COUNTER_KEY
-from biomio.algorithms.recognition.processes.messages import create_result_message, create_error_message
-from biomio.algorithms.recognition.processes.defs import INTERNAL_TRAINING_ERROR
 from biomio.algorithms.tools import load_json, save_json
 from defs import HASH_SETTINGS_FILE
 import os
@@ -71,8 +72,7 @@ class LoadIdentificationHashProcess(AlgorithmProcessInterface):
             "candidates_score": {}
         }
         redis_store = kwargs['database']
-        # TODO: Read provider_id from kwargs
-        user_ids = ['0000000000000', '0000000000001', '0000000000002']
+        user_ids = ProviderUserStore.instance().get_data(kwargs['providerID'])
         settings = kwargs['hash_settings']['settings']
         settings_path = os.path.join(kwargs['hash_settings']['hash_config_path'],
                                      HASH_SETTINGS_FILE % kwargs['cluster_id'])
