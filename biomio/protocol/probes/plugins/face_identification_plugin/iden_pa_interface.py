@@ -4,21 +4,22 @@ from biomio.algorithms.recognition.processes import (MainTrainingProcess, Traini
 from biomio.algorithms.recognition.processes.defs import REDIS_CLUSTER_JOB_ACTION, REDIS_TEMPLATE_RESULT, \
     REDIS_GENERAL_DATA
 from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
-from init_ident_update_process import InitIdentificationUpdateProcess
-from update_data_struct_process import UpdateDataStructureProcess
-from load_ident_hash_process import LoadIdentificationHashProcess
+from biomio.algorithms.processes.transfer_data_process import TransferDataProcess
+from processes.init_ident_update_process import InitIdentificationUpdateProcess
+from processes.load_ident_hash_process import LoadIdentificationHashProcess
+from processes.update_data_struct_process import UpdateDataStructureProcess
+from processes.final_ident_process import FinalIdentificationProcess
+from processes.ident_start_process import IdentificationStartProcess
+from processes.iden_rest_est_process import IdentificationREProcess
+from processes.training_start_process import TrainingStartProcess
+from processes.final_training_process import FinalTrainingProcess
+from processes.ident_run_process import IdentificationRunProcess
+from processes.interface_helper import tell_ai_training_results
 from biomio.algorithms.interfaces import AlgorithmInterface
-from final_ident_process import FinalIdentificationProcess
 from biomio.worker.worker_interface import WorkerInterface
-from ident_start_process import IdentificationStartProcess
-from iden_rest_est_process import IdentificationREProcess
-from training_start_process import TrainingStartProcess
-from final_training_process import FinalTrainingProcess
-from ident_run_process import IdentificationRunProcess
-from transfer_data_process import TransferDataProcess
-from interface_helper import tell_ai_training_results
 from biomio.constants import REDIS_PROBE_RESULT_KEY
 from defs import TRAINING_FULL, TEMP_DATA_PATH
+
 
 def result_send_job(callback_code, **kwargs):
     AlgorithmsDataStore.instance().store_data(key=REDIS_PROBE_RESULT_KEY % callback_code, result=kwargs['result'])

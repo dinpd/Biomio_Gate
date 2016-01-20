@@ -18,9 +18,32 @@ class TrainingStartProcess(AlgorithmProcessInterface):
         self.external_callback(callback)
 
     def set_main_training_process(self, process):
+        """
+          Sets main training process instance. This process instance
+        called by handler for run this process.
+
+        :param process: AlgorithmProcessInterface-based instance
+        """
         self._main_training_process = process
 
     def handler(self, result):
+        """
+        Callback function for corresponding job function.
+
+        :param result: data result dictionary:
+            {
+                'algoID': algorithm identifier string,
+                'general_data':
+                {
+                    'ai_code': AI code string,
+                    'data_path': image data path,
+                    'try_type': try type string,
+                    'probe_id': probe identifier string
+                },
+                'userID': user identifier string,
+                'data': image paths list
+            }
+        """
         self._handler_logger_info(result)
         if result.keys().__contains__('error'):
             self._callback(result)
@@ -29,6 +52,23 @@ class TrainingStartProcess(AlgorithmProcessInterface):
 
     @staticmethod
     def job(callback_code, **kwargs):
+        """
+        Job function for preparing data to training.
+
+        :param callback_code: callback function identifier
+        :param kwargs: settings dictionary:
+            {
+                'images': image byte list,
+                'ai_code': AI code string,
+                'try_type': try type string,
+                'probe_id': probe identifier string,
+                'settings':
+                {
+                    'algoID': algorithm identifier string,
+                    'userID': user identifier string
+                }
+            }
+        """
         TrainingStartProcess._job_logger_info(TRAINING_START_PROCESS_CLASS_NAME, **kwargs)
         settings = pre_training_helper(callback_code=callback_code, **kwargs)
         if settings is not None:

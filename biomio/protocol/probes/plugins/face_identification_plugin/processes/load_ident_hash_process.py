@@ -1,10 +1,11 @@
 from biomio.constants import REDIS_DO_NOT_STORE_RESULT_KEY, REDIS_PARTIAL_RESULTS_KEY, REDIS_RESULTS_COUNTER_KEY
 from biomio.algorithms.recognition.processes.messages import create_result_message, create_error_message
+from biomio.protocol.probes.plugins.face_identification_plugin.algo_hash_redis_store import \
+    AlgorithmsHashRedisStackStore
 from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
 from biomio.algorithms.recognition.processes.defs import INTERNAL_TRAINING_ERROR
 from biomio.protocol.data_stores.provider_user_store import ProviderUserStore
 from biomio.algorithms.interfaces import AlgorithmProcessInterface
-from algo_hash_redis_store import AlgorithmsHashRedisStackStore
 from biomio.algorithms.datastructs import get_data_structure
 from biomio.algorithms.tools import load_json, save_json
 from defs import HASH_SETTINGS_FILE

@@ -21,6 +21,19 @@ import json
 import os
 
 
+def ai_response_sender(ai_code, ai_response_type):
+    response_type = base64.b64encode(json.dumps(ai_response_type))
+    register_biometrics_url = biomio_settings.ai_rest_url % (REST_REGISTER_BIOMETRICS % (ai_code, response_type))
+    response = requests.post(register_biometrics_url)
+    try:
+        response.raise_for_status()
+        worker_logger.info('AI should now know that training change state with code - %s and response type - %s' %
+                           (ai_code, response_type))
+    except HTTPError as e:
+        worker_logger.exception(e)
+        worker_logger.exception('Failed to tell AI that training change state, reason - %s' % response.reason)
+
+
 def pre_training_helper(images, probe_id, settings, callback_code, try_type, ai_code):
     worker_logger.info('Running training for user - %s, with given parameters - %s' % (settings.get('userID'),
                                                                                        settings))
@@ -28,16 +41,7 @@ def pre_training_helper(images, probe_id, settings, callback_code, try_type, ai_
     try:
         worker_logger.info('Telling AI that we are starting training with code - %s' % ai_code)
         ai_response_type.update({'status': TRAINING_STARTED_STATUS, 'message': TRAINING_STARTED_MESSAGE})
-        response_type = base64.b64encode(json.dumps(ai_response_type))
-        register_biometrics_url = biomio_settings.ai_rest_url % (REST_REGISTER_BIOMETRICS % (ai_code, response_type))
-        response = requests.post(register_biometrics_url)
-        try:
-            response.raise_for_status()
-            worker_logger.info('AI should now know that training started with code - %s and response type - %s' %
-                               (ai_code, response_type))
-        except HTTPError as e:
-            worker_logger.exception(e)
-            worker_logger.exception('Failed to tell AI that training started, reason - %s' % response.reason)
+        ai_response_sender(ai_code, ai_response_type)
     except Exception as e:
         worker_logger.error('Failed to build rest request to AI - %s' % str(e))
         worker_logger.exception(e)
@@ -319,19 +323,7 @@ def tell_ai_training_results(result, ai_response_type, try_type, ai_code):
     try:
         worker_logger.info('Telling AI that training is finished with code - %s and result - %s' %
                            (ai_code, result))
-        response_type = base64.b64encode(json.dumps(ai_response_type))
-        register_biometrics_url = biomio_settings.ai_rest_url % (REST_REGISTER_BIOMETRICS %
-                                                                 (ai_code, response_type))
-        response = requests.post(register_biometrics_url)
-        try:
-            response.raise_for_status()
-            worker_logger.info(
-                'AI should now know that training is finished with code - %s and response type - %s' %
-                (ai_code, response_type))
-        except HTTPError as e:
-            worker_logger.exception(e)
-            worker_logger.exception(
-                'Failed to tell AI that training is finished, reason - %s' % response.reason)
+        ai_response_sender(ai_code, ai_response_type)
     except Exception as e:
         worker_logger.error('Failed to build rest request to AI - %s' % str(e))
         worker_logger.exception(e)

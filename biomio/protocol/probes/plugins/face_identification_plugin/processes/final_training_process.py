@@ -1,7 +1,6 @@
 from biomio.algorithms.interfaces import AlgorithmProcessInterface, logger
 from interface_helper import result_training_helper, ind_final_helper
 
-
 FINAL_TRAINING_PROCESS_CLASS_NAME = "FinalTrainingProcess"
 
 def job(callback_code, **kwargs):

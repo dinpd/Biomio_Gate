@@ -1,8 +1,7 @@
 from biomio.constants import MYSQL_IDENTIFICATION_HASH_DATA_TABLE_NAME, MYSQL_IDENTIFICATION_USER_HASH_TABLE_NAME
+from database_actions import delete_data, create_records, select_records_by_ids
 from biomio.protocol.storage.redis_storage import RedisStorage
 from biomio.worker.worker_interface import WorkerInterface
-from database_actions import delete_data, create_records, select_records_by_ids
-from biomio.algorithms.logger import logger
 from defs import serialize, deserialize
 from threading import Lock
 import ast

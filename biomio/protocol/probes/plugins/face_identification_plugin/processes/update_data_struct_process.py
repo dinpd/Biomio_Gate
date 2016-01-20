@@ -1,6 +1,7 @@
+from biomio.protocol.probes.plugins.face_identification_plugin.algo_hash_redis_store import \
+    AlgorithmsHashRedisStackStore
 from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
 from biomio.algorithms.interfaces import AlgorithmProcessInterface, logger
-from algo_hash_redis_store import AlgorithmsHashRedisStackStore
 from biomio.algorithms.datastructs import get_data_structure
 from biomio.constants import REDIS_DO_NOT_STORE_RESULT_KEY
 from biomio.algorithms.tools import load_json, save_json
@@ -29,10 +30,43 @@ class UpdateDataStructureProcess(AlgorithmProcessInterface):
             self._callback(self._internal_result)
 
     def handler(self, result):
+        """
+        Callback function for corresponding job function.
+
+        :param result: data result dictionary
+        """
         raise NotImplementedError
 
     @staticmethod
     def job(callback_code, **kwargs):
+        """
+        Job function for update identification database tables.
+
+        :param callback_code: callback function identifier
+        :param kwargs: settings dictionary:
+            {
+                'uuid': user identifier string,
+                'database': database identifier,
+                'hash_settings':
+                {
+                    'database_type': database type,
+                    'hash_config_path': identification hash settings files path,
+                    'settings': default identification hash settings dictionary
+                },
+                'cluster_id': cluster identifier,
+                'data_settings':
+                {
+                    'temp_image_path': temporary data path,
+                    'userID': user identifier string,
+                    'algoID': algorithm identifier string,
+                    'probe_id': probe identifier string,
+                    'ai_code': AI code string,
+                    'save': list of saved keys,
+                    'try_type': try type string
+                },
+                'template': descriptor list
+            }
+        """
         UpdateDataStructureProcess._job_logger_info(UPDATE_DATA_STRUCTURE_PROCESS_CLASS_NAME, **kwargs)
         redis_store = kwargs['database']
         settings = kwargs['hash_settings']['settings'].copy()

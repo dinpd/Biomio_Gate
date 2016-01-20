@@ -1,5 +1,5 @@
-from biomio.algorithms.logger import logger
 from biomio.mysql_storage.mysql_data_store_interface import MySQLDataStoreInterface
+from biomio.algorithms.logger import logger
 
 
 def select_records_by_ids(table_class_name, object_ids, flat_result=False):

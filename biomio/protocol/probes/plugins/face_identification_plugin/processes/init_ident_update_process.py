@@ -1,9 +1,9 @@
-from biomio.algorithms.interfaces import AlgorithmProcessInterface, logger
-from biomio.algorithms.recognition.processes.defs import STATUS_RESULT, STATUS_ERROR
 from biomio.algorithms.recognition.processes.handling import save_temp_data, load_temp_data
+from biomio.algorithms.recognition.processes.defs import STATUS_RESULT, STATUS_ERROR
 from biomio.algorithms.datastructs import wNearPyHash, DEFAULT_NEAR_PY_HASH_SETTINGS
 from biomio.algorithms.recognition.processes.messages import create_result_message
 from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
+from biomio.algorithms.interfaces import AlgorithmProcessInterface, logger
 from biomio.constants import REDIS_DO_NOT_STORE_RESULT_KEY
 from defs import get_plugin_dir
 
@@ -24,6 +24,19 @@ class InitIdentificationUpdateProcess(AlgorithmProcessInterface):
         self._update_data_process = process
 
     def handler(self, result):
+        """
+        Callback function for corresponding job function.
+
+        :param result: data result dictionary:
+            {
+                'status': 'result',
+                'data':
+                {
+                    'data_file': data file path
+                },
+                'type': 'update_hash'
+            }
+        """
         self._handler_logger_info(result)
         if result is not None:
             if result['status'] == STATUS_ERROR:
@@ -49,6 +62,30 @@ class InitIdentificationUpdateProcess(AlgorithmProcessInterface):
 
     @staticmethod
     def job(callback_code, **kwargs):
+        """
+        Job function for preparing data to update the identification hash.
+
+        :param callback_code: callback function identifier
+        :param kwargs: settings dictionary:
+            {
+                'algoID': algorithm identifier string,
+                'userID': user identifier string,
+                'general_data':
+                {
+                    'ai_code': AI code string,
+                    'data_path': image data path,
+                    'probe_id': probe identifier string,
+                    'try_type': try type string
+                },
+                'temp_data_path': temporary data path,
+                'ended': matching ending status,
+                'clusters_list': list of optional keys,
+                <optional key>: descriptor list,
+                <optional key>: descriptor list,
+                ...
+                <optional key>: descriptor list
+            }
+        """
         InitIdentificationUpdateProcess._job_logger_info(INIT_IDENTIFICATION_UPDATE_PROCESS_CLASS_NAME, **kwargs)
         record = InitIdentificationUpdateProcess.process(**kwargs)
         AlgorithmsDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
