@@ -85,7 +85,30 @@ class MySQLDataStore:
             delete_object.delete()
 
     @pny.db_session
-    def select_data_by_ids(self, module_name, table_name, object_ids):
+    def delete_multiple_data(self, module_name, table_name, object_ids):
+        table_class = self.get_table_class(module_name, table_name)
+        database.execute("DELETE FROM %s WHERE %s IN %s" % (table_class.get_table_name(),
+                                                            table_class.get_unique_search_attribute(),
+                                                            "('%s')" % "','".join(object_ids)))
+
+    @pny.db_session
+    def create_multiple_records(self, module_name, table_name, values, update=False):
+        table_class = self.get_table_class(module_name, table_name)
+        table_fields = table_class.get_create_update_attr()
+        query_values = ','.join(str(value) for value in values)
+        create_query = 'INSERT INTO %s (%s) VALUES %s' % (table_class.get_table_name(),
+                                                          ','.join(table_fields),
+                                                          query_values)
+        if update:
+            update_query_part = ' ON DUPLICATE KEY UPDATE %s'
+            values_set_list = []
+            for field in table_fields:
+                values_set_list.append('%s=VALUES(%s)' % (field, field))
+            create_query += update_query_part % ','.join(values_set_list)
+        database.execute(create_query)
+
+    @pny.db_session
+    def select_data_by_ids(self, module_name, table_name, object_ids, flat_result=False):
         table_class = self.get_table_class(module_name, table_name)
         objects = table_class.select_by_sql("SELECT * FROM %s WHERE %s IN %s" %
                                             (table_class.get_table_name(),
@@ -98,6 +121,14 @@ class MySQLDataStore:
             else:
                 obj_dict = obj.to_dict()
             result.update({getattr(obj, obj.get_unique_search_attribute()): obj_dict})
+        if not flat_result:
+            for obj in objects:
+                result.update({getattr(obj, obj.get_unique_search_attribute()): obj.to_dict()})
+        else:
+            results = []
+            for obj in objects:
+                results.append(obj.to_dict())
+            result.update({'records': results})
         return result
 
     @pny.db_session

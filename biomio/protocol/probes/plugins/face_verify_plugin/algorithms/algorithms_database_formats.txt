@@ -1,0 +1,145 @@
+###################################################################
+##############      Database Format Description      ##############
+##############---------------------------------------##############
+##### Algorithm:  ID 001001
+##### Clustering Matching Verification algorithm
+#####                          without Template Creation
+    database = dict() with following structure:
+	{
+		"threshold": <threshold_value>,
+		"data": 
+		{
+			"<image>": 
+			{
+				"<cluster>": 
+				{
+					"<number>": <descriptor>,
+					"<number>": <descriptor>,
+					...
+					"<number>": <descriptor>
+				},
+				...
+				"<cluster>": 
+				{
+					"<number>": <descriptor>,
+					"<number>": <descriptor>,
+					...
+					"<number>": <descriptor>
+				}
+			},
+			...
+			"<image>": 
+			{
+				"<cluster>": 
+				{
+					"<number>": <descriptor>,
+					"<number>": <descriptor>,
+					...
+					"<number>": <descriptor>
+				},
+				...
+				"<cluster>": 
+				{
+					"<number>": <descriptor>,
+					"<number>": <descriptor>,
+					...
+					"<number>": <descriptor>
+				}
+			}
+		}
+	}
+	
+	where
+		<threshold_value>	- value of dynamic threshold
+		<image>				- number of source image
+        <cluster>			- number of cluster (order is important)
+        <number>			- number of descriptor in cluster
+        <descriptor>		- descriptor as list of values
+##############---------------------------------------##############
+##### Algorithm:  ID 001002
+##### Clustering Matching Verification algorithm
+#####                          with creating L0-layer template
+	database = dict() with following structure:
+	{
+		"threshold": <threshold_value>,
+		"data": 
+		{
+			"<cluster>": 
+			{
+				"<number>": <descriptor>,
+				"<number>": <descriptor>,
+				...
+				"<number>": <descriptor>
+			},
+			...
+			"<cluster>": 
+			{
+				"<number>": <descriptor>,
+				"<number>": <descriptor>,
+				...
+				"<number>": <descriptor>}
+		}
+	}
+	
+	where
+		<threshold_value>	- value of dynamic threshold
+		<cluster>			- number of cluster (order is important)
+		<number>			- number of descriptor in cluster
+		<descriptor>		- descriptor as list of values
+##############---------------------------------------##############
+##### Algorithm:  ID 001003
+##### Clustering Matching Verification algorithm
+#####                        with creating L1-layer template
+	database = dict() with following structure:
+	{
+		"threshold": <threshold_value>,
+		"data": 
+		{
+			"<cluster>": 
+			{
+				"<number>": 
+				{
+					"count": <count>,
+					"descriptor": <descriptor>
+				},
+				"<number>": 
+				{
+					"count": <count>,
+					"descriptor": <descriptor>
+				},
+				...
+				"<number>": 
+				{
+					"count": <count>,
+					"descriptor": <descriptor>
+				}
+			},
+			...
+			"<cluster>": 
+			{
+				"<number>": 
+				{
+					"count": <count>,
+					"descriptor": <descriptor>
+				},
+				"<number>": 
+				{
+					"count": <count>,
+					"descriptor": <descriptor>
+				},
+				...
+				"<number>": 
+				{
+					"count": <count>,
+					"descriptor": <descriptor>
+				}
+			}
+		}
+	}
+	
+	where
+		<threshold_value>	- value of dynamic threshold
+		<cluster>			- number of cluster (order is important)
+		<number>			- number of descriptor in cluster
+		<count>				- number of coincidences of the descriptor
+		<descriptor>		- descriptor as list of values

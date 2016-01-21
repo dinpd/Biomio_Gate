@@ -229,7 +229,7 @@ class AppAuthConnection:
                     self._connection_manager.remove_active_app(app_id, self._app_id)
             if self.is_probe_owner():
                 self._connection_manager.delete_active_apps_list(self._app_id)
-            if self.is_probe_owner() and self._app_key:
+            if self.is_probe_owner():
                 self.remove_extension_keys_that_are_not_connected()
 
         return _disconnect_apps

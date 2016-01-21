@@ -1,13 +1,13 @@
 [Core]
-Name = face-photo
-Module = face_photo_plugin
+Name = face-verify
+Module = face_verify_plugin
 
 [Documentation]
-Description = This is Face recognition plugin.
+Description = This is Face Verification Plugin.
 Version = 1.0
 enabled = True
 auth_config = {"resources":{"rType":"front-cam", "resolutions":["1280x720","640x480"],"rProperties":"flash"},"cer":0,"samples":{"training":5,"verification":1}}
-auth_type = "facep"
+auth_type = "face"
 algo_id = "001022"
 max_training_attempts = 3
 max_verification_attempts = 5
