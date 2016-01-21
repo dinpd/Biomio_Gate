@@ -1,11 +1,11 @@
 from biomio.algorithms.recognition.processes.handling import save_temp_data, load_temp_data
+from biomio.protocol.probes.plugins.face_identification_plugin.defs import get_plugin_dir
 from biomio.algorithms.recognition.processes.defs import STATUS_RESULT, STATUS_ERROR
 from biomio.algorithms.datastructs import wNearPyHash, DEFAULT_NEAR_PY_HASH_SETTINGS
 from biomio.algorithms.recognition.processes.messages import create_result_message
 from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
 from biomio.algorithms.interfaces import AlgorithmProcessInterface, logger
 from biomio.constants import REDIS_DO_NOT_STORE_RESULT_KEY
-from defs import get_plugin_dir
 
 INIT_IDENTIFICATION_UPDATE_PROCESS_CLASS_NAME = "InitIdentificationUpdateProcess"
 

@@ -58,7 +58,7 @@ class TrainingStartProcess(AlgorithmProcessInterface):
         :param callback_code: callback function identifier
         :param kwargs: settings dictionary:
             {
-                'images': image byte list,
+                'images': image byte arrays list,
                 'ai_code': AI code string,
                 'try_type': try type string,
                 'probe_id': probe identifier string,

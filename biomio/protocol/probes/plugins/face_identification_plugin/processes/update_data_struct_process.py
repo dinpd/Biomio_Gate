@@ -1,3 +1,4 @@
+from biomio.protocol.probes.plugins.face_identification_plugin.defs import HASH_SETTINGS_FILE
 from biomio.protocol.probes.plugins.face_identification_plugin.algo_hash_redis_store import \
     AlgorithmsHashRedisStackStore
 from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
@@ -5,7 +6,6 @@ from biomio.algorithms.interfaces import AlgorithmProcessInterface, logger
 from biomio.algorithms.datastructs import get_data_structure
 from biomio.constants import REDIS_DO_NOT_STORE_RESULT_KEY
 from biomio.algorithms.tools import load_json, save_json
-from defs import HASH_SETTINGS_FILE
 import os
 
 UPDATE_DATA_STRUCTURE_PROCESS_CLASS_NAME = "UpdateDataStructureProcess"

@@ -52,6 +52,24 @@ class IdentificationPAInterface(AlgorithmInterface):
         worker.run_job(result_identification_job, callback=self._callback, **result)
 
     def training(self, callback=None, **kwargs):
+        """
+          Method for training identification hashes and verification
+        database using input images.
+
+        :param callback: callback function object
+        :param kwargs: settings dictionary:
+            {
+                'images': image byte arrays list,
+                'ai_code': AI code string,
+                'probe_id': probe identifier string,
+                'try_type': try type string,
+                'settings':
+                {
+                    'userID': user identifier string,
+                    'algoID': algorithm identifier string
+                }
+            }
+        """
         self._result_count = 0
         self._store_results = []
         mode = kwargs.get("mode", TRAINING_FULL)
