@@ -1,9 +1,8 @@
-from __future__ import absolute_import
 from biomio.protocol.probes.plugins.face_photo_plugin.algorithms.face.clusters_keypoints import ClustersMatchingDetector
 from biomio.algorithms.cvtools.types import listToNumpy_ndarray, numpy_ndarrayToList
 from biomio.algorithms.recognition.estimation import ClusterDBEstimation
 from biomio.algorithms.recognition.keypoints import verifying
-import logger
+from biomio.algorithms.logger import logger
 
 
 class ClustersDBMatchingDetector(ClustersMatchingDetector):
@@ -17,7 +16,7 @@ class ClustersDBMatchingDetector(ClustersMatchingDetector):
 
     def importSources(self, source):
         self._etalon = []
-        logger.algo_logger.debug("Database loading started...")
+        logger.debug("Database loading started...")
         self.importSources_Database(source.get('data', dict()))
         self._prob = source.get('threshold', 100)
         logger.algo_logger.debug("Database loading finished.")
