@@ -1,5 +1,6 @@
 from __future__ import absolute_import
-from biomio.protocol.probes.plugins.face_photo_plugin.algorithms.face.clusters_keypoints import ClustersMatchingDetector
+from biomio.protocol.probes.plugins.face_verify_plugin.algorithms.face.clusters_keypoints import \
+    ClustersMatchingDetector
 from biomio.algorithms.cvtools.types import listToNumpy_ndarray, numpy_ndarrayToList
 from biomio.algorithms.recognition.estimation import ClusterDBEstimation
 from biomio.algorithms.recognition.keypoints import verifying

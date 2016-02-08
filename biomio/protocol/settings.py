@@ -43,6 +43,7 @@ define('host', default='127.0.0.1')
 define('session_ttl', default=DEFAULT_SESSION_TTL, help='Number of seconds in which session expires.')
 define('redis_port', default=DEFAULT_REDIS_PORT, help='Redis port')
 define('redis_lru_port', default=DEFAULT_REDIS_LRU_PORT, help='Redis LRU port')
+define('redis_ihr_port', default=[DEFAULT_REDIS_LRU_PORT], help='Redis IHR ports')
 define('redis_host', default=DEFAULT_REDIS_HOST, help='Redis host address')
 define('bioauth_timeout', default=DEFAULT_BIOAUTH_TIMEOUT, help='Biometric authentication timeout')
 

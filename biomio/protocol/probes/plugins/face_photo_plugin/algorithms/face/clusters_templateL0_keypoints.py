@@ -1,10 +1,8 @@
 from __future__ import absolute_import
 from biomio.protocol.probes.plugins.face_photo_plugin.algorithms.face.clusters_keypoints import ClustersMatchingDetector
-from biomio.algorithms.algorithms.cvtools.types import listToNumpy_ndarray, numpy_ndarrayToList
-from biomio.algorithms.algorithms.features import matcherForDetector, dtypeForDetector
-from biomio.algorithms.algorithms.recognition.keypoints import verifying
-from biomio.algorithms.algorithms.features.matchers import Matcher
-import itertools
+from biomio.algorithms.cvtools.types import listToNumpy_ndarray, numpy_ndarrayToList
+from biomio.algorithms.recognition.estimation import ClusterL0Estimation
+from biomio.algorithms.recognition.keypoints import verifying
 import logger
 import sys
 
@@ -23,31 +21,8 @@ class ClustersTemplateL0MatchingDetector(ClustersMatchingDetector):
         self.update_hash_templateL0(data)
 
     def update_hash_templateL0(self, data):
-        knn = 3
-        if len(self._etalon) == 0:
-            self._etalon = data['clusters']
-        else:
-            matcher = Matcher(matcherForDetector(self.kodsettings.detector_type))
-            for index, et_cluster in enumerate(self._etalon):
-                dt_cluster = data['clusters'][index]
-                if et_cluster is None or len(et_cluster) == 0 or len(et_cluster) < knn:
-                    self._etalon[index] = et_cluster
-                elif dt_cluster is None or len(dt_cluster) == 0 or len(dt_cluster) < knn:
-                    self._etalon[index] = et_cluster
-                else:
-                    dtype = dtypeForDetector(self.kodsettings.detector_type)
-                    matches1 = matcher.knnMatch(listToNumpy_ndarray(et_cluster, dtype),
-                                                listToNumpy_ndarray(dt_cluster, dtype), k=knn)
-                    matches2 = matcher.knnMatch(listToNumpy_ndarray(dt_cluster, dtype),
-                                                listToNumpy_ndarray(et_cluster, dtype), k=knn)
-                    good = list(itertools.chain.from_iterable(itertools.imap(
-                        lambda(x, _): (et_cluster[x.queryIdx], dt_cluster[x.trainIdx]), itertools.ifilter(
-                            lambda(m, n): m.queryIdx == n.trainIdx and m.trainIdx == n.queryIdx, itertools.product(
-                                itertools.chain(*matches1), itertools.chain(*matches2)
-                            )
-                        )
-                    )))
-                    self._etalon[index] = listToNumpy_ndarray(good)
+        estimation = ClusterL0Estimation(self.kodsettings.detector_type, 3)
+        self._etalon = estimation.estimate_training(data['clusters'], self._etalon)
 
     def update_database(self):
         try:
@@ -104,43 +79,6 @@ class ClustersTemplateL0MatchingDetector(ClustersMatchingDetector):
         return self.verify_template_L0(data)
 
     def verify_template_L0(self, data):
-        knn = 2
-        matcher = Matcher(matcherForDetector(self.kodsettings.detector_type))
-        prob = 0
+        estimation = ClusterL0Estimation(self.kodsettings.detector_type, 2)
         logger.algo_logger.debug("Image: " + data['path'])
-        logger.algo_logger.debug("Template size: ")
-        summ = sum(itertools.imap(lambda x: len(x) if x is not None else 0, self._etalon))
-        for index, et_cluster in enumerate(self._etalon):
-            dt_cluster = data['clusters'][index]
-            if et_cluster is None or len(et_cluster) < knn:
-                logger.algo_logger.debug("Cluster #" + str(index + 1) + ": " + str(-1)
-                                         + " Invalid. (Weight: 0)")
-                continue
-            if dt_cluster is None or len(dt_cluster) < knn:
-                logger.algo_logger.debug("Cluster #" + str(index + 1) + ": " + str(len(self._etalon[index]))
-                                         + " Positive: 0 Probability: 0 (Weight: " +
-                                         str(len(et_cluster) / (1.0 * summ)) + ")")
-                continue
-            if len(et_cluster) > 0 and len(dt_cluster) > 0:
-                dtype = dtypeForDetector(self.kodsettings.detector_type)
-                matches1 = matcher.knnMatch(listToNumpy_ndarray(et_cluster, dtype),
-                                            listToNumpy_ndarray(dt_cluster, dtype), k=knn)
-                matches2 = matcher.knnMatch(listToNumpy_ndarray(dt_cluster, dtype),
-                                            listToNumpy_ndarray(et_cluster, dtype), k=knn)
-                ms = [
-                    x for (x, _) in itertools.ifilter(
-                        lambda(m, n): m.queryIdx == n.trainIdx and m.trainIdx == n.queryIdx, itertools.product(
-                            itertools.chain(*matches1), itertools.chain(*matches2)
-                        )
-                    )
-                ]
-                val = (len(ms) / (1.0 * len(et_cluster))) * 100
-                logger.algo_logger.debug("Cluster #" + str(index + 1) + ": " + str(len(et_cluster))
-                                         + " Positive: " + str(len(ms)) + " Probability: " + str(val) +
-                                         " (Weight: " + str(len(et_cluster) / (1.0 * summ)) + ")")
-                prob += (len(et_cluster) / (1.0 * summ)) * val
-            else:
-                logger.algo_logger.debug("Cluster #" + str(index + 1) + ": " + str(len(et_cluster))
-                                         + " Invalid.")
-        logger.algo_logger.debug("Probability: " + str(prob))
-        return prob
+        return estimation.estimate_verification(data['clusters'], self._etalon)

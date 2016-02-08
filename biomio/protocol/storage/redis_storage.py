@@ -9,10 +9,13 @@ from biomio.protocol.settings import settings
 class RedisStorage:
     _lru_instance = None
     _persistence_instance = None
+    _ihr_instance = None
     _lock = Lock()
 
-    def __init__(self, lru_instance=True):
-        if lru_instance:
+    def __init__(self, lru_instance=True, ihr_instance=False, ihr_number=-1):
+        if ihr_instance:
+            self._redis = StrictRedis(host=settings.redis_host, port=settings.redis_ihr_port[ihr_number])
+        elif lru_instance:
             self._redis = StrictRedis(host=settings.redis_host, port=settings.redis_lru_port)
             self._configure_redis_instance()
         else:
@@ -53,6 +56,18 @@ class RedisStorage:
             if cls._persistence_instance is None:
                 cls._persistence_instance = RedisStorage(lru_instance=False)
         return cls._persistence_instance
+
+    @classmethod
+    def ihr_instance(cls, number):
+        """
+            Returns current RedisStorage instance for identification hash.
+            If it doesn't exist creates new one.
+        :return: RedisStorage identification hash instance.
+        """
+        with cls._lock:
+            if cls._ihr_instance is None:
+                cls._ihr_instance = RedisStorage(ihr_instance=True, ihr_number=number)
+        return cls._ihr_instance
 
     def store_data(self, key, ex=None, **kwargs):
         """

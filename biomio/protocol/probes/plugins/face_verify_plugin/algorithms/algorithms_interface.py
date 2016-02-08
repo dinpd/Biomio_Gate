@@ -4,7 +4,7 @@ import os
 
 import logger
 from biomio.algorithms.imgobj import loadImageObject
-from biomio.protocol.probes.plugins.face_photo_plugin.algorithms.face import (
+from biomio.protocol.probes.plugins.face_verify_plugin.algorithms.face import (
     getClustersMatchingDetectorWithoutTemplate,
     getClustersMatchingDetectorWithL0Template,
     getClustersMatchingDetectorWithL1Template
