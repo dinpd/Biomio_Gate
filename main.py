@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import ast
 import json
 import ssl
 
@@ -19,6 +20,7 @@ from biomio.protocol.connectionhandler import ConnectionTimeoutHandler
 from biomio.protocol.rpc.bioauthflow import BioauthFlow
 
 import logging
+from biomio.protocol.storage.redis_storage import RedisStorage
 from biomio.tries_simulator.tries_simulator_manager import TriesSimulatorManager
 from biomio.worker.worker_interface import WorkerInterface
 
@@ -99,7 +101,7 @@ class TryRequestsSimulator(tornado.web.RequestHandler):
         if len(simulator_html):
             if not len(active_devices_list):
                 active_devices_list = self._simulator_option_value % ('No active devices', 'No active devices')
-            simulator_html = simulator_html.format(active_devices_list=active_devices_list)
+            simulator_html = simulator_html % active_devices_list
         self.write(simulator_html)
 
     def post(self, *args, **kwargs):
@@ -113,6 +115,8 @@ class TryRequestsSimulator(tornado.web.RequestHandler):
         request_body = request_body.split('&')
         for request_param in request_body:
             param_attrs = request_param.split('=')
+            if 'skip_' in param_attrs[0]:
+                continue
             try_param = try_data.get(param_attrs[0])
             if isinstance(try_param, list):
                 try_param.append(param_attrs[1])
@@ -122,6 +126,27 @@ class TryRequestsSimulator(tornado.web.RequestHandler):
         if try_data.get('app_id') != 'No active devices':
             TriesSimulatorManager.instance().send_try_request(**try_data)
         self.get(*args, **kwargs)
+
+
+class SetRecognitionType(tornado.web.RequestHandler):
+    app_rec_type_key = 'apP_rec_Type:%s'
+
+    def get(self, *args, **kwargs):
+        app_id = self.get_query_argument('app_id')
+        rec_type_data = RedisStorage.persistence_instance().get_data(key=self.app_rec_type_key % app_id)
+        response_data = dict(verification=True)
+        if rec_type_data is not None:
+            rec_type_data = ast.literal_eval(rec_type_data)
+            if rec_type_data.get('rec_type', 'verification') != 'verification':
+                response_data.update({'verification': False})
+
+        self.write(json.dumps(response_data))
+
+    def post(self, *args, **kwargs):
+        request_body = json.loads(self.request.body)
+        app_id = request_body.get('selected_device')
+        rec_type = request_body.get('rec_type')
+        RedisStorage.persistence_instance().store_data(key=self.app_rec_type_key % app_id, rec_type=rec_type)
 
 
 class NewEmailPGPKeysHandler(tornado.web.RequestHandler):
@@ -193,7 +218,8 @@ class HttpApplication(tornado.web.Application):
             (r'/set_try_type/(?P<try_type>[\w\-]+)', SetTryTypeHandler),
             (r'/set_keypoints_coff/(?P<coff>\d+\.\d{2})', SetKeypointsCoffHandler),
             (r'/set_condition.*', SetUserCondition),
-            (r'/tries_simulator.*', TryRequestsSimulator)
+            (r'/tries_simulator.*', TryRequestsSimulator),
+            (r'/set_recognition_type.*', SetRecognitionType)
         ]
         tornado.web.Application.__init__(self, handlers)
 

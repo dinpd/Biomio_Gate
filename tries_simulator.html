@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Tries Simulator</title>
     <link rel="shortcut icon" href="https://biom.io/favicon.ico">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
 </head>
 <body style="text-align: center">
 <form action="" method="post">
@@ -14,9 +15,21 @@
         <tr>
             <td>Selected Device</td>
             <td>
-                <select name="app_id">
-                    {active_devices_list}
+                <select name="app_id" id="app_selector">
+                    %s
                 </select>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding-top: 20px;padding-bottom: 5px;" align="left"><b>Device Face Recognition Type</b></td>
+        </tr>
+        <tr>
+            <td>
+                <input id="verification_auth" type="radio" value="verification" name="skip_radio">Verification
+                <input id="identification_auth" type="radio" value="identification" checked name="skip_radio">Identification
+                <br>
+                <br>
+                <input type="button" value="Save" id="save_rec_btn">
             </td>
         </tr>
         <tr>
@@ -25,6 +38,7 @@
         <tr>
             <td>Face</td>
             <td><input name="auth_types" type="checkbox" value="face" checked></td>
+
         </tr>
         <tr>
             <td>Fingerprint</td>
@@ -64,4 +78,61 @@
     </div>
 </form>
 </body>
+<script>
+    $('#save_rec_btn').on('click', function (e) {
+        e.preventDefault();
+        var rec_type = $("input[type='radio'][name='skip_radio']:checked").val();
+        var selected_device = $('#app_selector').find(':selected').text();
+        if (selected_device == 'No active devices') {
+            alert('It is required to select device first.');
+            return;
+        }
+        var current_btn = $(e.currentTarget);
+        current_btn.attr('disabled', 'disabled');
+        current_btn.val('Working...');
+        $.ajax({
+            url: '/set_recognition_type/',
+            type: 'post',
+            data: {
+                rec_type: rec_type,
+                selected_device: selected_device
+            },
+            success: function () {
+                alert('Recognition type for device ' + selected_device + ' was successfully changed to ' + rec_type);
+                current_btn.val('Save');
+                current_btn.removeAttr('disabled');
+            },
+            error: function (error) {
+                alert(error.responseText);
+                current_btn.val('Save');
+                current_btn.removeAttr('disabled');
+            }
+        });
+    });
+    $(document).ready(function () {
+        var selected_device = $('#app_selector').find(':selected').text();
+        if (selected_device == 'No active devices') {
+            alert('It is required to select device first.');
+            return;
+        }
+        var verification_radio = $('#verification_auth');
+        var identification_radio = $('#identification_auth');
+        $.ajax({
+            url: '/set_recognition_type/?app_id=' + selected_device,
+            type: 'get',
+            success: function (data) {
+                if (data['verification_auth']) {
+                    identification_radio.removeAttr('checked');
+                    verification_radio.attr('checked', 'checked');
+                } else {
+                    verification_radio.removeAttr('checked');
+                    identification_radio.attr('checked', 'checked');
+                }
+            },
+            error: function (error) {
+                alert(error.responseText);
+            }
+        });
+    });
+</script>
 </html>
