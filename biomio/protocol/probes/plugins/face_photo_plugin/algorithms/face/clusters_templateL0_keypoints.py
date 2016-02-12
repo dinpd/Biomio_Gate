@@ -40,7 +40,7 @@ class ClustersTemplateL0MatchingDetector(ClustersMatchingDetector):
 
     def importSources(self, source):
         logger.debug("Database loading started...")
-        self._etalon = self.importSources_L0Template(source.get('data', dict()))
+        self._etalon = SelfGraphEstimation.importDatabase(source.get('data', dict()))
         self._prob = source.get('threshold', 100)
         logger.info('Dynamic threshold: %f' % self._prob)
         logger.debug("Database loading finished.")
@@ -48,26 +48,12 @@ class ClustersTemplateL0MatchingDetector(ClustersMatchingDetector):
     @staticmethod
     def load_database(source):
         return {
-            "template": ClustersTemplateL0MatchingDetector.importSources_L0Template(source.get('data', dict())),
+            "template": SelfGraphEstimation.importDatabase(source.get('data', dict())),
             "threshold": source.get('threshold', 100)
         }
 
-    @staticmethod
-    def importSources_L0Template(source):
-
-        def _values(d, key=None):
-            l = sorted(d, key=key)
-            for e in l:
-                yield d[e]
-
-        return [listToNumpy_ndarray(
-            [
-                listToNumpy_ndarray(descriptor) for descriptor in _values(cluster)
-            ]) for cluster in _values(source, key=int)
-        ]
-
     def exportSources(self):
-        data = self.exportSources_L0Template()
+        data = SelfGraphEstimation.exportDatabase(self._etalon)
         if len(data.keys()) > 0:
             return {
                 'data': data,
@@ -75,13 +61,6 @@ class ClustersTemplateL0MatchingDetector(ClustersMatchingDetector):
             }
         else:
             return {}
-
-    def exportSources_L0Template(self):
-        return {
-            str(index): {} if cluster is None else {
-                i: numpy_ndarrayToList(descriptor) for i, descriptor in enumerate(cluster)
-                } for index, cluster in enumerate(self._etalon)
-            }
 
     @verifying
     def verify(self, data):
