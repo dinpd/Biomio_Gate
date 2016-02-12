@@ -8,6 +8,7 @@ import tornado.httpserver
 import tornado.ioloop
 import tornado.gen
 import traceback
+from biomio.protocol.crypt import Crypto
 from biomio.protocol.data_stores.condition_data_store import ConditionDataStore
 from biomio.protocol.probes.probe_plugin_manager import ProbePluginManager
 from biomio.protocol.rpc.app_connection_manager import AppConnectionManager
@@ -75,6 +76,14 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
     def check_connected(self):
         return bool(self.ws_connection)
+
+
+class GenerateRSAKeys(tornado.web.RequestHandler):
+    def post(self, *args, **kwargs):
+        key, pub_key = Crypto.generate_keypair()
+        fingerprint = Crypto.get_public_rsa_fingerprint(pub_key)
+        # TODO: store key somewhere
+        self.write(json.dumps(dict(pub_key=pub_key, fingerprint=fingerprint)))
 
 
 class InitialProbeRestHandler(tornado.web.RequestHandler):
@@ -193,7 +202,8 @@ class HttpApplication(tornado.web.Application):
             (r'/set_try_type/(?P<try_type>[\w\-]+)', SetTryTypeHandler),
             (r'/set_keypoints_coff/(?P<coff>\d+\.\d{2})', SetKeypointsCoffHandler),
             (r'/set_condition.*', SetUserCondition),
-            (r'/tries_simulator.*', TryRequestsSimulator)
+            (r'/tries_simulator.*', TryRequestsSimulator),
+            (r'/generate_rsa_keys.*', GenerateRSAKeys)
         ]
         tornado.web.Application.__init__(self, handlers)
 
