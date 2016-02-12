@@ -26,8 +26,7 @@ class ProviderUserStore(BaseDataStore):
 
     @inherit_docstring_from(BaseDataStore)
     def get_data(self, provider_id, callback):
-        self._get_lru_data(key=self.get_data_key(provider_id), table_class_name=self._table_class_name,
-                           object_id=provider_id, callback=callback)
+        self.select_data_by_ids(object_ids=[provider_id], callback=callback, flat_result=True)
 
     @inherit_docstring_from(BaseDataStore)
     def store_data(self, object_id, **kwargs):
@@ -42,5 +41,6 @@ class ProviderUserStore(BaseDataStore):
         raise NotImplementedError
 
     @inherit_docstring_from(BaseDataStore)
-    def select_data_by_ids(self, object_ids, callback):
-        raise NotImplementedError
+    def select_data_by_ids(self, object_ids, callback, flat_result=False):
+        self._select_data_by_ids(table_class_name=self._table_class_name, object_ids=object_ids, callback=callback,
+                                 flat_result=flat_result)

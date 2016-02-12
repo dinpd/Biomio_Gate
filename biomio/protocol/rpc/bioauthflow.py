@@ -1,3 +1,4 @@
+import ast
 import base64
 import json
 import requests
@@ -6,6 +7,7 @@ from biomio.constants import TRAINING_CANCELED_STATUS, TRAINING_CANCELED_MESSAGE
 from biomio.protocol.data_stores.device_information_store import DeviceInformationStore
 from biomio.protocol.probes.probe_plugin_manager import ProbePluginManager
 from biomio.protocol.rpc.app_connection_listener import AppConnectionListener
+from biomio.protocol.storage.redis_storage import RedisStorage
 from biomio.third_party.fysom import Fysom, FysomError
 from biomio.protocol.storage.auth_state_storage import AuthStateStorage
 from biomio.protocol.rpc.app_auth_connection import AppAuthConnection
@@ -346,12 +348,17 @@ class BioauthFlow:
 
         auth_result = True
         max_retries = False
-
+        rec_type_data = RedisStorage.get_data(key='app_rec_type:%s' % self.app_id)
+        rec_type_data = {} if rec_type_data is None else ast.literal_eval(rec_type_data)
         for probe_type, samples_list in samples_by_probe_type.iteritems():
-            if self._app_user is not None:
-                new_probe_type = '%s_%s' % (probe_type, self._app_user)
-                if new_probe_type in ProbePluginManager.instance().get_available_auth_types():
-                    probe_type = new_probe_type
+            # if self._app_user is not None:
+            #     new_probe_type = '%s_%s' % (probe_type, self._app_user)
+            #     if new_probe_type in ProbePluginManager.instance().get_available_auth_types():
+            #         probe_type = new_probe_type
+            if rec_type_data.get('rec_type') is not None and probe_type == 'face':
+                rec_type = rec_type_data.get('rec_type')
+                if rec_type != 'verification':
+                    probe_type = 'facei'
             data = dict(samples=samples_list, probe_id=self.app_id)
             result = yield tornado.gen.Task(
                 ProbePluginManager.instance().get_plugin_by_auth_type(probe_type).run_verification, data)
@@ -383,7 +390,13 @@ class BioauthFlow:
             ai_code = self.auth_connection.get_data(key=_PROBESTORE_AI_CODE_KEY)
             training_result = False
             error = None
+            rec_type_data = RedisStorage.get_data(key='app_rec_type:%s' % self.app_id)
+            rec_type_data = {} if rec_type_data is None else ast.literal_eval(rec_type_data)
             for probe_type, samples in samples_by_probe_type.iteritems():
+                if rec_type_data.get('rec_type') is not None and probe_type == 'face':
+                    rec_type = rec_type_data.get('rec_type')
+                    if rec_type != 'verification':
+                        probe_type = 'facei'
                 data = dict(try_type=probe_type, ai_code=ai_code, samples=samples, probe_id=self.app_id)
                 result = yield tornado.gen.Task(
                     ProbePluginManager.instance().get_plugin_by_auth_type(probe_type).run_training, data)

@@ -129,7 +129,7 @@ class TryRequestsSimulator(tornado.web.RequestHandler):
 
 
 class SetRecognitionType(tornado.web.RequestHandler):
-    app_rec_type_key = 'apP_rec_Type:%s'
+    app_rec_type_key = 'app_rec_type:%s'
 
     def get(self, *args, **kwargs):
         app_id = self.get_query_argument('app_id')
