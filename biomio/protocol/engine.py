@@ -368,7 +368,8 @@ def probe_trying(e):
         resources = None
         current_resources = e.protocol_instance.available_resources
         if hasattr(e, 'current_resources'):
-            current_resources = e.current_resources
+            if e.current_resources is not None:
+                current_resources = e.current_resources
         app_users = e.protocol_instance.app_users
         if isinstance(app_users, list):
             app_users = app_users[0]
