@@ -6,7 +6,7 @@ from biomio.utils.biomio_decorators import inherit_docstring_from
 from biomio.protocol.storage.redis_storage import RedisStorage
 
 class FaceIdentificationPlugin(base_probe_plugin.BaseProbePlugin):
-    _settings = dict(algoID="001022", userID="0000000000000")
+    _settings = dict(algoID="001022")
     _algorithm = IdentificationPAInterface()
     _max_verification_attempts = 5
     _max_training_attempts = 3
@@ -38,6 +38,7 @@ class FaceIdentificationPlugin(base_probe_plugin.BaseProbePlugin):
         del data['samples']
         data.update({'images': normalized_images, 'settings': self._settings,
                      'hash_config_path': get_plugin_dir("settings")})
+        data['settings']['providerID'] = '14'
         redis_instance = RedisStorage.persistence_instance()
         retries_key = REDIS_VERIFICATION_RETIES_COUNT_KEY % data['probe_id']
         if not redis_instance.exists(retries_key):

@@ -5,7 +5,6 @@ from biomio.protocol.probes.plugins.face_identification_plugin.algo_hash_redis_s
     AlgorithmsHashRedisStackStore
 from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
 from biomio.algorithms.recognition.processes.defs import INTERNAL_TRAINING_ERROR
-# from biomio.protocol.data_stores.provider_user_store import ProviderUserStore
 from biomio.algorithms.interfaces import AlgorithmProcessInterface
 from biomio.algorithms.datastructs import get_data_structure
 from biomio.algorithms.tools import load_json, save_json
@@ -53,7 +52,6 @@ class LoadIdentificationHashProcess(AlgorithmProcessInterface):
 
     @staticmethod
     def process(**kwargs):
-        LoadIdentificationHashProcess._process_logger_info(LOAD_IDENTIFICATION_HASH_PROCESS_CLASS_NAME, **kwargs)
         """
 
         :param kwargs:
@@ -65,6 +63,7 @@ class LoadIdentificationHashProcess(AlgorithmProcessInterface):
                 <key>: <value>, where <key> - ID of database,
                                       <value> - number of candidates for this database
         """
+        LoadIdentificationHashProcess._process_logger_info(LOAD_IDENTIFICATION_HASH_PROCESS_CLASS_NAME, **kwargs)
         cluster = kwargs['cluster']
         db = {
             "cluster_size": len(cluster),
@@ -73,7 +72,7 @@ class LoadIdentificationHashProcess(AlgorithmProcessInterface):
             "candidates_score": {}
         }
         redis_store = kwargs['database']
-        user_ids = ProviderUserStore.instance().get_data(kwargs['providerID'])
+        user_ids = kwargs['users']
         settings = kwargs['hash_settings']['settings']
         settings_path = os.path.join(kwargs['hash_settings']['hash_config_path'],
                                      HASH_SETTINGS_FILE % kwargs['cluster_id'])
@@ -94,9 +93,7 @@ class LoadIdentificationHashProcess(AlgorithmProcessInterface):
             buckets = database_store.neighbours(desc)
             db["candidates_size"] += len(buckets)
             for item in buckets:
-                lcount = db["candidates_score"].get(item[1], 0)
-                lcount += 1
-                db["candidates_score"][item[1]] = lcount
+                db["candidates_score"][item[1]] = db["candidates_score"].get(item[1], 0) + 1
         return db
 
     def run(self, worker, kwargs_list_for_results_gatherer=None, **kwargs):
