@@ -72,6 +72,8 @@ class PolicyEngineManager:
                 auth_types = condition_data.get(ConditionDataStore.AUTH_TYPES_ATTR)
                 policy.update({ConditionDataStore.CONDITION_ATTR: condition_data.get(ConditionDataStore.CONDITION_ATTR)})
         for auth_type in auth_types:
+            if auth_type == 'face_identification':
+                continue
             plugin_config = self._plugin_manager.get_plugin_auth_config(auth_type=auth_type)
             r_resource = self._plugin_manager.get_plugin_by_auth_type(auth_type=auth_type).check_resources(
                 resources=device_resources, plugin_auth_config=plugin_config, training=training)
