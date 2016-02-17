@@ -22,14 +22,14 @@ class IdentificationRunProcess(AlgorithmProcessInterface):
     def handler(self, result):
         self._handler_logger_info(result)
         data = load_temp_data(result['data_file'], remove=True)
-        logger.debug(data)
         test_size = 0
         settings = {
             "hash_settings": {
                 "database_type": wNearPyHash.type(),
                 "settings": DEFAULT_NEAR_PY_HASH_SETTINGS,
                 "hash_config_path": data['general_data']['hash_config_path']
-            }
+            },
+            "users": result['users']
         }
         jobs_list = []
         for inx, cluster in data['clusters'].iteritems():

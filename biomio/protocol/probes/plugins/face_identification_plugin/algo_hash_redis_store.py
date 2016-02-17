@@ -28,28 +28,31 @@ class AlgorithmsHashRedisStackStore:
                 cls._instance = AlgorithmsHashRedisStackStore(redis_id)
         return cls._instance
 
-    def store_vectors(self, hash_data_list, data, callback):
+    def store_vectors(self, hash_data_list, data, data_id=None, callback=None):
         user_hash_data = []
         local_buckets_list = []
         hash_keys_data = {}
+        ext_data_key = str(data)
+        if data_id is not None:
+            ext_data_key += ':' + str(data_id)
         for hash_name, hash_buckets in hash_data_list:
             for key, value in hash_buckets:
                 bucket_key = HASH_BUCKET_KEY_FORMAT % (hash_name, key)
                 if not local_buckets_list.__contains__(bucket_key):
                     local_buckets_list.append(bucket_key)
-                    user_hash_data.append((str(data), str(bucket_key)))
+                    user_hash_data.append((ext_data_key, str(bucket_key)))
                 values = hash_keys_data.get(str(bucket_key), [])
                 values.append((value, str(data)))
                 hash_keys_data[str(bucket_key)] = values
 
-        user_records = select_records_by_ids(self._user_hash_table_name, [str(data)], True)
+        user_records = select_records_by_ids(self._user_hash_table_name, [ext_data_key], True)
         if len(user_records['records']) > 0:
             loaded_buckets = []
             for record in user_records['records']:
                 if not loaded_buckets.__contains__(str(record['bucket_key'])):
                     loaded_buckets.append(str(record['bucket_key']))
             hash_buckets = select_records_by_ids(self._hash_data_table_name, loaded_buckets)
-            delete_data(self._user_hash_table_name, [str(data)])
+            delete_data(self._user_hash_table_name, [ext_data_key])
             for key, value in hash_buckets.iteritems():
                 hash_data = deserialize(value['hash_data'])
                 hash_buckets[key] = [v for v in hash_data if v[1] != str(data)]
@@ -105,8 +108,8 @@ class AlgorithmsHashRedisStackStore:
             return ""
 
     def get_bucket(self, hash_name, bucket_key):
-        bucket_key = HASH_BUCKET_KEY_FORMAT % (hash_name, bucket_key)
-        data = self._ihr_redis.get_data(bucket_key)
+        redis_key = HASH_BUCKET_KEY_FORMAT % (hash_name, bucket_key)
+        data = self._ihr_redis.get_data(redis_key)
         if data is not None:
             data = ast.literal_eval(data)
             return data['data']
