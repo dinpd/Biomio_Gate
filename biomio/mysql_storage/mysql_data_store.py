@@ -115,19 +115,21 @@ class MySQLDataStore:
                                              table_class.get_unique_search_attribute(),
                                              "('%s')" % "','".join(object_ids)))
         result = {}
-        for obj in objects:
-            if hasattr(obj, 'date_created'):
-                obj_dict = obj.to_dict(exclude='date_created')
-            else:
-                obj_dict = obj.to_dict()
-            result.update({getattr(obj, obj.get_unique_search_attribute()): obj_dict})
         if not flat_result:
             for obj in objects:
-                result.update({getattr(obj, obj.get_unique_search_attribute()): obj.to_dict()})
+                if hasattr(obj, 'date_created'):
+                    obj_dict = obj.to_dict(exclude='date_created')
+                else:
+                    obj_dict = obj.to_dict()
+                result.update({getattr(obj, obj.get_unique_search_attribute()): obj_dict})
         else:
             results = []
             for obj in objects:
-                results.append(obj.to_dict())
+                if hasattr(obj, 'date_created'):
+                    obj_dict = obj.to_dict(exclude='date_created')
+                else:
+                    obj_dict = obj.to_dict()
+                results.append(obj_dict)
             result.update({'records': results})
         return result
 
