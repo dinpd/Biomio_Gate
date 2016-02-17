@@ -23,7 +23,10 @@ class LoadUsersByProviderProcess(AlgorithmProcessInterface):
         if result is not None:
             ident_data = AlgorithmsDataStore.instance().get_data(self._data_redis_key)
             AlgorithmsDataStore.instance().delete_data(self._data_redis_key)
-            ident_data.update({'users': result})
+            users_list = []
+            for record in result['records']:
+                users_list.append(str(record['user_id']))
+            ident_data.update({'users': users_list})
             self._ident_run_process.run(self._worker, **ident_data)
 
     @staticmethod
