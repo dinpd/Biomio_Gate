@@ -1,5 +1,6 @@
 from biomio.constants import MYSQL_IDENTIFICATION_HASH_DATA_TABLE_NAME, MYSQL_IDENTIFICATION_USER_HASH_TABLE_NAME
 from database_actions import delete_data, create_records, select_records_by_ids
+from biomio.algorithms.cvtools.types import numpy_ndarrayToList
 from biomio.protocol.storage.redis_storage import RedisStorage
 from biomio.worker.worker_interface import WorkerInterface
 from defs import serialize, deserialize
@@ -44,7 +45,7 @@ class AlgorithmsHashRedisStackStore:
                     local_buckets_list.append(bucket_key)
                     user_hash_data.append((ext_data_key, str(bucket_key)))
                 values = hash_keys_data.get(str(bucket_key), [])
-                values.append((value, str(data)))
+                values.append((numpy_ndarrayToList(value), str(data)))
                 hash_keys_data[str(bucket_key)] = values
 
         user_records = select_records_by_ids(self._user_hash_table_name, [ext_data_key], True)
@@ -57,6 +58,8 @@ class AlgorithmsHashRedisStackStore:
             delete_data(self._user_hash_table_name, [ext_data_key])
             for key, value in hash_buckets.iteritems():
                 hash_data = deserialize(value['hash_data'])
+                logger.debug(hash_data)
+                logger.debug(type(hash_data))
                 hash_buckets[key] = [v for v in hash_data if v[1] != str(data)]
             for key, value in hash_keys_data.iteritems():
                 values = hash_buckets.get(key, [])
