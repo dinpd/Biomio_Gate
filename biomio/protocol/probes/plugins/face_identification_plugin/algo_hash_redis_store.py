@@ -118,6 +118,7 @@ class AlgorithmsHashRedisStackStore:
 
     def get_bucket(self, hash_name, bucket_key):
         redis_key = HASH_BUCKET_KEY_FORMAT % (hash_name, bucket_key)
+        logger.debug(redis_key)
         data = self._ihr_redis.get_data(redis_key)
         logger.debug(data)
         if data is not None:
