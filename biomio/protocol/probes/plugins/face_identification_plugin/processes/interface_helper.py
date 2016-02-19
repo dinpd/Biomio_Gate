@@ -6,11 +6,11 @@ from biomio.constants import REDIS_PROBE_RESULT_KEY, REDIS_RESULTS_COUNTER_KEY, 
     TRAINING_FAILED_STATUS, TRAINING_FAILED_MESSAGE, TRAINING_MAX_RETRIES_STATUS, TRAINING_MAX_RETRIES_MESSAGE, \
     TRAINING_STARTED_STATUS, TRAINING_STARTED_MESSAGE, REDIS_DO_NOT_STORE_RESULT_KEY
 from biomio.mysql_storage.mysql_data_store_interface import MySQLDataStoreInterface
+from biomio.protocol.probes.plugins.face_identification_plugin.defs import APP_ROOT
 from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
-from biomio.protocol.probes.plugins.face_verify_plugin.defs import APP_ROOT
 from biomio.protocol.settings import settings as biomio_settings
+from biomio.algorithms.logger import logger
 from requests.exceptions import HTTPError
-from logger import worker_logger
 import requests
 import tempfile
 import binascii
@@ -27,24 +27,24 @@ def ai_response_sender(ai_code, ai_response_type):
     response = requests.post(register_biometrics_url)
     try:
         response.raise_for_status()
-        worker_logger.info('AI should now know that training change state with code - %s and response type - %s' %
-                           (ai_code, response_type))
+        logger.info('AI should now know that training change state with code - %s and response type - %s' %
+                    (ai_code, response_type))
     except HTTPError as e:
-        worker_logger.exception(e)
-        worker_logger.exception('Failed to tell AI that training change state, reason - %s' % response.reason)
+        logger.exception(e)
+        logger.exception('Failed to tell AI that training change state, reason - %s' % response.reason)
 
 
 def pre_training_helper(images, probe_id, settings, callback_code, try_type, ai_code):
-    worker_logger.info('Running training for user - %s, with given parameters - %s' % (settings.get('userID'),
-                                                                                       settings))
+    logger.info('Running training for user - %s, with given parameters - %s' % (settings.get('userID'),
+                                                                                settings))
     ai_response_type = dict()
     try:
-        worker_logger.info('Telling AI that we are starting training with code - %s' % ai_code)
+        logger.info('Telling AI that we are starting training with code - %s' % ai_code)
         ai_response_type.update({'status': TRAINING_STARTED_STATUS, 'message': TRAINING_STARTED_MESSAGE})
         ai_response_sender(ai_code, ai_response_type)
     except Exception as e:
-        worker_logger.error('Failed to build rest request to AI - %s' % str(e))
-        worker_logger.exception(e)
+        logger.error('Failed to build rest request to AI - %s' % str(e))
+        logger.exception(e)
     ai_response_type.update({'status': TRAINING_SUCCESS_STATUS, 'message': TRAINING_SUCCESS_MESSAGE})
     result = False
     error = None
@@ -66,10 +66,8 @@ def pre_training_helper(images, probe_id, settings, callback_code, try_type, ai_
         store_test_photo_helper(image_paths)
 
         settings.update({'data': image_paths})
-        settings.update({'general_data': {'data_path': temp_image_path,
-                                          'ai_code': ai_code,
-                                          'try_type': try_type,
-                                          'probe_id': probe_id}})
+        settings.update({'general_data': {'data_path': temp_image_path, 'ai_code': ai_code,
+                                          'try_type': try_type, 'probe_id': probe_id}})
         return settings
     except:
         final_helper(temp_image_path, probe_id, error, callback_code, result, ai_response_type, try_type, ai_code)
@@ -77,10 +75,10 @@ def pre_training_helper(images, probe_id, settings, callback_code, try_type, ai_
 
 
 def pre_identification_helper(images, probe_id, settings, hash_config_path, callback_code):
-    worker_logger.info('Running verification for user - %s, with given parameters - %s' % (settings.get('userID'),
-                                                                                           settings))
+    logger.info('Running verification for user - %s, with given parameters - %s' % (settings.get('userID'),
+                                                                                    settings))
     if AlgorithmsDataStore.instance().exists(key=REDIS_JOB_RESULTS_ERROR % callback_code):
-        worker_logger.info('Job interrupted because of job_results_error key existence.')
+        logger.info('Job interrupted because of job_results_error key existence.')
         return
     temp_image_path = tempfile.mkdtemp(dir=APP_ROOT)
     try:
@@ -97,8 +95,7 @@ def pre_identification_helper(images, probe_id, settings, hash_config_path, call
         store_test_photo_helper(image_paths)
 
         settings.update({'data': image_paths})
-        settings.update({'general_data': {'data_path': temp_image_path,
-                                          'hash_config_path': hash_config_path,
+        settings.update({'general_data': {'data_path': temp_image_path, 'hash_config_path': hash_config_path,
                                           'probe_id': probe_id}})
         return settings
     except:
@@ -132,9 +129,9 @@ def result_training_helper(algo_result, callback_code, probe_id, temp_image_path
         elif isinstance(algo_result, list):
             for algo_result_item in algo_result:
                 if algo_result_item.get('status', '') == "error":
-                    worker_logger.exception('Error during education - %s, %s, %s' % (algo_result_item.get('status'),
-                                                                                     algo_result_item.get('type'),
-                                                                                     algo_result_item.get('details')))
+                    logger.exception('Error during education - %s, %s, %s' % (algo_result_item.get('status'),
+                                                                              algo_result_item.get('type'),
+                                                                              algo_result_item.get('details')))
                     if 'Internal Training Error' in algo_result_item.get('type', ''):
                         error = algo_result_item.get('details', {}).get('message', '')
                         ai_response_type.update(dict(
@@ -173,9 +170,9 @@ def result_training_helper(algo_result, callback_code, probe_id, temp_image_path
             # Need save to redis
             pass
         elif algo_result.get('status', '') == "error":
-            worker_logger.exception('Error during education - %s, %s, %s' % (algo_result.get('status'),
-                                                                             algo_result.get('type'),
-                                                                             algo_result.get('details')))
+            logger.exception('Error during education - %s, %s, %s' % (algo_result.get('status'),
+                                                                      algo_result.get('type'),
+                                                                      algo_result.get('details')))
             if 'Internal Training Error' in algo_result.get('type', ''):
                 error = algo_result.get('details', {}).get('message', '')
                 ai_response_type.update(dict(
@@ -208,7 +205,7 @@ def result_training_helper(algo_result, callback_code, probe_id, temp_image_path
             # Need save to redis
             pass
     except Exception as e:
-        worker_logger.exception(e)
+        logger.exception(e)
     finally:
         final_func(temp_image_path, probe_id, error, callback_code, result, ai_response_type, try_type, ai_code)
 
@@ -226,7 +223,7 @@ def ind_final_helper(temp_image_path, probe_id, error, callback_code, result, ai
             REDiS_TRAINING_RETRIES_COUNT_KEY % probe_id)
         if retries_count == 0:
             AlgorithmsDataStore.instance().delete_data(key=REDiS_TRAINING_RETRIES_COUNT_KEY % probe_id)
-            worker_logger.debug('Maximum training attempts reached...')
+            logger.debug('Maximum training attempts reached...')
             res_dict['result'] = False
             ai_response_type.update(dict(
                 status=TRAINING_MAX_RETRIES_STATUS,
@@ -239,7 +236,7 @@ def ind_final_helper(temp_image_path, probe_id, error, callback_code, result, ai
             res_dict['error'] = error
         AlgorithmsDataStore.instance().store_job_result(key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
                                                         result=res_dict)
-        worker_logger.info('Job was finished with internal algorithm error %s ' % error)
+        logger.info('Job was finished with internal algorithm error %s ' % error)
     else:
         AlgorithmsDataStore.instance().delete_data(key=REDiS_TRAINING_RETRIES_COUNT_KEY % probe_id)
         AlgorithmsDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
@@ -252,7 +249,7 @@ def final_helper(temp_image_path, probe_id, error, callback_code, result, ai_res
             REDiS_TRAINING_RETRIES_COUNT_KEY % probe_id)
         if retries_count == 0:
             AlgorithmsDataStore.instance().delete_data(key=REDiS_TRAINING_RETRIES_COUNT_KEY % probe_id)
-            worker_logger.debug('Maximum training attempts reached...')
+            logger.debug('Maximum training attempts reached...')
             result = False
             ai_response_type.update(dict(
                 status=TRAINING_MAX_RETRIES_STATUS,
@@ -263,7 +260,7 @@ def final_helper(temp_image_path, probe_id, error, callback_code, result, ai_res
             AlgorithmsDataStore.instance().store_data(key=REDIS_UPDATE_TRAINING_KEY % probe_id, error=error)
             result = dict(result=False, error=error)
         AlgorithmsDataStore.instance().store_data(key=REDIS_PROBE_RESULT_KEY % callback_code, result=result)
-        worker_logger.info('Job was finished with internal algorithm error %s ' % error)
+        logger.info('Job was finished with internal algorithm error %s ' % error)
     else:
         AlgorithmsDataStore.instance().delete_data(key=REDiS_TRAINING_RETRIES_COUNT_KEY % probe_id)
         AlgorithmsDataStore.instance().store_data(key=REDIS_PROBE_RESULT_KEY % callback_code, result=result)
@@ -276,7 +273,7 @@ def store_verification_results(result, callback_code, probe_id):
             REDIS_VERIFICATION_RETIES_COUNT_KEY % probe_id)
         if retries_count == 0:
             AlgorithmsDataStore.instance().delete_data(key=REDIS_VERIFICATION_RETIES_COUNT_KEY % probe_id)
-            worker_logger.debug('Max number of verification attempts reached...')
+            logger.debug('Max number of verification attempts reached...')
             del result['error']
             result.update({'max_retries': True})
     else:
@@ -321,12 +318,12 @@ def tell_ai_training_results(result, ai_response_type, try_type, ai_code):
     if isinstance(result, bool) and result:
         ai_response_type.update(get_ai_training_response(try_type))
     try:
-        worker_logger.info('Telling AI that training is finished with code - %s and result - %s' %
-                           (ai_code, result))
+        logger.info('Telling AI that training is finished with code - %s and result - %s' %
+                    (ai_code, result))
         ai_response_sender(ai_code, ai_response_type)
     except Exception as e:
-        worker_logger.error('Failed to build rest request to AI - %s' % str(e))
-        worker_logger.exception(e)
+        logger.error('Failed to build rest request to AI - %s' % str(e))
+        logger.exception(e)
 
 
 def _store_training_db(database, probe_id):
@@ -336,8 +333,8 @@ def _store_training_db(database, probe_id):
                                             data=training_data)
     except Exception as e:
         if '1062 Duplicate entry' in str(e):
-            worker_logger.info('Training data already exists, updating the record.')
+            logger.info('Training data already exists, updating the record.')
             MySQLDataStoreInterface.update_data(table_name=TRAINING_DATA_TABLE_CLASS_NAME,
                                                 object_id=probe_id, data=training_data)
         else:
-            worker_logger.exception(e)
+            logger.exception(e)
