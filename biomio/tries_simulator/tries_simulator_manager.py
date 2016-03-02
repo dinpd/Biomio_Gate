@@ -79,7 +79,8 @@ class TriesSimulatorManager:
         current_connection = self._current_connections.get(app_id)
         if current_connection is not None:
             RedisStorage.persistence_instance().store_data(key='simulator_auth_status:%s' % app_id,
-                                                           result='Waiting for your device input...')
+                                                           result='Waiting for your device input...',
+                                                           status='in_progress')
             redis_key = 'try__simulator:%s' % app_id
             AuthStateStorage.instance().store_probe_data(id=REDIS_APP_AUTH_KEY % redis_key, ttl=300, state='auth_wait',
                                                          provider_id=provider_id)

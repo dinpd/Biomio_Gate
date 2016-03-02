@@ -133,13 +133,16 @@
                 contentType: 'application/json',
                 success: function(data){
                     data = JSON.parse(data);
+                    if(data['status'] == 'finished'){
+                        clearInterval(check_status_interval);
+                    }
                     $('#result_text').text(data.result);
                 },
                 error: function(error){
                     alert(error.responseText);
                 }
             });
-        }, 5000);
+        }, 10000);
     };
 
     $('#save_rec_btn').on('click', function (e) {
@@ -206,7 +209,7 @@
                 console.log(providers);
                 if (providers.length) {
                     for (var i = 0; i < providers.length; i++) {
-                        var current_provider = providers[i]['user_id'];
+                        var current_provider = providers[i]['provider_id'];
                         console.log(current_provider);
                         providers_select.append($('<option></option>').attr("value", current_provider).text(current_provider));
                     }
