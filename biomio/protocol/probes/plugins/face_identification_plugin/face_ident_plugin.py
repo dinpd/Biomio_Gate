@@ -39,7 +39,8 @@ class FaceIdentificationPlugin(base_probe_plugin.BaseProbePlugin):
         del data['samples']
         data.update({'images': normalized_images, 'settings': self._settings,
                      'hash_config_path': get_plugin_dir("settings")})
-        data['settings']['providerID'] = '14'
+        data['settings']['providerID'] = data.get('provider_id', '0')
+        del data['provider_id']
         redis_instance = RedisStorage.persistence_instance()
         retries_key = REDIS_VERIFICATION_RETIES_COUNT_KEY % data['probe_id']
         if not redis_instance.exists(retries_key):
