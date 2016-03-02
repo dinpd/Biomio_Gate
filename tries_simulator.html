@@ -110,11 +110,13 @@
             url: '/start_auth/',
             type: 'post',
             contentType: 'application/json',
-            data: {
+            processData: false,
+            data: JSON.stringify({
                 selected_device: selected_device,
                 selected_provider: selected_provider
-            },
+            }),
             success: function(){
+                console.log('aaa');
                 check_auth_status(selected_device);
             },
             error: function(error){
@@ -130,13 +132,13 @@
                 type: 'get',
                 contentType: 'application/json',
                 success: function(data){
-
+                    console.log(data);
                 },
                 error: function(error){
                     alert(error.responseText);
                 }
             });
-        }, 10000);
+        }, 5000);
         clearInterval(check_status_interval);
         check_status_interval;
     }
@@ -202,9 +204,11 @@
                 var providers_select = $('#provider_select');
                 data = JSON.parse(data);
                 var providers = data["result"];
+                console.log(providers);
                 if (providers.length) {
                     for (var i = 0; i < providers.length; i++) {
                         var current_provider = providers[i]['user_id'];
+                        console.log(current_provider);
                         providers_select.append($('<oprion></oprion>').attr("value", current_provider).text(current_provider));
                     }
                 }else{

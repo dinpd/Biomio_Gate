@@ -91,9 +91,11 @@ def on_cancel_auth(e):
 def on_state_changed(e):
     flow = e.bioauth_flow
     connection_data = flow.auth_connection.get_data()
-
-    next_state = connection_data.get(_PROBESTORE_STATE_KEY)
-    provider_id = connection_data.get('provider_id')
+    next_state = None
+    provider_id = None
+    if connection_data is not None:
+        next_state = connection_data.get(_PROBESTORE_STATE_KEY)
+        provider_id = connection_data.get('provider_id')
 
     if provider_id is not None:
         flow._provider_id = provider_id

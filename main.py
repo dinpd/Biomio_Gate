@@ -134,7 +134,7 @@ class GetUserProviders(tornado.web.RequestHandler):
     def get(self, *args, **kwargs):
         app_id = self.get_query_argument('app_id')
         providers = MySQLDataStore.instance().get_providers_by_device(app_id=app_id)
-        self.write(json.dumps([dict(result=providers)]))
+        self.write(json.dumps(dict(result=providers)))
 
 
 class StartSimulatorAuth(tornado.web.RequestHandler):

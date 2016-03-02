@@ -151,7 +151,7 @@ class MySQLDataStore:
         table_class = self.get_table_class(module_name, table_name)
         objects = table_class.select_by_sql(
             "Select * FROM ProviderUsers WHERE user_id IN (Select userinformation FROM application_userinformation "
-            "WHERE application=%s))" % app_id)
+            "WHERE application=$app_id)")
         result = []
         for obj in objects:
             result.append(obj.to_dict())
