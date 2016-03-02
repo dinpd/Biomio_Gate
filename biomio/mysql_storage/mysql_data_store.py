@@ -147,7 +147,7 @@ class MySQLDataStore:
         return getattr(module, table_name)
 
     @pny.db_session
-    def get_providers_by_device(self, app_id, module_name='', table_name=''):
+    def get_providers_by_device(self, app_id, module_name='mysql_data_entities', table_name='ProviderUser'):
         table_class = self.get_table_class(module_name, table_name)
         objects = table_class.select_by_sql(
             "Select * FROM ProviderUsers WHERE user_id IN (Select userinformation FROM application_userinformation "

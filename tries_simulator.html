@@ -97,11 +97,12 @@
     </div>
     <div style="margin-top: 20px;" class="results_only_area">
         <input type="button" value="Start Auth" id="start_auth_btn">
-        <p id="result_text">Nothing Yet...</p>
+        <p id="result_text"><span>Result: </span>Nothing Yet...</p>
     </div>
 </form>
 </body>
 <script>
+    var check_status_interval;
     $('#start_auth_btn').on('click', function(e){
         e.preventDefault();
         var selected_device = $('#app_selector').find(':selected').text();
@@ -117,6 +118,7 @@
             }),
             success: function(){
                 console.log('aaa');
+                clearInterval(check_status_interval);
                 check_auth_status(selected_device);
             },
             error: function(error){
@@ -124,9 +126,8 @@
             }
         });
     });
-
-    function check_auth_status(app_id){
-        var check_status_interval = setInterval(function(){
+    var check_auth_status = function(app_id){
+        check_status_interval = setInterval(function(){
             $.ajax({
                 url: '/start_auth/?app_id=' + app_id,
                 type: 'get',
@@ -139,9 +140,7 @@
                 }
             });
         }, 5000);
-        clearInterval(check_status_interval);
-        check_status_interval;
-    }
+    };
 
     $('#save_rec_btn').on('click', function (e) {
         e.preventDefault();
@@ -209,10 +208,10 @@
                     for (var i = 0; i < providers.length; i++) {
                         var current_provider = providers[i]['user_id'];
                         console.log(current_provider);
-                        providers_select.append($('<oprion></oprion>').attr("value", current_provider).text(current_provider));
+                        providers_select.append($('<option></option>').attr("value", current_provider).text(current_provider));
                     }
                 }else{
-                    providers_select.append($('<oprion></oprion>').attr("value", "no_providers").text('No Providers'));
+                    providers_select.append($('<option></option>').attr("value", "no_providers").text('No Providers'));
                 }
             },
             error: function (error) {
