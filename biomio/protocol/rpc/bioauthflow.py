@@ -146,6 +146,9 @@ def on_auth_verification_started(e):
 
     if flow.is_extension_owner():
         flow._verification_started_callback()
+    else:
+        RedisStorage.persistence_instance().store_data(key='simulator_auth_status:%s' % flow.app_id,
+                                                       result='Auth check in progress....', status='in_progress')
 
 
 auth_states = {
@@ -279,7 +282,7 @@ class BioauthFlow:
         logger.debug('BIOMETRIC AUTH OBJECT [%s, %s]: SHUTTING DOWN...' % (self.app_type, self.app_id))
         if self.is_probe_owner() and (self.is_current_state(STATE_AUTH_VERIFICATION_STARTED)):
             RedisStorage.persistence_instance().store_data(key='simulator_auth_status:%s' % self.app_id,
-                                                           result='Your device was disconnected...')
+                                                           result='Your device was disconnected...', status='finished')
             logger.debug("BIOMETRIC AUTH OBJECT [%s, %s]: APP DISCONNECTED - CONTINUE PROBE VERIFICATION...")
         else:
             self.cancel_auth()
@@ -437,7 +440,8 @@ class BioauthFlow:
     def set_auth_results(self, result, max_retries=False):
         # TODO: make method private
         if self.auth_connection.is_probe_owner():
-            RedisStorage.persistence_instance().store_data(key='simulator_auth_status:%s' % self.app_id, result=result)
+            RedisStorage.persistence_instance().store_data(key='simulator_auth_status:%s' % self.app_id, result=result,
+                                                           status='finished')
         self._state_machine_instance.results_available(bioauth_flow=self, result=result, max_retries=max_retries)
         self._store_state()
 
