@@ -278,6 +278,8 @@ class BioauthFlow:
     def shutdown(self):
         logger.debug('BIOMETRIC AUTH OBJECT [%s, %s]: SHUTTING DOWN...' % (self.app_type, self.app_id))
         if self.is_probe_owner() and (self.is_current_state(STATE_AUTH_VERIFICATION_STARTED)):
+            RedisStorage.persistence_instance().store_data(key='simulator_auth_status:%s' % self.app_id,
+                                                           result='Your device was disconnected...')
             logger.debug("BIOMETRIC AUTH OBJECT [%s, %s]: APP DISCONNECTED - CONTINUE PROBE VERIFICATION...")
         else:
             self.cancel_auth()
