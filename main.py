@@ -8,7 +8,10 @@ import tornado.websocket
 import tornado.httpserver
 import tornado.ioloop
 import tornado.gen
+import greenado
 import traceback
+from biomio.mysql_storage.mysql_data_store import MySQLDataStore
+from biomio.protocol.data_stores.application_data_store import ApplicationDataStore
 from biomio.protocol.data_stores.condition_data_store import ConditionDataStore
 from biomio.protocol.probes.probe_plugin_manager import ProbePluginManager
 from biomio.protocol.rpc.app_connection_manager import AppConnectionManager
@@ -88,7 +91,6 @@ class InitialProbeRestHandler(tornado.web.RequestHandler):
 
 
 class TryRequestsSimulator(tornado.web.RequestHandler):
-
     _simulator_option_value = '<option value="%s">%s</option>'
 
     def get(self, *args, **kwargs):
@@ -126,6 +128,26 @@ class TryRequestsSimulator(tornado.web.RequestHandler):
         if try_data.get('app_id') != 'No active devices':
             TriesSimulatorManager.instance().send_try_request(**try_data)
         self.get(*args, **kwargs)
+
+
+class GetUserProviders(tornado.web.RequestHandler):
+    def get(self, *args, **kwargs):
+        app_id = self.get_query_argument('app_id')
+        providers = MySQLDataStore.instance().get_providers_by_device(app_id=app_id)
+        self.write(json.dumps([dict(result=providers)]))
+
+
+class StartSimulatorAuth(tornado.web.RequestHandler):
+    def get(self, *args, **kwargs):
+        app_id = self.get_query_argument('app_id')
+        auth_status = RedisStorage.persistence_instance().get_data(key='simulator_auth_status:%s' % app_id)
+        auth_status = ast.literal_eval(auth_status) if auth_status is not None else {}
+        self.write(json.dumps(auth_status))
+
+    def post(self, *args, **kwargs):
+        request_body = json.loads(self.request.body)
+        TriesSimulatorManager.instance().start_regular_auth(app_id=request_body.get('selected_device'),
+                                                            provider_id=request_body.get('selected_provider'))
 
 
 class SetRecognitionType(tornado.web.RequestHandler):
@@ -170,7 +192,6 @@ class SetKeypointsCoffHandler(tornado.web.RequestHandler):
 
 
 class SetUserCondition(tornado.web.RequestHandler):
-
     def get(self, *args, **kwargs):
         self.write(json.dumps(dict(auth_types=ProbePluginManager.instance().get_available_auth_types())))
 
@@ -219,7 +240,9 @@ class HttpApplication(tornado.web.Application):
             (r'/set_keypoints_coff/(?P<coff>\d+\.\d{2})', SetKeypointsCoffHandler),
             (r'/set_condition.*', SetUserCondition),
             (r'/tries_simulator.*', TryRequestsSimulator),
-            (r'/set_recognition_type.*', SetRecognitionType)
+            (r'/set_recognition_type.*', SetRecognitionType),
+            (r'/get_user_providers.*', GetUserProviders),
+            (r'/start_auth.*', StartSimulatorAuth)
         ]
         tornado.web.Application.__init__(self, handlers)
 

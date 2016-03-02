@@ -5,10 +5,18 @@
     <title>Tries Simulator</title>
     <link rel="shortcut icon" href="https://biom.io/favicon.ico">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <style>
+        .results_only_area {
+            display: none;
+        }
+    </style>
 </head>
 <body style="text-align: center">
 <form action="" method="post">
     <table align="center">
+        <tr>
+            <td><input id="receive_results" type="checkbox" value="with_results"> Receive Results</td>
+        </tr>
         <tr>
             <td style="padding-top: 20px;padding-bottom: 5px;" align="left"><b>Connected Devices</b></td>
         </tr>
@@ -32,38 +40,49 @@
                 <input type="button" value="Save" id="save_rec_btn">
             </td>
         </tr>
-        <tr>
+        <tr class="results_only_area">
+            <td style="padding-top: 20px;padding-bottom: 5px;" align="left"><b>Device Providers</b></td>
+        </tr>
+        <tr class="results_only_area">
+            <td>Select Provider</td>
+            <td>
+                <select name="skip_provider_id" id="provider_select">
+
+                </select>
+            </td>
+        </tr>
+        <tr class="without_results_area">
             <td style="padding-top: 20px;padding-bottom: 5px;" align="left"><b>Try Types</b></td>
         </tr>
-        <tr>
+        <tr class="without_results_area">
             <td>Face</td>
             <td><input name="auth_types" type="checkbox" value="face" checked></td>
 
         </tr>
-        <tr>
+        <tr class="without_results_area">
             <td>Fingerprint</td>
             <td><input name="auth_types" type="checkbox" value="fp"></td>
         </tr>
-        <tr>
+        <tr class="without_results_area">
             <td>Push Button</td>
             <td><input name="auth_types" type="checkbox" value="push_button"></td>
         </tr>
-        <tr>
+        <tr class="without_results_area">
             <td>Pin Code</td>
             <td><input name="auth_types" type="checkbox" value="pin_code"></td>
         </tr>
-        <tr>
+        <tr class="without_results_area">
             <td>Credit Card</td>
             <td><input name="auth_types" type="checkbox" value="credit_card"></td>
         </tr>
-        <tr>
+        <tr class="without_results_area">
             <td>Location</td>
             <td><input name="auth_types" type="checkbox" value="location"></td>
         </tr>
-        <tr>
+        <tr class="without_results_area">
             <td style="padding-top: 20px;padding-bottom: 5px;" align="left"><b>Try Parameters</b></td>
         </tr>
-        <tr>
+        <tr class="without_results_area">
             <td>Condition</td>
             <td>
                 <input type="radio" name="condition" value="any" checked>Any
@@ -73,12 +92,55 @@
             </td>
         </tr>
     </table>
-    <div style="margin-top: 20px;">
+    <div style="margin-top: 20px;" class="without_results_area">
         <input type="submit" value="Send Try">
+    </div>
+    <div style="margin-top: 20px;" class="results_only_area">
+        <input type="button" value="Start Auth" id="start_auth_btn">
+        <p id="result_text">Nothing Yet...</p>
     </div>
 </form>
 </body>
 <script>
+    $('#start_auth_btn').on('click', function(e){
+        e.preventDefault();
+        var selected_device = $('#app_selector').find(':selected').text();
+        var selected_provider = $('#provider_select').find(':selected').text();
+        $.ajax({
+            url: '/start_auth/',
+            type: 'post',
+            contentType: 'application/json',
+            data: {
+                selected_device: selected_device,
+                selected_provider: selected_provider
+            },
+            success: function(){
+                check_auth_status(selected_device);
+            },
+            error: function(error){
+                console.log(error.responseText);
+            }
+        });
+    });
+
+    function check_auth_status(app_id){
+        var check_status_interval = setInterval(function(){
+            $.ajax({
+                url: '/start_auth/?app_id=' + app_id,
+                type: 'get',
+                contentType: 'application/json',
+                success: function(data){
+
+                },
+                error: function(error){
+                    alert(error.responseText);
+                }
+            });
+        }, 10000);
+        clearInterval(check_status_interval);
+        check_status_interval;
+    }
+
     $('#save_rec_btn').on('click', function (e) {
         e.preventDefault();
         var rec_type = $("input[type='radio'][name='skip_radio']:checked").val();
@@ -111,7 +173,7 @@
     $(document).ready(function () {
         var selected_device = $('#app_selector').find(':selected').text();
         if (selected_device == 'No active devices') {
-            alert('It is required to select device first.');
+            // alert('It is required to select device first.');
             return;
         }
         var verification_radio = $('#verification_auth');
@@ -133,6 +195,35 @@
                 alert(error.responseText);
             }
         });
+        $.ajax({
+            url: '/get_user_providers/?app_id=' + selected_device,
+            type: 'get',
+            success: function (data) {
+                var providers_select = $('#provider_select');
+                data = JSON.parse(data);
+                var providers = data["result"];
+                if (providers.length) {
+                    for (var i = 0; i < providers.length; i++) {
+                        var current_provider = providers[i]['user_id'];
+                        providers_select.append($('<oprion></oprion>').attr("value", current_provider).text(current_provider));
+                    }
+                }else{
+                    providers_select.append($('<oprion></oprion>').attr("value", "no_providers").text('No Providers'));
+                }
+            },
+            error: function (error) {
+                alert(error.responseText);
+            }
+        });
+    });
+    $('#receive_results').change(function () {
+        if (this.checked) {
+            $('.without_results_area').hide();
+            $('.results_only_area').show();
+        } else {
+            $('.without_results_area').show();
+            $('.results_only_area').hide();
+        }
     });
 </script>
 </html>

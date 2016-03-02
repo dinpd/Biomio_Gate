@@ -145,3 +145,14 @@ class MySQLDataStore:
     def get_table_class(module_name, table_name):
         module = __import__(module_name, globals())
         return getattr(module, table_name)
+
+    @pny.db_session
+    def get_providers_by_device(self, app_id, module_name='', table_name=''):
+        table_class = self.get_table_class(module_name, table_name)
+        objects = table_class.select_by_sql(
+            "Select * FROM ProviderUsers WHERE user_id IN (Select userinformation FROM application_userinformation "
+            "WHERE application=%s))" % app_id)
+        result = []
+        for obj in objects:
+            result.append(obj.to_dict())
+        return result

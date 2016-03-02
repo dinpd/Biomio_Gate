@@ -90,7 +90,13 @@ def on_cancel_auth(e):
 
 def on_state_changed(e):
     flow = e.bioauth_flow
-    next_state = flow.auth_connection.get_data(key=_PROBESTORE_STATE_KEY)
+    connection_data = flow.auth_connection.get_data()
+
+    next_state = connection_data.get(_PROBESTORE_STATE_KEY)
+    provider_id = connection_data.get('provider_id')
+
+    if provider_id is not None:
+        flow._provider_id = provider_id
 
     if next_state is None:
         if e.fsm.current == STATE_AUTH_WAIT or e.fsm.current == STATE_AUTH_VERIFICATION_STARTED:
@@ -257,6 +263,7 @@ class BioauthFlow:
         self._resources_list = []
         self._on_behalf_of = None
         self.auth_connection = AppAuthConnection(app_id=app_id, app_type=app_type)
+        self._provider_id = None
 
         if auto_initialize:
             self.initialize()
@@ -348,6 +355,7 @@ class BioauthFlow:
 
         auth_result = True
         max_retries = False
+        error = None
         rec_type_data = RedisStorage.persistence_instance().get_data(key='app_rec_type:%s' % self.app_id)
         rec_type_data = {} if rec_type_data is None else ast.literal_eval(rec_type_data)
         for probe_type, samples_list in samples_by_probe_type.iteritems():
@@ -355,11 +363,13 @@ class BioauthFlow:
             #     new_probe_type = '%s_%s' % (probe_type, self._app_user)
             #     if new_probe_type in ProbePluginManager.instance().get_available_auth_types():
             #         probe_type = new_probe_type
+            data = dict(samples=samples_list, probe_id=self.app_id)
             if rec_type_data.get('rec_type') is not None and probe_type == 'face':
                 rec_type = rec_type_data.get('rec_type')
                 if rec_type != 'verification':
                     probe_type = 'face_identification'
-            data = dict(samples=samples_list, probe_id=self.app_id)
+                    if self._provider_id is not None:
+                        data.update({'provider_id': self._provider_id})
             result = yield tornado.gen.Task(
                 ProbePluginManager.instance().get_plugin_by_auth_type(probe_type).run_verification, data)
             if isinstance(result, bool):
@@ -367,15 +377,20 @@ class BioauthFlow:
                 error = None
                 max_retries = False
             else:
-                error = result.get('error')
-                verified = result.get('verified')
-                max_retries = result.get('max_retries', False)
+                if 'result' in result:
+                    auth_result = 'Your user_id is %s' % result.get('result')
+                else:
+                    error = result.get('error')
+                    verified = result.get('verified', False)
+                    max_retries = result.get('max_retries', False)
             if error:
                 logger.debug(msg='Some samples could not be processed. Sending "try" message again.')
                 self._state_machine_instance.retry(bioauth_flow=self)
                 self._store_state()
                 break
             else:
+                if isinstance(auth_result, str):
+                    break
                 logger.debug(msg='SET NEXT AUTH RESULT: %s' % verified)
                 auth_result = verified and auth_result
 
@@ -417,6 +432,8 @@ class BioauthFlow:
 
     def set_auth_results(self, result, max_retries=False):
         # TODO: make method private
+        if self.auth_connection.is_probe_owner():
+            RedisStorage.persistence_instance().store_data(key='simulator_auth_status:%s' % self.app_id, result=result)
         self._state_machine_instance.results_available(bioauth_flow=self, result=result, max_retries=max_retries)
         self._store_state()
 

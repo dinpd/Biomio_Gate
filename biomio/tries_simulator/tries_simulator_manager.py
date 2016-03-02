@@ -2,6 +2,9 @@ from random import randint
 from threading import Lock
 from os import urandom
 from hashlib import sha1
+from biomio.constants import REDIS_APP_AUTH_KEY
+from biomio.protocol.storage.auth_state_storage import AuthStateStorage
+from biomio.protocol.storage.redis_storage import RedisStorage
 
 
 class TriesSimulatorManager:
@@ -12,7 +15,7 @@ class TriesSimulatorManager:
         oid='try',
         resource=[],
         policy=dict(condition='any'),
-        try_id=sha1(urandom(32)).hexdigest()[:8],
+        try_id='',
         authTimeout=300,
         message='Authentication'
     )
@@ -48,6 +51,7 @@ class TriesSimulatorManager:
 
     def send_try_request(self, auth_types, condition, app_id):
         self._try_request_template.get('policy').update({'condition': condition})
+        self._try_request_template.update({'try_id': sha1(urandom(32)).hexdigest()[:8]})
         resources = []
         for auth_type in auth_types:
             t_resource = dict(
@@ -59,8 +63,23 @@ class TriesSimulatorManager:
         self._try_request_template.update({'resource': resources})
         current_connection = self._current_connections.get(app_id)
         if current_connection is not None:
+            # RedisStorage.persistence_instance().store_data(key='simulator_auth_status:simulator_auth_status' % app_id,
+            #                                                result='Waiting for your device input...')
+            # redis_key = 'try__simulator:%s' % app_id
+            # AuthStateStorage.instance().store_probe_data(id=REDIS_APP_AUTH_KEY % redis_key, ttl=300, state='auth_wait',
+            #                                              provider_id=provider_id)
+            current_connection.probe_trying()
             message = current_connection.create_next_message(
                 request_seq=current_connection._last_received_message.header.seq,
                 **self._try_request_template
             )
             current_connection.send_message(responce=message)
+
+    def start_regular_auth(self, app_id, provider_id):
+        current_connection = self._current_connections.get(app_id)
+        if current_connection is not None:
+            RedisStorage.persistence_instance().store_data(key='simulator_auth_status:%s' % app_id,
+                                                           result='Waiting for your device input...')
+            redis_key = 'try__simulator:%s' % app_id
+            AuthStateStorage.instance().store_probe_data(id=REDIS_APP_AUTH_KEY % redis_key, ttl=300, state='auth_wait',
+                                                         provider_id=provider_id)
