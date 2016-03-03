@@ -96,8 +96,9 @@ class TryRequestsSimulator(tornado.web.RequestHandler):
     def get(self, *args, **kwargs):
         active_devices = TriesSimulatorManager.instance().get_active_connections()
         active_devices_list = ''
-        for active_device in active_devices:
-            active_devices_list += self._simulator_option_value % (active_device, active_device)
+        for active_device_id, user_email in active_devices.iteritems():
+            active_devices_list += self._simulator_option_value % (active_device_id, '%s - %s' % (user_email,
+                                                                                                  active_device_id))
         with open('./tries_simulator.html') as f:
             simulator_html = f.read()
         if len(simulator_html):
