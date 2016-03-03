@@ -1,6 +1,9 @@
+import logging
 from threading import Lock
 from biomio.mysql_storage.mysql_data_entities import pny, database, UserInformation
 from biomio.protocol.settings import settings
+
+logger = logging.getLogger(__name__)
 
 if settings.logging == 'DEBUG':
     pny.sql_debug(True)
@@ -147,12 +150,13 @@ class MySQLDataStore:
         return getattr(module, table_name)
 
     @pny.db_session
-    def get_providers_by_device(self, app_id, module_name='mysql_data_entities', table_name='ProviderUser'):
-        table_class = self.get_table_class(module_name, table_name)
-        objects = table_class.select_by_sql(
-            "Select * FROM ProviderUsers WHERE user_id IN (Select userinformation FROM application_userinformation "
-            "WHERE application=$app_id)")
+    def get_providers_by_device(self, app_id):
+        # table_class = self.get_table_class(module_name, table_name)
+        objects = database.execute(
+            "Select pu.provider_id, ps.name FROM ProviderUsers JOIN Providers as ps ON pu.provider_id=ps.id "
+            "WHERE pu.user_id IN (Select userinformation FROM application_userinformation WHERE application=$app_id)")
+        logger.debug(objects)
         result = []
-        for obj in objects:
-            result.append(obj.to_dict())
+        # for obj in objects:
+        #     result.append(obj.to_dict())
         return result

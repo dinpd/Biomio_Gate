@@ -105,8 +105,8 @@
     var check_status_interval;
     $('#start_auth_btn').on('click', function(e){
         e.preventDefault();
-        var selected_device = $('#app_selector').find(':selected').text();
-        var selected_provider = $('#provider_select').find(':selected').text();
+        var selected_device = $('#app_selector').find(':selected').val();
+        var selected_provider = $('#provider_select').find(':selected').val();
         $.ajax({
             url: '/start_auth/',
             type: 'post',
@@ -148,7 +148,7 @@
     $('#save_rec_btn').on('click', function (e) {
         e.preventDefault();
         var rec_type = $("input[type='radio'][name='skip_radio']:checked").val();
-        var selected_device = $('#app_selector').find(':selected').text();
+        var selected_device = $('#app_selector').find(':selected').val();
         if (selected_device == 'No active devices') {
             alert('It is required to select device first.');
             return;
@@ -175,7 +175,7 @@
         });
     });
     $(document).ready(function () {
-        var selected_device = $('#app_selector').find(':selected').text();
+        var selected_device = $('#app_selector').find(':selected').val();
         if (selected_device == 'No active devices') {
             // alert('It is required to select device first.');
             return;

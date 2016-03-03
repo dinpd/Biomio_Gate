@@ -345,7 +345,8 @@ def ready(e):
     app_type = str(e.request.header.appType)
     app_id = str(e.request.header.appId)
     if (app_type.startswith(PROBE_APP_TYPE_PREFIX) or app_type.startswith(HYBRID_APP_TYPE_PREFIX)) and app_id not in e.protocol_instance.bioauth_flows:
-        TriesSimulatorManager.instance().add_active_connection(app_id=app_id, connection_instance=e.protocol_instance)
+        TriesSimulatorManager.instance().add_active_connection(app_id=app_id, connection_instance=e.protocol_instance,
+                                                               user_id=e.protocol_instance.app_users)
         auth_wait_callback = e.protocol_instance.try_probe
         cancel_auth_callback = e.protocol_instance.cancel_auth
         app_users = e.protocol_instance.app_users
