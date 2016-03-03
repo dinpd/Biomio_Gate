@@ -114,10 +114,7 @@ class AlgorithmsHashRedisStackStore:
     @staticmethod
     def _buckets_hash(key):
         parts = key.split(':')
-        if len(parts) == 3:
-            return parts[1]
-        else:
-            return ""
+        return parts[1] if len(parts) == 3 else ""
 
     def get_bucket(self, hash_name, bucket_key):
         redis_key = HASH_BUCKET_KEY_FORMAT % (hash_name, bucket_key)

@@ -4,6 +4,7 @@ from biomio.algorithms.recognition.processes.handling import load_temp_data
 from biomio.algorithms.interfaces import AlgorithmProcessInterface, logger
 from biomio.constants import REDIS_DO_NOT_STORE_RESULT_KEY
 
+
 IDENTIFICATION_RUN_PROCESS_CLASS_NAME = "IdentificationRunProcess"
 
 def job(callback_code, **kwargs):

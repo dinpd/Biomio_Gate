@@ -2,6 +2,7 @@ from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStor
 from biomio.protocol.data_stores.provider_user_store import ProviderUserStore
 from biomio.algorithms.interfaces import AlgorithmProcessInterface
 
+
 LOAD_USERS_BY_PROVIDER_PROCESS_CLASS_NAME = "LoadUsersByProviderProcess"
 
 def job(callback_code, **kwargs):
@@ -23,9 +24,7 @@ class LoadUsersByProviderProcess(AlgorithmProcessInterface):
         if result is not None:
             ident_data = AlgorithmsDataStore.instance().get_data(self._data_redis_key)
             AlgorithmsDataStore.instance().delete_data(self._data_redis_key)
-            users_list = []
-            for record in result['records']:
-                users_list.append(str(record['user_id']))
+            users_list = [str(record['user_id']) for record in result['records']]
             ident_data.update({'users': users_list})
             self._ident_run_process.run(self._worker, **ident_data)
 

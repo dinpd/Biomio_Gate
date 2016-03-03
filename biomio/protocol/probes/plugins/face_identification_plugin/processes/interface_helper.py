@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 from biomio.constants import REDIS_PROBE_RESULT_KEY, REDIS_RESULTS_COUNTER_KEY, REDIS_PARTIAL_RESULTS_KEY, \
     TRAINING_DATA_TABLE_CLASS_NAME, REDIS_JOB_RESULTS_ERROR, REST_REGISTER_BIOMETRICS, get_ai_training_response, \
     REDIS_UPDATE_TRAINING_KEY, REDIS_VERIFICATION_RETIES_COUNT_KEY, REDiS_TRAINING_RETRIES_COUNT_KEY, \
@@ -34,6 +33,18 @@ def ai_response_sender(ai_code, ai_response_type):
         logger.exception('Failed to tell AI that training change state, reason - %s' % response.reason)
 
 
+def save_images(images, temp_image_path):
+    image_paths = []
+    for image in images:
+        fd, temp_image = tempfile.mkstemp(dir=temp_image_path)
+        os.close(fd)
+        photo_data = binascii.a2b_base64(str(image))
+        with open(temp_image, 'wb') as f:
+            f.write(photo_data)
+        image_paths.append(temp_image)
+    return image_paths
+
+
 def pre_training_helper(images, probe_id, settings, callback_code, try_type, ai_code):
     logger.info('Running training for user - %s, with given parameters - %s' % (settings.get('userID'),
                                                                                 settings))
@@ -53,14 +64,7 @@ def pre_training_helper(images, probe_id, settings, callback_code, try_type, ai_
         AlgorithmsDataStore.instance().delete_data(key=REDIS_UPDATE_TRAINING_KEY % probe_id)
     temp_image_path = tempfile.mkdtemp(dir=APP_ROOT)
     try:
-        image_paths = []
-        for image in images:
-            fd, temp_image = tempfile.mkstemp(dir=temp_image_path)
-            os.close(fd)
-            photo_data = binascii.a2b_base64(str(image))
-            with open(temp_image, 'wb') as f:
-                f.write(photo_data)
-            image_paths.append(temp_image)
+        image_paths = save_images(images, temp_image_path)
 
         # Store photos for test purposes
         store_test_photo_helper(image_paths)
@@ -79,17 +83,10 @@ def pre_identification_helper(images, probe_id, settings, hash_config_path, call
                                                                                     settings))
     if AlgorithmsDataStore.instance().exists(key=REDIS_JOB_RESULTS_ERROR % callback_code):
         logger.info('Job interrupted because of job_results_error key existence.')
-        return
+        return None
     temp_image_path = tempfile.mkdtemp(dir=APP_ROOT)
     try:
-        image_paths = []
-        for image in images:
-            fd, temp_image = tempfile.mkstemp(dir=temp_image_path)
-            os.close(fd)
-            photo_data = binascii.a2b_base64(str(image))
-            with open(temp_image, 'wb') as f:
-                f.write(photo_data)
-            image_paths.append(temp_image)
+        image_paths = save_images(images, temp_image_path)
 
         # Store photos for test purposes
         store_test_photo_helper(image_paths)
