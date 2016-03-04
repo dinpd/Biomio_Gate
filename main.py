@@ -25,6 +25,7 @@ from biomio.protocol.rpc.bioauthflow import BioauthFlow
 import logging
 from biomio.protocol.storage.redis_storage import RedisStorage
 from biomio.tries_simulator.tries_simulator_manager import TriesSimulatorManager
+from biomio.tries_simulator.try_simulator_store import TrySimulatorStore
 from biomio.worker.worker_interface import WorkerInterface
 
 logger = logging.getLogger(__name__)
@@ -143,6 +144,14 @@ class StartSimulatorAuth(tornado.web.RequestHandler):
         app_id = self.get_query_argument('app_id')
         auth_status = RedisStorage.persistence_instance().get_data(key='simulator_auth_status:%s' % app_id)
         auth_status = ast.literal_eval(auth_status) if auth_status is not None else {}
+        if auth_status.get('status') == 'finished' and 'result' in auth_status:
+            result = auth_status.get('result')
+            try:
+                user_info = TrySimulatorStore.instance().get_user_info(user_id=int(result))
+                if user_info is not None:
+                    auth_status.update({'result': '%s - %s' % (user_info.get('email'), result)})
+            except ValueError:
+                pass
         self.write(json.dumps(auth_status))
 
     def post(self, *args, **kwargs):

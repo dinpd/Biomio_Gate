@@ -98,7 +98,7 @@
     <div style="margin-top: 20px;" class="results_only_area">
         <input type="button" value="Start Auth" id="start_auth_btn">
 
-        <p id="result_text"><span>Result: </span>Nothing Yet...</p>
+        <p id="result_text">Result: Nothing Yet...</p>
     </div>
 </form>
 </body>
@@ -137,7 +137,7 @@
                     if (data['status'] == 'finished') {
                         clearInterval(check_status_interval);
                     }
-                    $('#result_text').text(data.result);
+                    $('#result_text').text('Result: ' + data.result);
                 },
                 error: function (error) {
                     alert(error.responseText);

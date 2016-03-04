@@ -385,7 +385,7 @@ class BioauthFlow:
                 max_retries = False
             else:
                 if isinstance(result, str):
-                    auth_result = 'Your user_id is %s' % result
+                    auth_result = result
                 else:
                     error = result.get('error')
                     verified = result.get('verified', False)
