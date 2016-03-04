@@ -1,6 +1,5 @@
 from biomio.protocol.probes.plugins.face_photo_plugin.algorithms.face.clusters_keypoints import ClustersMatchingDetector
-from biomio.algorithms.cvtools.types import listToNumpy_ndarray, numpy_ndarrayToList
-from biomio.algorithms.recognition.estimation import SelfGraphEstimation
+from biomio.algorithms.recognition.estimation import SelfGraphEstimation, ClusterL0Estimation, DEFAULT_MODE
 from biomio.algorithms.recognition.keypoints import verifying
 from biomio.algorithms.logger import logger
 import sys
@@ -22,8 +21,11 @@ class ClustersTemplateL0MatchingDetector(ClustersMatchingDetector):
         self.update_hash_templateL0(data)
 
     def update_hash_templateL0(self, data):
-        estimation = SelfGraphEstimation(self.kodsettings.detector_type, knn=3)
-        self._etalon = estimation.estimate_training(data, self._etalon)
+        estimation = ClusterL0Estimation(self.kodsettings.detector_type, knn=3, max_distance=0.9,
+                                         mode=DEFAULT_MODE)
+        self._etalon = estimation.estimate_training(data['clusters'], self._etalon)
+        # estimation = SelfGraphEstimation(self.kodsettings.detector_type, knn=3)
+        # self._etalon = estimation.estimate_training(data, self._etalon)
 
     def update_database(self):
         try:
@@ -67,6 +69,9 @@ class ClustersTemplateL0MatchingDetector(ClustersMatchingDetector):
         return self.verify_template_L0(data)
 
     def verify_template_L0(self, data):
-        estimation = SelfGraphEstimation(self.kodsettings.detector_type, knn=2)
+        estimation = ClusterL0Estimation(self.kodsettings.detector_type, knn=2, max_distance=0.9,
+                                         mode=DEFAULT_MODE)
+        # estimation = SelfGraphEstimation(self.kodsettings.detector_type, knn=2)
         logger.debug("Image: " + data['path'])
-        return estimation.estimate_verification(data, self._etalon)
+        return estimation.estimate_verification(data['clusters'], self._etalon)
+        # return estimation.estimate_verification(data, self._etalon)
