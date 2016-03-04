@@ -42,7 +42,8 @@ class ClustersTemplateL0MatchingDetector(ClustersMatchingDetector):
 
     def importSources(self, source):
         logger.debug("Database loading started...")
-        self._etalon = SelfGraphEstimation.importDatabase(source.get('data', dict()))
+        self._etalon = ClusterL0Estimation.importDatabase(source.get('data', dict()))
+        # self._etalon = SelfGraphEstimation.importDatabase(source.get('data', dict()))
         self._prob = source.get('threshold', 100)
         logger.info('Dynamic threshold: %f' % self._prob)
         logger.debug("Database loading finished.")
@@ -50,12 +51,14 @@ class ClustersTemplateL0MatchingDetector(ClustersMatchingDetector):
     @staticmethod
     def load_database(source):
         return {
-            "template": SelfGraphEstimation.importDatabase(source.get('data', dict())),
+            # "template": SelfGraphEstimation.importDatabase(source.get('data', dict())),
+            "template": ClusterL0Estimation.importDatabase(source.get('data', dict())),
             "threshold": source.get('threshold', 100)
         }
 
     def exportSources(self):
-        data = SelfGraphEstimation.exportDatabase(self._etalon)
+        # data = SelfGraphEstimation.exportDatabase(self._etalon)
+        data = ClusterL0Estimation.exportDatabase(self._etalon)
         if len(data.keys()) > 0:
             return {
                 'data': data,
