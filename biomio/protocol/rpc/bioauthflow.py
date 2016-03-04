@@ -415,11 +415,13 @@ class BioauthFlow:
             rec_type_data = RedisStorage.persistence_instance().get_data(key='app_rec_type:%s' % self.app_id)
             rec_type_data = {} if rec_type_data is None else ast.literal_eval(rec_type_data)
             for probe_type, samples in samples_by_probe_type.iteritems():
+                data = dict(try_type=probe_type, ai_code=ai_code, samples=samples, probe_id=self.app_id)
                 if rec_type_data.get('rec_type') is not None and probe_type == 'face':
                     rec_type = rec_type_data.get('rec_type')
                     if rec_type != 'verification':
+                        if self._app_user is not None:
+                            data.update({'user_id': self._app_user})
                         probe_type = 'face_identification'
-                data = dict(try_type=probe_type, ai_code=ai_code, samples=samples, probe_id=self.app_id)
                 result = yield tornado.gen.Task(
                     ProbePluginManager.instance().get_plugin_by_auth_type(probe_type).run_training, data)
                 if not isinstance(result, bool):
