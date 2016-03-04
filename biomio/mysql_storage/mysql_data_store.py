@@ -151,12 +151,10 @@ class MySQLDataStore:
 
     @pny.db_session
     def get_providers_by_device(self, app_id):
-        # table_class = self.get_table_class(module_name, table_name)
         objects = database.execute(
-            "Select pu.provider_id, ps.name FROM ProviderUsers JOIN Providers as ps ON pu.provider_id=ps.id "
+            "Select pu.provider_id, ps.name FROM ProviderUsers as pu JOIN Providers as ps ON pu.provider_id=ps.id "
             "WHERE pu.user_id IN (Select userinformation FROM application_userinformation WHERE application=$app_id)")
-        logger.debug(objects)
         result = []
-        # for obj in objects:
-        #     result.append(obj.to_dict())
+        for key, val in dict(objects.fetchall()).iteritems():
+            result.append(dict(provider_id=key, provider_name=val))
         return result

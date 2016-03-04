@@ -43,11 +43,11 @@ class TrySimulatorStore:
 
     def get_user_info(self, user_id):
         user_data = self.get_data(key=self.USER_INFO_KEY, identifier=user_id)
-        if user_data is not None:
-            return ast.literal_eval(user_data)
-        user_data = MySQLDataStore.get_object(module_name='mysql_data_entities', table_name='Email',
-                                              object_id=user_id, return_dict=True,
-                                              custom_search_attr='profileId', primary=True)
+        if user_data is not None and len(user_data):
+            return user_data
+        user_data = MySQLDataStore.instance().get_object(module_name='mysql_data_entities', table_name='Email',
+                                                         object_id=user_id, return_dict=True,
+                                                         custom_search_attr='profileId', primary=True)
         if user_data is not None:
             self.store_data(key=self.USER_INFO_KEY, identifier=user_id, ex=86400, **user_data)
         return user_data

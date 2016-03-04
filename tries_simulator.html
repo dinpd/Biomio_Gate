@@ -97,13 +97,14 @@
     </div>
     <div style="margin-top: 20px;" class="results_only_area">
         <input type="button" value="Start Auth" id="start_auth_btn">
+
         <p id="result_text"><span>Result: </span>Nothing Yet...</p>
     </div>
 </form>
 </body>
 <script>
     var check_status_interval;
-    $('#start_auth_btn').on('click', function(e){
+    $('#start_auth_btn').on('click', function (e) {
         e.preventDefault();
         var selected_device = $('#app_selector').find(':selected').val();
         var selected_provider = $('#provider_select').find(':selected').val();
@@ -116,29 +117,29 @@
                 selected_device: selected_device,
                 selected_provider: selected_provider
             }),
-            success: function(){
+            success: function () {
                 clearInterval(check_status_interval);
                 check_auth_status(selected_device);
             },
-            error: function(error){
+            error: function (error) {
                 alert(error.responseText);
             }
         });
     });
-    var check_auth_status = function(app_id){
-        check_status_interval = setInterval(function(){
+    var check_auth_status = function (app_id) {
+        check_status_interval = setInterval(function () {
             $.ajax({
                 url: '/start_auth/?app_id=' + app_id,
                 type: 'get',
                 contentType: 'application/json',
-                success: function(data){
+                success: function (data) {
                     data = JSON.parse(data);
-                    if(data['status'] == 'finished'){
+                    if (data['status'] == 'finished') {
                         clearInterval(check_status_interval);
                     }
                     $('#result_text').text(data.result);
                 },
-                error: function(error){
+                error: function (error) {
                     alert(error.responseText);
                 }
             });
@@ -206,14 +207,13 @@
                 var providers_select = $('#provider_select');
                 data = JSON.parse(data);
                 var providers = data["result"];
-                console.log(providers);
                 if (providers.length) {
                     for (var i = 0; i < providers.length; i++) {
-                        var current_provider = providers[i]['provider_id'];
-                        console.log(current_provider);
-                        providers_select.append($('<option></option>').attr("value", current_provider).text(current_provider));
+                        var current_provider_id = providers[i]['provider_id'];
+                        var current_provider_name = providers[i]['provider_name'];
+                        providers_select.append($('<option></option>').attr("value", current_provider_id).text(current_provider_name + ' - ' + current_provider_id));
                     }
-                }else{
+                } else {
                     providers_select.append($('<option></option>').attr("value", "no_providers").text('No Providers'));
                 }
             },

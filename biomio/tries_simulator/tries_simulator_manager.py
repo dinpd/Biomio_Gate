@@ -41,6 +41,8 @@ class TriesSimulatorManager:
         return cls._instance
 
     def add_active_connection(self, app_id, connection_instance, user_id):
+        if isinstance(user_id, list):
+            user_id = int(user_id[0])
         user_data = TrySimulatorStore.instance().get_user_info(user_id=user_id)
         if user_data is not None:
             user_data = user_data.get('email')
