@@ -76,4 +76,8 @@ su - vagrant
 cd biomio
 git checkout development
 sudo pip install -r requirements.txt
-
+DB = "biomio_db";
+echo "Driping database $DB if it already exists.";
+mysql -ubiomio_gate -pgate -e "DROP DATABASE IF EXISTS $DB";
+echo "Creating new database $DB"
+mysql -ubiomio_gate -pgate -e "CREATE DATABASE $DB";
