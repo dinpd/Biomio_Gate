@@ -54,12 +54,12 @@ if [ ! -f "/tmp/tmp_swap" ]; then
 fi
 
 # Install OpenCV
-#pushd /tmp
-#    git clone https://github.com/jayrambhia/Install-OpenCV.git
-#    pushd Install-OpenCV/Ubuntu/
-#        ./opencv_latest.sh
-#    popd
-#popd
+pushd /tmp
+    git clone https://github.com/jayrambhia/Install-OpenCV.git
+    pushd Install-OpenCV/Ubuntu/
+        ./opencv_latest.sh
+    popd
+popd
 
 cp /vagrant/ssh_config /etc/ssh
 
