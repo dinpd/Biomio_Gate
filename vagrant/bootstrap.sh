@@ -61,23 +61,33 @@ fi
 #    popd
 #popd
 
-BIOMIO_BASE=/home/vagrant
+cp /vagrant/ssh_config /etc/ssh
 
-if [ ! -d "${BIOMIO_BASE}/biomio" ]; then
-	cp /vagrant/ssh_config /etc/ssh
+BIOMIO_BASE=/home/vagrant/biomio
 
-	echo "Clon BIOMIO repo..."
-	sudo su - vagrant -c 'git clone git@bitbucket.org:biomio/prototype-protocol.git ~/biomio'
+if [ ! -d "${BIOMIO_BASE}" ]; then
+	echo "Clonning BIOMIO repo..."
+	sudo su - vagrant -c 'git clone git@bitbucket.org:biomio/prototype-protocol.git ~/biomio && cd ~/biomio && git checkout development'
 fi
+
 # Install required python packages.
 easy_install pip
+pip install -r ${BIOMIO_BASE}/requirements.txt
+pip install supervisor supervisor_twiddler
 
-su - vagrant
-cd biomio
-git checkout development
-sudo pip install -r requirements.txt
-DB = "biomio_db";
-echo "Driping database $DB if it already exists.";
-mysql -ubiomio_gate -pgate -e "DROP DATABASE IF EXISTS $DB";
-echo "Creating new database $DB"
-mysql -ubiomio_gate -pgate -e "CREATE DATABASE $DB";
+echo "Installing supervisor"
+cp /vagrant/supervisord.conf /etc && cp /vagrant/supervisord /etc/init.d/ && chmod +x /etc/init.d/supervisord
+update-rc.d supervisord defaults
+service supervisord start
+
+DB="biomio_db"
+DB_USER="biomio_gate"
+DB_USER_PWD="gate"
+
+echo "Creating database and user"
+mysql -e "CREATE USER '$DB_USER'@'localhost' IDENTIFIED BY '$DB_USER_PWD';\
+	CREATE DATABASE $DB;\
+	GRANT ALL PRIVILEGES  ON $DB.* TO '$DB_USER'@'localhost' WITH GRANT OPTION;"
+echo "Loading schema for '$DB'"
+mysql $DB < /vagrant/schema.sql
+
