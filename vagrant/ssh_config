@@ -54,6 +54,6 @@ Host *
     GSSAPIDelegateCredentials no
 
 Host bitbucket.org
-	IdentityFile	/vagrant/id_rsa.bitbucket
+	IdentityFile	~/.ssh/id_rsa.bitbucket
 	IdentitiesOnly	yes
 	StrictHostKeyChecking no

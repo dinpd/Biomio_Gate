@@ -17,6 +17,7 @@ PKG_DEPENDENCIES=(
     'redis-server'
     'mysql-server'
     'libmysqlclient-dev'
+    'mc'
 )
 
 # Enable multiverse.
@@ -45,6 +46,9 @@ if [ ! -f "/usr/include/freetype2/ft2build.h" ]; then
     ln -s /usr/include/freetype2/ft2build.h /usr/include/
 fi
 
+echo 'Installing freetype additional packages.'
+apt-get install -y freetypy*
+
 # Create a temporary 2Gb swap file so that we don't exaust the virtual
 # machines's memory when compiling scipy.
 if [ ! -f "/tmp/tmp_swap" ]; then
@@ -62,12 +66,17 @@ pushd /tmp
 popd
 
 cp /vagrant/ssh_config /etc/ssh
+cp /vagrant/id_rsa.bitbucket ~/.ssh
+chmod 600 /etc/ssh/ssh_config
+chmod 600 ~/.ssh/id_rsa.bitbucket
+
 
 BIOMIO_BASE=/home/vagrant/biomio
 
 if [ ! -d "${BIOMIO_BASE}" ]; then
 	echo "Clonning BIOMIO repo..."
-	sudo su - vagrant -c 'git clone git@bitbucket.org:biomio/prototype-protocol.git ~/biomio && cd ~/biomio && git checkout development'
+    ssh-keyscan -H bitbucket.org >> ~/.ssh/known_hosts
+	git clone git@bitbucket.org:biomio/prototype-protocol.git ${BIOMIO_BASE} && cd ${BIOMIO_BASE} && git checkout development
 fi
 
 # Install required python packages.
