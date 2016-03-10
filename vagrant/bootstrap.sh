@@ -81,6 +81,11 @@ fi
 
 chown vagrant:vagrant ${BIOMIO_BASE} -R
 
+# Enable Redis event notifications
+echo "Enabling Redis event notifications"
+sed -i 's/notify-keyspace-events ""/notify-keyspace-events KEA/' /etc/redis/redis.conf
+service redis-server restart
+
 # Install required python packages.
 easy_install pip
 pip install -r ${BIOMIO_BASE}/requirements.txt
@@ -101,4 +106,7 @@ mysql -e "CREATE USER '$DB_USER'@'localhost' IDENTIFIED BY '$DB_USER_PWD';\
 	GRANT ALL PRIVILEGES  ON $DB.* TO '$DB_USER'@'localhost' WITH GRANT OPTION;"
 echo "Loading schema for '$DB'"
 mysql $DB < /vagrant/schema.sql
+
+# Change binding address for MySQL
+sed -i -r 's/bind-address\t\t= 127.0.0.1/bind-address\t\t= 0.0.0.0/' /etc/mysql/my.cnf
 
