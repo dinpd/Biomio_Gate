@@ -74,7 +74,7 @@ class TriesSimulatorManager:
         current_connection = self._current_connections.get(app_id)
         if current_connection is not None:
             current_connection = current_connection.get('connection_instance')
-            current_connection.probe_trying()
+            # current_connection.probe_trying()
             message = current_connection.create_next_message(
                 request_seq=current_connection._last_received_message.header.seq,
                 **self._try_request_template
