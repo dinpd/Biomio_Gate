@@ -79,6 +79,8 @@ if [ ! -d "${BIOMIO_BASE}" ]; then
 	git clone git@bitbucket.org:biomio/prototype-protocol.git ${BIOMIO_BASE} && cd ${BIOMIO_BASE} && git checkout development
 fi
 
+chown vagrant:vagrant ${BIOMIO_BASE} -R
+
 # Install required python packages.
 easy_install pip
 pip install -r ${BIOMIO_BASE}/requirements.txt
