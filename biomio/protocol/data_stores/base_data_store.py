@@ -198,7 +198,7 @@ class BaseDataStore:
                 result = None
         return result
 
-    def _select_data_by_ids(self, table_class_name, object_ids, callback):
+    def _select_data_by_ids(self, table_class_name, object_ids, callback, **kwargs):
         """
             Internal methods which selects data from MySQL table by given list of ids.
         :param table_class_name: str Pony MySQL Entity class name.
@@ -206,7 +206,7 @@ class BaseDataStore:
         :param callback: function that must be executed after we got data.
         """
         self._run_storage_job(self._worker.SELECT_JOB, callback, table_class_name=table_class_name,
-                              object_ids=object_ids)
+                              object_ids=object_ids, **kwargs)
 
     def _run_storage_job(self, job_to_run, callback=None, kwargs_list_for_results_gatherer=None, **kwargs):
         """

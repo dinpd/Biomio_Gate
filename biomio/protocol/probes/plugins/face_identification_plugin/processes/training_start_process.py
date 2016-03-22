@@ -40,6 +40,7 @@ class TrainingStartProcess(AlgorithmProcessInterface):
                     'try_type': try type string,
                     'probe_id': probe identifier string
                 },
+                'providerID': provider identifier string,
                 'userID': user identifier string,
                 'data': image paths list
             }
@@ -64,6 +65,7 @@ class TrainingStartProcess(AlgorithmProcessInterface):
                 'probe_id': probe identifier string,
                 'settings':
                 {
+                    'providerID': provider identifier string,
                     'algoID': algorithm identifier string,
                     'userID': user identifier string
                 }

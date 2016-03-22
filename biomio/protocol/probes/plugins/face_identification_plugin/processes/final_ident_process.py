@@ -21,13 +21,13 @@ class FinalIdentificationProcess(AlgorithmProcessInterface):
     def job(callback_code, **kwargs):
         FinalIdentificationProcess._job_logger_info(FINAL_IDENTIFICATION_PROCESS_CLASS_NAME, **kwargs)
         max_count = 0
-        max_key = ""
+        max_key = None
         for key, count in kwargs['candidates_score'].iteritems():
             if max_count < count:
                 max_count = count
                 max_key = key
         record = {
-            'result': max_key
+            'result': max_key if max_key is not None else "FaceIdentificationError: any userID not found."
         }
         AlgorithmsDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
                                                         record_dict=record, callback_code=callback_code)

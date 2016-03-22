@@ -7,7 +7,8 @@ from hashlib import sha1
 from jsonschema import ValidationError
 import tornado.gen
 import greenado
-from biomio.constants import REDiS_TRAINING_RETRIES_COUNT_KEY, REDIS_VERIFICATION_RETIES_COUNT_KEY
+from biomio.constants import REDiS_TRAINING_RETRIES_COUNT_KEY, REDIS_VERIFICATION_RETIES_COUNT_KEY, \
+    HYBRID_APP_TYPE_PREFIX
 from biomio.constants import PROBE_APP_TYPE_PREFIX
 from biomio.protocol.data_stores.condition_data_store import ConditionDataStore
 from biomio.protocol.data_stores.device_information_store import DeviceInformationStore
@@ -343,8 +344,9 @@ def app_registered(e):
 def ready(e):
     app_type = str(e.request.header.appType)
     app_id = str(e.request.header.appId)
-    if app_type.startswith(PROBE_APP_TYPE_PREFIX) and app_id not in e.protocol_instance.bioauth_flows:
-        TriesSimulatorManager.instance().add_active_connection(app_id=app_id, connection_instance=e.protocol_instance)
+    if (app_type.startswith(PROBE_APP_TYPE_PREFIX) or app_type.startswith(HYBRID_APP_TYPE_PREFIX)) and app_id not in e.protocol_instance.bioauth_flows:
+        TriesSimulatorManager.instance().add_active_connection(app_id=app_id, connection_instance=e.protocol_instance,
+                                                               user_id=e.protocol_instance.app_users)
         auth_wait_callback = e.protocol_instance.try_probe
         cancel_auth_callback = e.protocol_instance.cancel_auth
         app_users = e.protocol_instance.app_users
@@ -365,12 +367,16 @@ def probe_trying(e):
     if not e.src == STATE_PROBE_TRYING:
         flow = e.protocol_instance.bioauth_flows.get(str(e.request.header.appId))
         resources = None
+        current_resources = e.protocol_instance.available_resources
+        if hasattr(e, 'current_resources'):
+            if e.current_resources is not None:
+                current_resources = e.current_resources
         app_users = e.protocol_instance.app_users
         if isinstance(app_users, list):
             app_users = app_users[0]
         is_training = flow.is_current_state(STATE_AUTH_TRAINING_STARTED)
         policy, resources = PolicyEngineManager.instance().generate_try_resources(
-            device_resources=e.protocol_instance.available_resources, user_id=app_users,
+            device_resources=current_resources, user_id=app_users,
             training=is_training)
         if not is_training:
             flow.auth_started(resource_list=e.protocol_instance.available_resources)
@@ -389,11 +395,13 @@ def probe_trying(e):
             try_message_str = None
             if hasattr(e, 'message'):
                 try_message_str = e.message
-
+            try_id = sha1(urandom(32)).hexdigest()[:8]
+            if e.protocol_instance._session_id is not None:
+                try_id = '%s##%s' % (try_id, e.protocol_instance._session_id)
             message = e.protocol_instance.create_next_message(
                 request_seq=e.request.header.seq,
                 oid='try',
-                try_id=sha1(urandom(32)).hexdigest()[:8],
+                try_id=try_id,
                 resource=resources,
                 policy=policy,
                 authTimeout=settings.bioauth_timeout,
@@ -553,6 +561,8 @@ class BiomioProtocol:
         self.app_users = []
 
         self.auth_items = []
+
+        self._session_id = None
 
         logger.debug(' --------- ')  # helpful to separate output when auto tests is running
 
@@ -762,6 +772,8 @@ class BiomioProtocol:
             if hasattr(input_msg.msg, 'onBehalfOf'):
                 data['on_behalf_of'] = str(input_msg.msg.onBehalfOf)
                 user_key = str(input_msg.msg.onBehalfOf)
+            if hasattr(input_msg.msg, 'session_id'):
+                self._session_id = str(input_msg.msg.session_id)
             namespace = str(input_msg.msg.namespace)
             req_plugin = self._rpc_handler.get_plugin_instance(namespace=namespace)
             user_id = req_plugin.identify_user(on_behalf_of=user_key)
@@ -815,6 +827,9 @@ class BiomioProtocol:
                 'rpcStatus': status
             }
 
+            if self._session_id is not None:
+                res_params.update({'session_id': self._session_id})
+
             if result is not None:
                 for k, v in result.iteritems():
                     res_keys.append(k)
@@ -863,8 +878,9 @@ class BiomioProtocol:
 
     def try_probe(self, **kwargs):
         message = kwargs.get('message', None)
+        current_resources = kwargs.get('current_resources', None)
         self._state_machine_instance.probetry(request=self._last_received_message, protocol_instance=self,
-                                              message=message)
+                                              message=message, current_resources=current_resources)
 
     def cancel_auth(self, **kwargs):
         flow = kwargs.get('bioauth_flow')

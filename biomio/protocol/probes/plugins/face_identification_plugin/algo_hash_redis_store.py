@@ -1,10 +1,13 @@
 from biomio.constants import MYSQL_IDENTIFICATION_HASH_DATA_TABLE_NAME, MYSQL_IDENTIFICATION_USER_HASH_TABLE_NAME
 from database_actions import delete_data, create_records, select_records_by_ids
+from biomio.algorithms.cvtools.types import numpy_ndarrayToList, isEqual
 from biomio.protocol.storage.redis_storage import RedisStorage
 from biomio.worker.worker_interface import WorkerInterface
 from defs import serialize, deserialize
 from threading import Lock
 import ast
+from biomio.algorithms.logger import logger
+
 
 REDIS_IDENTIFICATION_BUCKET_KEY = 'identification_hash:%s:%s'
 HASH_BUCKET_KEY_FORMAT = "bucket_key:%s:%s"
@@ -28,30 +31,40 @@ class AlgorithmsHashRedisStackStore:
                 cls._instance = AlgorithmsHashRedisStackStore(redis_id)
         return cls._instance
 
-    def store_vectors(self, hash_data_list, data, callback):
+    def store_vectors(self, hash_data_list, data, data_id=None, callback=None):
         user_hash_data = []
         local_buckets_list = []
         hash_keys_data = {}
+        ext_data_key = str(data)
+        if data_id is not None:
+            ext_data_key += ':' + str(data_id)
         for hash_name, hash_buckets in hash_data_list:
             for key, value in hash_buckets:
                 bucket_key = HASH_BUCKET_KEY_FORMAT % (hash_name, key)
                 if not local_buckets_list.__contains__(bucket_key):
                     local_buckets_list.append(bucket_key)
-                    user_hash_data.append((str(data), str(bucket_key)))
+                    user_hash_data.append((ext_data_key, str(bucket_key)))
                 values = hash_keys_data.get(str(bucket_key), [])
-                values.append((value, str(data)))
+                contains = False
+                for v in values:
+                    if isEqual(v[0], numpy_ndarrayToList(value)) and str(v[1]) == str(data):
+                        contains = True
+                        break
+                if not contains:
+                    values.append((numpy_ndarrayToList(value), str(data)))
                 hash_keys_data[str(bucket_key)] = values
 
-        user_records = select_records_by_ids(self._user_hash_table_name, [str(data)], True)
+        user_records = select_records_by_ids(self._user_hash_table_name, [ext_data_key], True)
         if len(user_records['records']) > 0:
             loaded_buckets = []
             for record in user_records['records']:
                 if not loaded_buckets.__contains__(str(record['bucket_key'])):
                     loaded_buckets.append(str(record['bucket_key']))
             hash_buckets = select_records_by_ids(self._hash_data_table_name, loaded_buckets)
-            delete_data(self._user_hash_table_name, [str(data)])
+            delete_data(self._user_hash_table_name, [ext_data_key])
             for key, value in hash_buckets.iteritems():
                 hash_data = deserialize(value['hash_data'])
+                logger.debug(hash_data)
                 hash_buckets[key] = [v for v in hash_data if v[1] != str(data)]
             for key, value in hash_keys_data.iteritems():
                 values = hash_buckets.get(key, [])
@@ -73,12 +86,18 @@ class AlgorithmsHashRedisStackStore:
         if len(user_hash_data) > 0:
             create_records(self._user_hash_table_name, tuple(user_hash_data))
 
-    def load_data(self, user_ids=None, user_group_id=None, include_only_from=None):
+    def load_data(self, user_ids=None, data_id=None, user_group_id=None, include_only_from=None):
         if user_ids is None:
             user_ids = select_records_by_ids("", [user_group_id], True)
         if len(user_ids) > 0:
-            data_user_ids = [str(user_id) for user_id in user_ids]
+            data_user_ids = []
+            for user_id in user_ids:
+                user_data_id = str(user_id)
+                if data_id is not None:
+                    user_data_id += ":" + str(data_id)
+                data_user_ids.append(user_data_id)
             user_records = select_records_by_ids(self._user_hash_table_name, data_user_ids, True)
+            logger.debug(user_records)
             if len(user_records['records']) > 0:
                 loaded_buckets = []
                 for record in user_records['records']:
@@ -90,6 +109,7 @@ class AlgorithmsHashRedisStackStore:
                             loaded_buckets.append(str(record['bucket_key']))
 
                 hash_buckets = select_records_by_ids(self._hash_data_table_name, loaded_buckets)
+                logger.debug(hash_buckets)
                 for key, value in hash_buckets.iteritems():
                     hash_data = deserialize(value['hash_data'])
                     if self._ihr_redis.exists(str(key)):
@@ -99,14 +119,13 @@ class AlgorithmsHashRedisStackStore:
     @staticmethod
     def _buckets_hash(key):
         parts = key.split(':')
-        if len(parts) == 3:
-            return parts[1]
-        else:
-            return ""
+        return parts[1] if len(parts) == 3 else ""
 
     def get_bucket(self, hash_name, bucket_key):
-        bucket_key = HASH_BUCKET_KEY_FORMAT % (hash_name, bucket_key)
-        data = self._ihr_redis.get_data(bucket_key)
+        redis_key = HASH_BUCKET_KEY_FORMAT % (hash_name, bucket_key)
+        logger.debug(redis_key)
+        data = self._ihr_redis.get_data(redis_key)
+        logger.debug(data)
         if data is not None:
             data = ast.literal_eval(data)
             return data['data']

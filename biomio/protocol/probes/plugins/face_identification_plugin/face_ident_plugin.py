@@ -6,7 +6,7 @@ from biomio.utils.biomio_decorators import inherit_docstring_from
 from biomio.protocol.storage.redis_storage import RedisStorage
 
 class FaceIdentificationPlugin(base_probe_plugin.BaseProbePlugin):
-    _settings = dict(algoID="001022", userID="0000000000000")
+    _settings = dict(algoID="001022")
     _algorithm = IdentificationPAInterface()
     _max_verification_attempts = 5
     _max_training_attempts = 3
@@ -22,8 +22,10 @@ class FaceIdentificationPlugin(base_probe_plugin.BaseProbePlugin):
         self._callback = callback
         self._data_validator(data)
         normalized_images = [str(image) for image in data.get('samples')]
-        del data['samples']
         data.update({'images': normalized_images, 'settings': self._settings})
+        data['settings']['userID'] = str(data['user_id'])
+        del data['samples']
+        del data['user_id']
         redis_instance = RedisStorage.persistence_instance()
         retries_key = REDiS_TRAINING_RETRIES_COUNT_KEY % data['probe_id']
         if not redis_instance.exists(retries_key):
@@ -38,6 +40,8 @@ class FaceIdentificationPlugin(base_probe_plugin.BaseProbePlugin):
         del data['samples']
         data.update({'images': normalized_images, 'settings': self._settings,
                      'hash_config_path': get_plugin_dir("settings")})
+        data['settings']['providerID'] = data.get('provider_id', '0')
+        del data['provider_id']
         redis_instance = RedisStorage.persistence_instance()
         retries_key = REDIS_VERIFICATION_RETIES_COUNT_KEY % data['probe_id']
         if not redis_instance.exists(retries_key):

@@ -6,8 +6,10 @@ from biomio.algorithms.recognition.processes.defs import REDIS_CLUSTER_JOB_ACTIO
 from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
 from biomio.algorithms.processes.transfer_data_process import TransferDataProcess
 from processes.init_ident_update_process import InitIdentificationUpdateProcess
+from processes.load_user_by_provider_process import LoadUsersByProviderProcess
 from processes.load_ident_hash_process import LoadIdentificationHashProcess
 from processes.update_data_struct_process import UpdateDataStructureProcess
+from processes.ident_prepare_process import IdentificationPrepareProcess
 from processes.final_ident_process import FinalIdentificationProcess
 from processes.ident_start_process import IdentificationStartProcess
 from processes.iden_rest_est_process import IdentificationREProcess
@@ -119,6 +121,8 @@ class IdentificationPAInterface(AlgorithmInterface):
         data_detect_process = DataDetectionProcess(TEMP_DATA_PATH, worker)
         rotation_detect_process = RotationDetectionProcess(TEMP_DATA_PATH, worker)
         rotation_result_process = RotationResultProcess(TEMP_DATA_PATH, worker)
+        ident_prepare_process = IdentificationPrepareProcess(worker)
+        load_users_process = LoadUsersByProviderProcess(worker)
         ident_run_process = IdentificationRunProcess(worker)
         load_ident_hash_process = LoadIdentificationHashProcess(worker)
         identify_re_process = IdentificationREProcess(worker)
@@ -130,7 +134,9 @@ class IdentificationPAInterface(AlgorithmInterface):
         training_process.set_data_rotation_process(rotation_detect_process)
         rotation_detect_process.set_rotation_result_process(rotation_result_process)
         rotation_result_process.set_data_detection_process(data_detect_process)
-        data_detect_process.set_final_training_process(ident_run_process)
+        data_detect_process.set_final_training_process(ident_prepare_process)
+        ident_prepare_process.set_load_users_process(load_users_process)
+        load_users_process.set_identification_run_process(ident_run_process)
         ident_run_process.set_identification_process(load_ident_hash_process)
         load_ident_hash_process.set_identification_estimate_process(identify_re_process)
         identify_re_process.set_final_identification_process(final_ident_process)

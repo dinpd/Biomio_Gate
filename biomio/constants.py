@@ -10,6 +10,8 @@ TRAINING_DATA_TABLE_CLASS_NAME = 'TrainingData'
 POLICY_DATA_TABLE_CLASS_NAME = 'Policy'
 DEVICE_INFORMATION_TABLE_CLASS_NAME = 'DeviceInformation'
 PGP_KEYS_DATA_TABLE_CLASS_NAME = 'PgpKeysData'
+WEB_RESOURCE_TABLE_CLASS_NAME = 'WebResource'
+PROVIDER_USERS_TABLE_CLASS_NAME = 'ProviderUser'
 
 MYSQL_APPS_TABLE_NAME = 'Applications'
 MYSQL_EMAILS_TABLE_NAME = 'Emails'
@@ -19,6 +21,8 @@ MYSQL_TRAINING_DATA_TABLE_NAME = 'TrainingData'
 MYSQL_CHANGES_TABLE_NAME = 'UILog'
 MYSQL_POLICIES_TABLE_NAME = 'Policies'
 MYSQL_DEVICE_INFORMATION_TABLE_NAME = 'UserServices'
+MYSQL_WEB_RESOURCES_TABLE_NAME = 'WebResources'
+MYSQL_PROVIDER_USERS_TABLE_NAME = 'ProviderUsers'
 # Identification Data Tables
 MYSQL_IDENTIFICATION_USER_HASH_TABLE_NAME = 'IdentificationUsersBucketsData'
 MYSQL_IDENTIFICATION_HASH_DATA_TABLE_NAME = 'IdentificationHashData'
@@ -43,6 +47,8 @@ REDIS_RESOURCES_KEY = 'device_resources:%s'
 REDIS_USER_POLICY_KEY = 'policy:%s'
 REDIS_USER_CONDITION_KEY = 'auth_condition:%s'
 REDIS_DEVICE_INFORMATION_KEY = 'device_info:%s'
+REDIS_WEB_RESOURCE_KEY = 'web_resource:%s'
+REDIS_PROVIDER_USER_KEY = 'provider_user:%s'
 
 REDiS_TRAINING_RETRIES_COUNT_KEY = 'training_retries_count:%s'
 REDIS_VERIFICATION_RETIES_COUNT_KEY = 'verification_retries_count:%s'
@@ -112,6 +118,8 @@ TRAINING_TYPES_AI_RESPONSE = {
     'voice': '0'
 }
 
+
+HYBRID_APP_TYPE_PREFIX = 'hybrid'
 PROBE_APP_TYPE_PREFIX = 'probe'
 GENERAL_SUBSCRIBE_PATTERN = '__keyspace*:{redis_key_pattern}'
 

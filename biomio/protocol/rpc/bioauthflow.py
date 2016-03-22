@@ -1,3 +1,4 @@
+import ast
 import base64
 import json
 import requests
@@ -6,6 +7,7 @@ from biomio.constants import TRAINING_CANCELED_STATUS, TRAINING_CANCELED_MESSAGE
 from biomio.protocol.data_stores.device_information_store import DeviceInformationStore
 from biomio.protocol.probes.probe_plugin_manager import ProbePluginManager
 from biomio.protocol.rpc.app_connection_listener import AppConnectionListener
+from biomio.protocol.storage.redis_storage import RedisStorage
 from biomio.third_party.fysom import Fysom, FysomError
 from biomio.protocol.storage.auth_state_storage import AuthStateStorage
 from biomio.protocol.rpc.app_auth_connection import AppAuthConnection
@@ -45,9 +47,10 @@ def on_reset(e):
 
 def on_request(e):
     flow = e.bioauth_flow
+    current_resources = e.current_resources
 
     if flow.is_extension_owner():
-        flow.auth_connection.start_auth()
+        flow.auth_connection.start_auth(current_resources=current_resources)
 
     return STATE_AUTH_WAIT
 
@@ -87,7 +90,15 @@ def on_cancel_auth(e):
 
 def on_state_changed(e):
     flow = e.bioauth_flow
-    next_state = flow.auth_connection.get_data(key=_PROBESTORE_STATE_KEY)
+    connection_data = flow.auth_connection.get_data()
+    next_state = None
+    provider_id = None
+    if connection_data is not None:
+        next_state = connection_data.get(_PROBESTORE_STATE_KEY)
+        provider_id = connection_data.get('provider_id')
+
+    if provider_id is not None:
+        flow._provider_id = provider_id
 
     if next_state is None:
         if e.fsm.current == STATE_AUTH_WAIT or e.fsm.current == STATE_AUTH_VERIFICATION_STARTED:
@@ -109,8 +120,8 @@ def on_state_changed(e):
 def on_auth_wait(e):
     flow = e.bioauth_flow
 
-    if flow.is_probe_owner():
-        flow.try_probe_callback(message="Authentication")
+    if flow.is_probe_owner() or flow.is_hybrid_app():
+        flow.try_probe_callback(message="Authentication", current_resources=flow.auth_connection._current_resources)
 
 
 def on_auth_training(e):
@@ -122,7 +133,7 @@ def on_auth_training(e):
 def on_auth_finished(e):
     flow = e.bioauth_flow
 
-    if flow.is_extension_owner():
+    if flow.is_extension_owner() or flow.is_hybrid_app():
         flow.rpc_callback()
 
     if flow.is_probe_owner():
@@ -135,6 +146,9 @@ def on_auth_verification_started(e):
 
     if flow.is_extension_owner():
         flow._verification_started_callback()
+    else:
+        RedisStorage.persistence_instance().store_data(key='simulator_auth_status:%s' % flow.app_id,
+                                                       result='Auth check in progress....', status='in_progress')
 
 
 auth_states = {
@@ -254,6 +268,7 @@ class BioauthFlow:
         self._resources_list = []
         self._on_behalf_of = None
         self.auth_connection = AppAuthConnection(app_id=app_id, app_type=app_type)
+        self._provider_id = None
 
         if auto_initialize:
             self.initialize()
@@ -266,6 +281,8 @@ class BioauthFlow:
     def shutdown(self):
         logger.debug('BIOMETRIC AUTH OBJECT [%s, %s]: SHUTTING DOWN...' % (self.app_type, self.app_id))
         if self.is_probe_owner() and (self.is_current_state(STATE_AUTH_VERIFICATION_STARTED)):
+            RedisStorage.persistence_instance().store_data(key='simulator_auth_status:%s' % self.app_id,
+                                                           result='Your device was disconnected...', status='finished')
             logger.debug("BIOMETRIC AUTH OBJECT [%s, %s]: APP DISCONNECTED - CONTINUE PROBE VERIFICATION...")
         else:
             self.cancel_auth()
@@ -315,7 +332,7 @@ class BioauthFlow:
         self._store_state()
 
     @tornado.gen.engine
-    def request_auth(self, verification_started_callback, callback):
+    def request_auth(self, verification_started_callback, current_resources=None, callback=None):
         """
         Should be called for extension to request biometric authentication from probe.
         """
@@ -323,7 +340,7 @@ class BioauthFlow:
         self.rpc_callback = callback  # Store callback to call later in STATE_AUTH_FINISHED state
         data_dict = {}
         self.auth_connection.store_data(**data_dict)
-        self._state_machine_instance.request(bioauth_flow=self)
+        self._state_machine_instance.request(bioauth_flow=self, current_resources=current_resources)
         self._store_state()
 
     def auth_started(self, resource_list=None):
@@ -345,13 +362,21 @@ class BioauthFlow:
 
         auth_result = True
         max_retries = False
-
+        error = None
+        rec_type_data = RedisStorage.persistence_instance().get_data(key='app_rec_type:%s' % self.app_id)
+        rec_type_data = {} if rec_type_data is None else ast.literal_eval(rec_type_data)
         for probe_type, samples_list in samples_by_probe_type.iteritems():
-            if self._app_user is not None:
-                new_probe_type = '%s_%s' % (probe_type, self._app_user)
-                if new_probe_type in ProbePluginManager.instance().get_available_auth_types():
-                    probe_type = new_probe_type
+            # if self._app_user is not None:
+            #     new_probe_type = '%s_%s' % (probe_type, self._app_user)
+            #     if new_probe_type in ProbePluginManager.instance().get_available_auth_types():
+            #         probe_type = new_probe_type
             data = dict(samples=samples_list, probe_id=self.app_id)
+            if rec_type_data.get('rec_type') is not None and probe_type == 'face':
+                rec_type = rec_type_data.get('rec_type')
+                if rec_type != 'verification':
+                    probe_type = 'face_identification'
+                    if self._provider_id is not None:
+                        data.update({'provider_id': self._provider_id})
             result = yield tornado.gen.Task(
                 ProbePluginManager.instance().get_plugin_by_auth_type(probe_type).run_verification, data)
             if isinstance(result, bool):
@@ -359,15 +384,20 @@ class BioauthFlow:
                 error = None
                 max_retries = False
             else:
-                error = result.get('error')
-                verified = result.get('verified')
-                max_retries = result.get('max_retries', False)
+                if isinstance(result, str):
+                    auth_result = result
+                else:
+                    error = result.get('error')
+                    verified = result.get('verified', False)
+                    max_retries = result.get('max_retries', False)
             if error:
                 logger.debug(msg='Some samples could not be processed. Sending "try" message again.')
                 self._state_machine_instance.retry(bioauth_flow=self)
                 self._store_state()
                 break
             else:
+                if isinstance(auth_result, str):
+                    break
                 logger.debug(msg='SET NEXT AUTH RESULT: %s' % verified)
                 auth_result = verified and auth_result
 
@@ -382,12 +412,20 @@ class BioauthFlow:
             ai_code = self.auth_connection.get_data(key=_PROBESTORE_AI_CODE_KEY)
             training_result = False
             error = None
+            rec_type_data = RedisStorage.persistence_instance().get_data(key='app_rec_type:%s' % self.app_id)
+            rec_type_data = {} if rec_type_data is None else ast.literal_eval(rec_type_data)
             for probe_type, samples in samples_by_probe_type.iteritems():
                 if self._app_user is not None:
                     new_probe_type = '%s_%s' % (probe_type, self._app_user)
                     if new_probe_type in ProbePluginManager.instance().get_available_auth_types():
                         probe_type = new_probe_type
                 data = dict(try_type=probe_type, ai_code=ai_code, samples=samples, probe_id=self.app_id)
+                if rec_type_data.get('rec_type') is not None and probe_type == 'face':
+                    rec_type = rec_type_data.get('rec_type')
+                    if rec_type != 'verification':
+                        if self._app_user is not None:
+                            data.update({'user_id': self._app_user})
+                        probe_type = 'face_identification'
                 result = yield tornado.gen.Task(
                     ProbePluginManager.instance().get_plugin_by_auth_type(probe_type).run_training, data)
                 if not isinstance(result, bool):
@@ -407,6 +445,9 @@ class BioauthFlow:
 
     def set_auth_results(self, result, max_retries=False):
         # TODO: make method private
+        if self.auth_connection.is_probe_owner():
+            RedisStorage.persistence_instance().store_data(key='simulator_auth_status:%s' % self.app_id, result=result,
+                                                           status='finished')
         self._state_machine_instance.results_available(bioauth_flow=self, result=result, max_retries=max_retries)
         self._store_state()
 
@@ -418,6 +459,9 @@ class BioauthFlow:
 
     def is_extension_owner(self):
         return not self.auth_connection.is_probe_owner()
+
+    def is_hybrid_app(self):
+        return self.auth_connection.is_hybrid_app()
 
     @classmethod
     def start_training(cls, probe_id, code):

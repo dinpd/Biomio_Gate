@@ -4,6 +4,7 @@ from biomio.algorithms.recognition.processes.handling import load_temp_data
 from biomio.algorithms.interfaces import AlgorithmProcessInterface, logger
 from biomio.constants import REDIS_DO_NOT_STORE_RESULT_KEY
 
+
 IDENTIFICATION_RUN_PROCESS_CLASS_NAME = "IdentificationRunProcess"
 
 def job(callback_code, **kwargs):
@@ -22,14 +23,14 @@ class IdentificationRunProcess(AlgorithmProcessInterface):
     def handler(self, result):
         self._handler_logger_info(result)
         data = load_temp_data(result['data_file'], remove=True)
-        logger.debug(data)
         test_size = 0
         settings = {
             "hash_settings": {
                 "database_type": wNearPyHash.type(),
                 "settings": DEFAULT_NEAR_PY_HASH_SETTINGS,
                 "hash_config_path": data['general_data']['hash_config_path']
-            }
+            },
+            "users": result['users']
         }
         jobs_list = []
         for inx, cluster in data['clusters'].iteritems():

@@ -3,6 +3,7 @@ from biomio.algorithms.interfaces import AlgorithmProcessInterface
 from biomio.constants import REDIS_DO_NOT_STORE_RESULT_KEY
 from interface_helper import pre_identification_helper
 
+
 IDENTIFICATION_START_PROCESS_CLASS_NAME = "IdentificationStartProcess"
 
 def job(callback_code, **kwargs):
