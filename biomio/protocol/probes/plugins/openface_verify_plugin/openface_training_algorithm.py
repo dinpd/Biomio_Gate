@@ -1,5 +1,6 @@
 from algoflows_defs import OPENFACE_DATA_REPRESENTATION
 from biomio.algorithms.flows.flow import AlgorithmFlow
+from biomio.algorithms.logger import logger
 
 
 class OpenFaceTrainingFlowAlgorithm(AlgorithmFlow):
@@ -30,6 +31,10 @@ class OpenFaceTrainingFlowAlgorithm(AlgorithmFlow):
         AlgorithmFlow.__init__(self)
 
     def apply(self, data):
+        logger.debug("===================================")
+        logger.debug("OpenFaceTrainingFlowAlgorithm::apply")
+        logger.debug(data)
+        logger.debug("===================================")
         if data is None:
             # TODO: Write Error handler
             return data
@@ -38,7 +43,7 @@ class OpenFaceTrainingFlowAlgorithm(AlgorithmFlow):
             'data': [],
             'threshold': data['threshold']
         } if data.get('database', None) is None else data.get('database')
-        for img in data['images']:
+        for img in data['data']:
             res = self._stages.get(OPENFACE_DATA_REPRESENTATION).apply({'path': img})
             db['data'].append(res)
         return db

@@ -1,5 +1,6 @@
 from algoflows_defs import OPENFACE_DATA_REPRESENTATION, OPENFACE_SD_ESTIMATE
 from biomio.algorithms.flows.flow import AlgorithmFlow
+from biomio.algorithms.logger import logger
 
 class OpenFaceVerificationFlowAlgorithm(AlgorithmFlow):
     """
@@ -27,6 +28,10 @@ class OpenFaceVerificationFlowAlgorithm(AlgorithmFlow):
         AlgorithmFlow.__init__(self)
 
     def apply(self, data):
+        logger.debug("===================================")
+        logger.debug("OpenFaceVerificationFlowAlgorithm::apply")
+        logger.debug(data)
+        logger.debug("===================================")
         if data is None:
             # TODO: Write Error handler
             return data
