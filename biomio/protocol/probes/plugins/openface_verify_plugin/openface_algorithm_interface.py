@@ -22,7 +22,9 @@ IMAGE_DIMENSION = 96
 
 
 def training_job(callback_code, **kwargs):
-    settings = pre_training_helper(callback_code=callback_code, **kwargs)
+    settings = pre_training_helper(images=kwargs['images'], probe_id=kwargs['probe_id'], settings=kwargs['settings'],
+                                   callback_code=callback_code, try_type=kwargs['try_type'], ai_code=kwargs['ai_code'])
+    settings.update({'threshold': kwargs['threshold']})
     algo = OpenFaceAlgorithmInterface()
     res = algo.training(callback=None, **settings)
     res_record = {
