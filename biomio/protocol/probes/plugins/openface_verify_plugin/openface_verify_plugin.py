@@ -11,9 +11,11 @@ class OpenFaceVerifyPlugin(base_probe_plugin.BaseProbePlugin):
     # _algorithm = OpenFaceAlgorithmInterface()
     _max_verification_attempts = 5
     _max_training_attempts = 3
+    _threshold = 0.0
 
     @inherit_docstring_from(base_probe_plugin.BaseProbePlugin)
     def set_plugin_config(self, config_values):
+        self._threshold = config_values.get('threshold', self._threshold)
         self._max_verification_attempts = config_values.get('max_verification_attempts', 5)
         self._max_training_attempts = config_values.get('max_training_attempts', 3)
 
@@ -23,8 +25,8 @@ class OpenFaceVerifyPlugin(base_probe_plugin.BaseProbePlugin):
         self._data_validator(data)
         normalized_images = [str(image) for image in data.get('samples')]
         del data['samples']
-        data.update({'images': normalized_images, 'settings': self._settings.copy()})
-        data['settings'].update({'userID': str(data['user_id'])})
+        data.update({'images': normalized_images, 'settings': self._settings.copy(), 'threshold': self._threshold})
+        data['settings'].update({'userID': str(data.get('user_id', self._settings.get('userID')))})
         redis_instance = RedisStorage.persistence_instance()
         retries_key = REDiS_TRAINING_RETRIES_COUNT_KEY % data['probe_id']
         if not redis_instance.exists(retries_key):
