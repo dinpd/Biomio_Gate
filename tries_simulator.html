@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tries Simulator</title>
+    <link rel="shortcut icon" href="https://biom.io/favicon.ico">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <style>
+        .results_only_area {
+            display: none;
+        }
+    </style>
+</head>
+<body style="text-align: center">
+<form action="" method="post">
+    <table align="center">
+        <tr>
+            <td><input id="receive_results" type="checkbox" value="with_results"> Receive Results</td>
+        </tr>
+        <tr>
+            <td style="padding-top: 20px;padding-bottom: 5px;" align="left"><b>Connected Devices</b></td>
+        </tr>
+        <tr>
+            <td>Selected Device</td>
+            <td>
+                <select name="app_id" id="app_selector">
+                    %s
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding-top: 20px;padding-bottom: 5px;" align="left"><b>Device Face Recognition Type</b></td>
+        </tr>
+        <tr>
+            <td>
+                <input id="verification_auth" type="radio" value="verification" checked name="skip_radio">Verification
+                <input id="identification_auth" type="radio" value="identification" name="skip_radio">Identification
+                <br>
+                <br>
+                <input type="button" value="Save" id="save_rec_btn">
+            </td>
+        </tr>
+        <tr class="results_only_area">
+            <td style="padding-top: 20px;padding-bottom: 5px;" align="left"><b>Device Providers</b></td>
+        </tr>
+        <tr class="results_only_area">
+            <td>Select Provider</td>
+            <td>
+                <select name="skip_provider_id" id="provider_select">
+
+                </select>
+            </td>
+        </tr>
+        <tr class="without_results_area">
+            <td style="padding-top: 20px;padding-bottom: 5px;" align="left"><b>Try Types</b></td>
+        </tr>
+        <tr class="without_results_area">
+            <td>Face</td>
+            <td><input name="auth_types" type="checkbox" value="face" checked></td>
+
+        </tr>
+        <tr class="without_results_area">
+            <td>Fingerprint</td>
+            <td><input name="auth_types" type="checkbox" value="fp"></td>
+        </tr>
+        <tr class="without_results_area">
+            <td>Push Button</td>
+            <td><input name="auth_types" type="checkbox" value="push_button"></td>
+        </tr>
+        <tr class="without_results_area">
+            <td>Pin Code</td>
+            <td><input name="auth_types" type="checkbox" value="pin_code"></td>
+        </tr>
+        <tr class="without_results_area">
+            <td>Credit Card</td>
+            <td><input name="auth_types" type="checkbox" value="credit_card"></td>
+        </tr>
+        <tr class="without_results_area">
+            <td>Location</td>
+            <td><input name="auth_types" type="checkbox" value="location"></td>
+        </tr>
+        <tr class="without_results_area">
+            <td style="padding-top: 20px;padding-bottom: 5px;" align="left"><b>Try Parameters</b></td>
+        </tr>
+        <tr class="without_results_area">
+            <td>Condition</td>
+            <td>
+                <input type="radio" name="condition" value="any" checked>Any
+            </td>
+            <td>
+                <input type="radio" name="condition" value="all" checked>All
+            </td>
+        </tr>
+    </table>
+    <div style="margin-top: 20px;" class="without_results_area">
+        <input type="submit" value="Send Try">
+    </div>
+    <div style="margin-top: 20px;" class="results_only_area">
+        <input type="button" value="Start Auth" id="start_auth_btn">
+
+        <p id="result_text">Result: Nothing Yet...</p>
+    </div>
+</form>
+</body>
+<script>
+    var check_status_interval;
+    $('#start_auth_btn').on('click', function (e) {
+        e.preventDefault();
+        var selected_device = $('#app_selector').find(':selected').val();
+        var selected_provider = $('#provider_select').find(':selected').val();
+        $.ajax({
+            url: '/start_auth/',
+            type: 'post',
+            contentType: 'application/json',
+            processData: false,
+            data: JSON.stringify({
+                selected_device: selected_device,
+                selected_provider: selected_provider
+            }),
+            success: function () {
+                clearInterval(check_status_interval);
+                check_auth_status(selected_device);
+            },
+            error: function (error) {
+                alert(error.responseText);
+            }
+        });
+    });
+    var check_auth_status = function (app_id) {
+        check_status_interval = setInterval(function () {
+            $.ajax({
+                url: '/start_auth/?app_id=' + app_id,
+                type: 'get',
+                contentType: 'application/json',
+                success: function (data) {
+                    data = JSON.parse(data);
+                    if (data['status'] == 'finished') {
+                        clearInterval(check_status_interval);
+                    }
+                    $('#result_text').text('Result: ' + data.result);
+                },
+                error: function (error) {
+                    alert(error.responseText);
+                }
+            });
+        }, 10000);
+    };
+
+    $('#save_rec_btn').on('click', function (e) {
+        e.preventDefault();
+        var rec_type = $("input[type='radio'][name='skip_radio']:checked").val();
+        var selected_device = $('#app_selector').find(':selected').val();
+        if (selected_device == 'No active devices') {
+            alert('It is required to select device first.');
+            return;
+        }
+        var current_btn = $(e.currentTarget);
+        current_btn.attr('disabled', 'disabled');
+        current_btn.val('Working...');
+        var request_data = JSON.stringify({rec_type: rec_type, selected_device: selected_device});
+        $.ajax({
+            url: '/set_recognition_type/',
+            type: 'post',
+            contentType: 'application/json',
+            data: request_data,
+            success: function () {
+                alert('Recognition type for device ' + selected_device + ' was successfully changed to ' + rec_type);
+                current_btn.val('Save');
+                current_btn.removeAttr('disabled');
+            },
+            error: function (error) {
+                alert(error.responseText);
+                current_btn.val('Save');
+                current_btn.removeAttr('disabled');
+            }
+        });
+    });
+    $(document).ready(function () {
+        var selected_device = $('#app_selector').find(':selected').val();
+        if (selected_device == 'No active devices') {
+            // alert('It is required to select device first.');
+            return;
+        }
+        var verification_radio = $('#verification_auth');
+        var identification_radio = $('#identification_auth');
+        $.ajax({
+            url: '/set_recognition_type/?app_id=' + selected_device,
+            type: 'get',
+            success: function (data) {
+                data = JSON.parse(data);
+                if (data['verification']) {
+                    identification_radio.removeAttr('checked');
+                    verification_radio.attr('checked', 'checked');
+                } else {
+                    verification_radio.removeAttr('checked');
+                    identification_radio.attr('checked', 'checked');
+                }
+            },
+            error: function (error) {
+                alert(error.responseText);
+            }
+        });
+        $.ajax({
+            url: '/get_user_providers/?app_id=' + selected_device,
+            type: 'get',
+            success: function (data) {
+                var providers_select = $('#provider_select');
+                data = JSON.parse(data);
+                var providers = data["result"];
+                if (providers.length) {
+                    for (var i = 0; i < providers.length; i++) {
+                        var current_provider_id = providers[i]['provider_id'];
+                        var current_provider_name = providers[i]['provider_name'];
+                        providers_select.append($('<option></option>').attr("value", current_provider_id).text(current_provider_name + ' - ' + current_provider_id));
+                    }
+                } else {
+                    providers_select.append($('<option></option>').attr("value", "no_providers").text('No Providers'));
+                }
+            },
+            error: function (error) {
+                alert(error.responseText);
+            }
+        });
+    });
+    $('#receive_results').change(function () {
+        if (this.checked) {
+            $('.without_results_area').hide();
+            $('.results_only_area').show();
+        } else {
+            $('.without_results_area').show();
+            $('.results_only_area').hide();
+        }
+    });
+</script>
+</html>

@@ -1,4 +1,4 @@
-from biomio.constants import PROBE_APP_TYPE_PREFIX
+from biomio.constants import PROBE_APP_TYPE_PREFIX, HYBRID_APP_TYPE_PREFIX
 from biomio.protocol.data_stores.device_information_store import DeviceInformationStore
 from biomio.protocol.rpc.app_connection_listener import AppConnectionListener
 from biomio.protocol.rpc.app_connection_manager import AppConnectionManager
@@ -28,6 +28,7 @@ class AppAuthConnection:
         self._push_notifications_callback = push_notification_callback(
             'Please open the app to proceed with Verification.')
         self._push_notifications_clear_callback = push_notification_callback('', clear=True)
+        self._current_resources = None
 
     def is_probe_owner(self):
         """
@@ -36,7 +37,15 @@ class AppAuthConnection:
         """
         return self._app_type.lower().startswith(PROBE_APP_TYPE_PREFIX)
 
+    def is_hybrid_app(self):
+        return self._app_type.lower().startswith(HYBRID_APP_TYPE_PREFIX)
+
     def _set_keys_for_connected_app(self):
+        if self.is_hybrid_app():
+            new_app_key = self._connection_listener.auth_key(extension_id=self._app_id, probe_id=self._app_id)
+            self._app_key = new_app_key
+            self.store_data(state='auth_wait')
+            return
         if 'code_' in self._app_id:
             app_id = self._app_id
         else:
@@ -152,8 +161,9 @@ class AppAuthConnection:
         self._remove_disconnected_app_keys()
         self._connection_listener.unsubscribe()
 
-    def start_auth(self):
+    def start_auth(self, current_resources=None):
         if not self.is_probe_owner():
+            self._current_resources = current_resources
             self._set_keys_for_connected_app()
 
     def end_auth(self):
@@ -195,9 +205,10 @@ class AppAuthConnection:
         return result
 
     def _remove_disconnected_app_keys(self, clear_related_keys=True):
-        app_id = self._app_id if self.is_probe_owner() else self._app_id.split('_')[1]
+        is_probe = self.is_probe_owner() or self.is_hybrid_app()
+        app_id = self._app_id if is_probe else self._app_id.split('_')[1]
         self.clear_related_keys = clear_related_keys
-        AppConnectionManager.get_connected_apps(app_id=app_id, probe_device=self.is_probe_owner(),
+        AppConnectionManager.get_connected_apps(app_id=app_id, probe_device=is_probe,
                                                 callback=self._get_disconnect_apps_callback())
 
     def get_client_id(self):
@@ -211,14 +222,14 @@ class AppAuthConnection:
                 app_ids = app_ids.get('result') if app_ids is not None else []
                 logger.debug('App ids to remove connections for: %s' % app_ids)
                 for app_id in app_ids:
-                    if not self.is_probe_owner():
+                    if not self.is_probe_owner() and not self.is_hybrid_app():
                         logger.debug('DISCONNECTED')
                         DeviceInformationStore.instance().get_data(app_id=app_id,
                                                                    callback=self._push_notifications_clear_callback)
                     self._connection_manager.remove_active_app(app_id, self._app_id)
             if self.is_probe_owner():
                 self._connection_manager.delete_active_apps_list(self._app_id)
-            if self.is_probe_owner() and self._app_key:
+            if self.is_probe_owner():
                 self.remove_extension_keys_that_are_not_connected()
 
         return _disconnect_apps

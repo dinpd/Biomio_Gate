@@ -26,7 +26,8 @@ class ProbePluginManager:
     MAX_TRAINING_ATTR = 'max_training_attempts'
     MAX_VERIFICATION_ATTR = 'max_verification_attempts'
 
-    _AVAILABLE_EXTRA_CONFIG_ATTR = [AUTH_TYPE_ATTR, AUTH_CONFIG_ATTR, ENABLED_ATTR]
+    _AVAILABLE_EXTRA_CONFIG_ATTR = [AUTH_TYPE_ATTR, AUTH_CONFIG_ATTR, ENABLED_ATTR, ALGO_ID_ATTR, MAX_TRAINING_ATTR,
+                                    MAX_VERIFICATION_ATTR]
 
     @classmethod
     def instance(cls):

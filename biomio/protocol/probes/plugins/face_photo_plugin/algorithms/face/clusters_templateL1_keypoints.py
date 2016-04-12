@@ -1,11 +1,10 @@
-from __future__ import absolute_import
 from biomio.protocol.probes.plugins.face_photo_plugin.algorithms.face.clusters_keypoints import ClustersMatchingDetector
-from biomio.algorithms.algorithms.cvtools.types import listToNumpy_ndarray, numpy_ndarrayToList
-from biomio.algorithms.algorithms.features import matcherForDetector, dtypeForDetector
-from biomio.algorithms.algorithms.recognition.keypoints import verifying
-from biomio.algorithms.algorithms.features.matchers import Matcher
+from biomio.algorithms.cvtools import listToNumpy_ndarray, numpy_ndarrayToList
+from biomio.algorithms.features import matcherForDetector, dtypeForDetector
+from biomio.algorithms.recognition.keypoints import verifying
+from biomio.algorithms.features.matchers import Matcher
+from biomio.algorithms.logger import logger
 import itertools
-import logger
 import numpy
 
 
@@ -21,6 +20,7 @@ class ClustersTemplateL1MatchingDetector(ClustersMatchingDetector):
 
     def update_hash_templateL1(self, data):
         """
+
         max_weight = se*sum(i=1,k-1: 1+2*i) + k*(n-k)*se,
         where
             n - count of images,
@@ -57,6 +57,7 @@ class ClustersTemplateL1MatchingDetector(ClustersMatchingDetector):
 
                     for v in matches1:
                         if len(v) >= 1:
+
                             if v[0].distance == 0:
                                 best = v[0]
                             else:
@@ -85,10 +86,11 @@ class ClustersTemplateL1MatchingDetector(ClustersMatchingDetector):
                     self._etalon[index] = et_cluster
 
     def importSources(self, source):
-        logger.algo_logger.debug("Database loading started...")
+        self._etalon = []
+        logger.debug("Database loading started...")
         self.importSources_L1Template(source.get('data', dict()))
         self._prob = source.get('threshold', 100)
-        logger.algo_logger.debug("Database loading finished.")
+        logger.debug("Database loading finished.")
 
     def importSources_L1Template(self, source):
 
@@ -133,9 +135,8 @@ class ClustersTemplateL1MatchingDetector(ClustersMatchingDetector):
         matcher = Matcher(matcherForDetector(self.kodsettings.detector_type))
         count = 0
         prob = 0
-        logger.algo_logger.debug("Image: " + data['path'])
-        logger.algo_logger.debug("Template size: ")
-
+        logger.debug("Image: " + data['path'])
+        logger.debug("Template size: ")
         for index, et_weight_cluster in enumerate(self._etalon):
             d, c = itertools.izip(*itertools.ifilter(lambda (_, c): c > 0, et_weight_cluster))
             et_cluster = list(d)
@@ -166,11 +167,10 @@ class ClustersTemplateL1MatchingDetector(ClustersMatchingDetector):
                 )
                 count += 1
                 val = (c_val / (1.0 * cluster_weight)) * 100
-                logger.algo_logger.debug("Cluster #" + str(index + 1) + ": " + str(cluster_weight)
-                                         + " Positive: " + str(c_val) + " Probability: " + str(val))
+                logger.debug("Cluster #" + str(index + 1) + ": " + str(cluster_weight)
+                             + " Positive: " + str(c_val) + " Probability: " + str(val))
                 prob += val
             else:
-                logger.algo_logger.debug("Cluster #" + str(index + 1) + ": " + str(cluster_weight)
-                                         + " Invalid.")
-        logger.algo_logger.debug("Probability: " + str((prob / (1.0 * count))))
+                logger.debug("Cluster #" + str(index + 1) + ": " + str(cluster_weight) + " Invalid.")
+        logger.debug("Probability: " + str((prob / (1.0 * count))))
         return prob / (1.0 * count)

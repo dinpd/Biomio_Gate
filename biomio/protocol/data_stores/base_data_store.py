@@ -119,7 +119,7 @@ class BaseDataStore:
         self._lru_redis.store_data(key=key, ex=ex, **kwargs)
         self._run_storage_job(self._worker.UPDATE_JOB, table_class_name=table_class_name, object_id=object_id, **kwargs)
 
-    def _get_lru_data(self, key, table_class_name, object_id, callback, to_dict=False):
+    def _get_lru_data(self, key, table_class_name, object_id, callback, to_dict=False, **kwargs):
         """
             Internal method which gets data from LRU Redis. If it exists there then callback is executed with this data.
             If not - we run worker job to get data from MySQL and save it into Redis.
@@ -138,7 +138,7 @@ class BaseDataStore:
             callback(result)
         else:
             self._run_storage_job(self._worker.GET_JOB, callback, table_class_name=table_class_name,
-                                  object_id=object_id, to_dict=to_dict)
+                                  object_id=object_id, to_dict=to_dict, **kwargs)
 
     def _delete_lru_data(self, key, table_class_name, object_id):
         """
@@ -198,7 +198,7 @@ class BaseDataStore:
                 result = None
         return result
 
-    def _select_data_by_ids(self, table_class_name, object_ids, callback):
+    def _select_data_by_ids(self, table_class_name, object_ids, callback, **kwargs):
         """
             Internal methods which selects data from MySQL table by given list of ids.
         :param table_class_name: str Pony MySQL Entity class name.
@@ -206,7 +206,7 @@ class BaseDataStore:
         :param callback: function that must be executed after we got data.
         """
         self._run_storage_job(self._worker.SELECT_JOB, callback, table_class_name=table_class_name,
-                              object_ids=object_ids)
+                              object_ids=object_ids, **kwargs)
 
     def _run_storage_job(self, job_to_run, callback=None, kwargs_list_for_results_gatherer=None, **kwargs):
         """

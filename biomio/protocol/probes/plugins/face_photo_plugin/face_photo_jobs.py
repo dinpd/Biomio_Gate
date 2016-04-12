@@ -170,9 +170,13 @@ def store_test_photo_helper(image_paths):
         #             os.unlink(file_path)
         #     except Exception, e:
         #         print e
+    TEST_IMAGE_FOLDER = tempfile.mkdtemp(dir=TEST_PHOTO_PATH)
+
+    if not os.path.exists(TEST_IMAGE_FOLDER):
+        os.makedirs(TEST_IMAGE_FOLDER)
 
     for path in image_paths:
-        shutil.copyfile(path, os.path.join(TEST_PHOTO_PATH, os.path.basename(path)))
+        shutil.copyfile(path, os.path.join(TEST_IMAGE_FOLDER, os.path.basename(path)))
 
 
 def training_job(images, probe_id, settings, callback_code, try_type, ai_code):
@@ -347,7 +351,7 @@ def training_job(images, probe_id, settings, callback_code, try_type, ai_code):
         else:
             RedisStorage.persistence_instance().delete_data(key=REDiS_TRAINING_RETRIES_COUNT_KEY % probe_id)
             RedisStorage.persistence_instance().store_data(key=REDIS_PROBE_RESULT_KEY % callback_code, result=result)
-        _tell_ai_training_results(result, ai_response_type, try_type, ai_code)
+        _tell_ai_training_results(result, ai_response_type, try_type.split('_')[0], ai_code)
     worker_logger.info('training finished for user - %s, with result - %s' % (settings.get('userID'), result))
 
 

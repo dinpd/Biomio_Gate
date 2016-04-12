@@ -1,6 +1,6 @@
 import requests
 from requests.exceptions import HTTPError
-from biomio.constants import EMAILS_TABLE_CLASS_NAME, REDIS_DO_NOT_STORE_RESULT_KEY, REST_VERIFY_COMMAND, \
+from biomio.constants import REDIS_DO_NOT_STORE_RESULT_KEY, REST_VERIFY_COMMAND, \
     USERS_TABLE_CLASS_NAME
 from biomio.mysql_storage.mysql_data_store_interface import MySQLDataStoreInterface
 from biomio.protocol.crypt import Crypto

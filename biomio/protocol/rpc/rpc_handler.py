@@ -1,6 +1,6 @@
 from biomio.protocol.rpc.rpc_plugin_manager import RpcPluginManager
 from biomio.protocol.rpc.rpcutils import CALLBACK_ARG, USER_ID_ARG, WAIT_CALLBACK_ARG, BIOAUTH_FLOW_INSTANCE_ARG, \
-    APP_ID_ATG
+    APP_ID_ATG, CURRENT_RESOURCES_ARG
 
 import logging
 
@@ -34,13 +34,16 @@ class RpcHandler:
         if hasattr(rpc_obj, call):
             rpc_call = getattr(rpc_obj, call)
             if rpc_call:
+                current_resources = None
+                if 'current_resources' in data:
+                    current_resources = data.pop('current_resources')
                 call_params = data
                 call_params[USER_ID_ARG] = user_id
                 call_params[WAIT_CALLBACK_ARG] = wait_callback
                 call_params[CALLBACK_ARG] = callback
                 call_params[BIOAUTH_FLOW_INSTANCE_ARG] = bioauth_flow
                 call_params[APP_ID_ATG] = app_id
-
+                call_params[CURRENT_RESOURCES_ARG] = current_resources
                 rpc_call(**call_params)
 
     @staticmethod

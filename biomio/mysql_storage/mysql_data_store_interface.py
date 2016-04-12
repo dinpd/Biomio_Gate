@@ -82,7 +82,8 @@ class MySQLDataStoreInterface:
                                                   add_object_pk=add_object_id, set_attr=set_attr)
 
     @staticmethod
-    def get_object(table_name, object_id, return_dict=False, module_name=TABLES_MODULE):
+    def get_object(table_name, object_id, return_dict=False, module_name=TABLES_MODULE, custom_search_attr=None,
+                   **additional_query_params):
         """
             Returns single object for given table_name
         :param module_name: string name of the module
@@ -93,20 +94,22 @@ class MySQLDataStoreInterface:
 
         """
         return MySQLDataStore.instance().get_object(module_name=module_name, table_name=table_name, object_id=object_id,
-                                                    return_dict=return_dict)
+                                                    return_dict=return_dict, custom_search_attr=custom_search_attr,
+                                                    **additional_query_params)
 
     @staticmethod
-    def select_data_by_ids(table_name, object_ids, module_name=TABLES_MODULE):
+    def select_data_by_ids(table_name, object_ids, module_name=TABLES_MODULE, flat_result=False):
         """
             Selects data from given table with filter:
             obj.<unique_id> in [object_ids]
         :param module_name: string name of the module
         :param object_ids: list of unique object ids to select data for
         :param table_name: string name of the class (table)
-        :return: dict with unique object id as key and object dict as value
+        :param flat_result: bool, indicates whether it is required to return simple list of results
+        :return: dict with unique object id as key and object dict as value OR list with all results dicts
         """
         return MySQLDataStore.instance().select_data_by_ids(module_name=module_name, table_name=table_name,
-                                                            object_ids=object_ids)
+                                                            object_ids=object_ids, flat_result=flat_result)
 
     @staticmethod
     def get_applications_by_user_id_and_type(table_name, user_id, app_type, module_name=TABLES_MODULE):
@@ -121,3 +124,26 @@ class MySQLDataStoreInterface:
         return MySQLDataStore.instance().get_applications_by_user_id_and_type(module_name=module_name,
                                                                               table_name=table_name, user_id=user_id,
                                                                               app_type=app_type)
+
+    @staticmethod
+    def create_multiple_records(table_name, values, update=False, module_name=TABLES_MODULE):
+        """
+            Creates/Updates multiple records with one query.
+        :param table_name: string name of the class (table)
+        :param values: tuple of tuples with values to insert/update into the table. (e.g. ((1, 'a'), (2, 'b')) )
+        :param update: bool, indicates whether it is required to update existing values.
+        :param module_name: string name of the module
+        """
+        MySQLDataStore.instance().create_multiple_records(module_name=module_name, table_name=table_name,
+                                                          values=values, update=update)
+
+    @staticmethod
+    def delete_multiple_data(table_name, object_ids, module_name=TABLES_MODULE):
+        """
+            Deletes specified records from the specified table.
+        :param module_name: string name of the module
+        :param table_name: string name of the class (table)
+        :param object_ids: list of IDs of the objects(records) to delete.
+        """
+        MySQLDataStore.instance().delete_multiple_data(module_name=module_name, table_name=table_name,
+                                                       object_ids=object_ids)

@@ -92,12 +92,12 @@ def generate_pgp_key_pair(email):
 def register_for_handshake(user_id, mails, extension_app_id, extension_pub_key, probe_app_id, probe_pub_key):
     from biomio.protocol.data_stores.user_data_store import UserDataStore
     from biomio.protocol.data_stores.application_data_store import ApplicationDataStore
-    from biomio.protocol.data_stores.email_data_store import EmailDataStore
+    from biomio.protocol.data_stores.pgp_keys_data_store import PgpKeysDataStore
 
     BaseDataStore.instance().delete_custom_lru_redis_data(ApplicationDataStore.get_data_key(extension_app_id))
     BaseDataStore.instance().delete_custom_lru_redis_data(ApplicationDataStore.get_data_key(probe_app_id))
     for mail in mails:
-        BaseDataStore.instance().delete_custom_lru_redis_data(EmailDataStore.get_data_key(mail))
+        BaseDataStore.instance().delete_custom_lru_redis_data(PgpKeysDataStore.get_data_key(mail))
 
     BaseDataStore.instance().delete_custom_lru_redis_data(UserDataStore.get_data_key(user_id))
     UserDataStore.instance().store_data(user_id=user_id)
@@ -118,13 +118,13 @@ def register_for_handshake(user_id, mails, extension_app_id, extension_pub_key, 
     for mail in mails:
         public, private, pass_phrase = generate_pgp_key_pair(mail)
         store_keywords = {
-            EmailDataStore.PASS_PHRASE_ATTR: pass_phrase,
-            EmailDataStore.PUBLIC_PGP_KEY_ATTR: public,
-            EmailDataStore.PRIVATE_PGP_KEY_ATTR: private,
-            EmailDataStore.USER_ATTR: user_id
+            PgpKeysDataStore.PASS_PHRASE_ATTR: pass_phrase,
+            PgpKeysDataStore.PUBLIC_PGP_KEY_ATTR: public,
+            PgpKeysDataStore.PRIVATE_PGP_KEY_ATTR: private,
+            PgpKeysDataStore.USER_ATTR: user_id
         }
-        EmailDataStore.instance().store_data(email=mail, **store_keywords)
-        BaseDataStore.instance().delete_custom_lru_redis_data(EmailDataStore.get_data_key(mail))
+        PgpKeysDataStore.instance().store_data(email=mail, **store_keywords)
+        BaseDataStore.instance().delete_custom_lru_redis_data(PgpKeysDataStore.get_data_key(mail))
 
 
 def main():

@@ -42,11 +42,15 @@ def update_record_job(table_class_name, object_id, **kwargs):
         worker_logger.exception(msg=str(e))
 
 
-def get_record_job(table_class_name, object_id, callback_code, to_dict=False):
+def get_record_job(table_class_name, object_id, callback_code, to_dict=False, custom_search_attr=None,
+                   additional_query_params=None):
     worker_logger.info('Getting record for table class - %s, with object_id - %s' % (table_class_name, object_id))
     try:
+        if additional_query_params is None:
+            additional_query_params = {}
         record = MySQLDataStoreInterface.get_object(table_name=table_class_name, object_id=object_id,
-                                                    return_dict=to_dict)
+                                                    return_dict=to_dict, custom_search_attr=custom_search_attr,
+                                                    **additional_query_params)
         if not to_dict:
             redis_key = record.get_redis_key()
             record = record.to_dict()
@@ -66,10 +70,11 @@ def get_record_job(table_class_name, object_id, callback_code, to_dict=False):
     worker_logger.info('Got record for table class - %s, with object_id - %s' % (table_class_name, object_id))
 
 
-def select_records_by_ids_job(table_class_name, object_ids, callback_code):
+def select_records_by_ids_job(table_class_name, object_ids, callback_code, flat_result=False):
     worker_logger.info('Getting records for table class - %s, with object_ids - %s' % (table_class_name, object_ids))
     try:
-        records = MySQLDataStoreInterface.select_data_by_ids(table_name=table_class_name, object_ids=object_ids)
+        records = MySQLDataStoreInterface.select_data_by_ids(table_name=table_class_name, object_ids=object_ids,
+                                                             flat_result=flat_result)
         worker_logger.debug('Data: %s' % records)
         BaseDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
                                                   record_dict=records, callback_code=callback_code)
