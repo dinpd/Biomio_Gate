@@ -33,15 +33,15 @@ def training_job(callback_code, **kwargs):
     res = algo.training(callback=None, **settings)
     res_record = {
         'status': "update",
-        'userID': kwargs['userID'],
+        'userID': settings['userID'],
         'database': res
     }
     result = {
         'algo_result': res_record,
-        'temp_image_path': kwargs['general_data']['data_path'],
-        'probe_id': kwargs['general_data']['probe_id'],
-        'try_type': kwargs['general_data']['try_type'],
-        'ai_code': kwargs['general_data']['ai_code']
+        'temp_image_path': settings['general_data']['data_path'],
+        'probe_id': settings['general_data']['probe_id'],
+        'try_type': settings['general_data']['try_type'],
+        'ai_code': settings['general_data']['ai_code']
     }
     logger.info('Status::The database updated.')
     result_training_helper(callback_code=callback_code, final_func=ind_final_helper, **result)
