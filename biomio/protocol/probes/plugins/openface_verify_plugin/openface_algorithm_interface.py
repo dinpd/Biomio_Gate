@@ -22,6 +22,10 @@ IMAGE_DIMENSION = 96
 
 
 def training_job(callback_code, **kwargs):
+    logger.debug("-----------------------------------")
+    logger.debug("OpenFaceVerificationPlugin::training_job")
+    logger.debug(kwargs)
+    logger.debug("-----------------------------------")
     settings = pre_training_helper(images=kwargs['images'], probe_id=kwargs['probe_id'], settings=kwargs['settings'],
                                    callback_code=callback_code, try_type=kwargs['try_type'], ai_code=kwargs['ai_code'])
     settings.update({'threshold': kwargs['threshold']})
@@ -29,7 +33,6 @@ def training_job(callback_code, **kwargs):
     res = algo.training(callback=None, **settings)
     res_record = {
         'status': "update",
-        'algoID': kwargs['algoID'],
         'userID': kwargs['userID'],
         'database': res
     }
@@ -45,6 +48,10 @@ def training_job(callback_code, **kwargs):
 
 
 def verification_job(callback_code, **kwargs):
+    logger.debug("-----------------------------------")
+    logger.debug("OpenFaceVerificationPlugin::verification_job")
+    logger.debug(kwargs)
+    logger.debug("-----------------------------------")
     settings = pre_identification_helper(callback_code=callback_code, **kwargs)
     algo = OpenFaceAlgorithmInterface()
     res = algo.apply(callback=None, **settings)
