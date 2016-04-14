@@ -56,7 +56,8 @@ def verification_job(callback_code, **kwargs):
     settings = pre_verification_helper(callback_code=callback_code, **kwargs)
     algo = OpenFaceAlgorithmInterface()
     res = algo.apply(callback=None, **settings)
-    result_handling(res, **settings)
+    result_handling(result=res, probe_id=kwargs['probe_id'], temp_image_path=settings['temp_image_path'],
+                    settings=kwargs['settings'], callback_code=callback_code)
 
 
 class OpenFaceAlgorithmInterface(AlgorithmInterface):
