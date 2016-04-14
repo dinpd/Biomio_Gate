@@ -37,8 +37,6 @@ class OpenFaceVerificationFlowAlgorithm(AlgorithmFlow):
             return data
         database = data.get('database')
         tdata = self._stages.get(OPENFACE_DATA_REPRESENTATION).apply({'path': data.get('data')})
-        tdata.update({'database': database})
-        logger.debug(tdata)
-        dist = self._stages.get(OPENFACE_SD_ESTIMATE).apply(tdata)
+        dist = self._stages.get(OPENFACE_SD_ESTIMATE).apply({'data': tdata, 'database': database})
         logger.debug(dist)
         return {'result': dist['result'] < database.get('threshold', 0.0)}
