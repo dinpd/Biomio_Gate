@@ -1,5 +1,5 @@
 from biomio.protocol.probes.plugins.face_identification_plugin.processes.interface_helper import pre_training_helper, \
-    result_training_helper, ind_final_helper, pre_identification_helper
+    result_training_helper, ind_final_helper
 from biomio.algorithms.openface.openface_simple_dist_estimate import OpenFaceSimpleDistanceEstimation
 from biomio.algorithms.openface.openface_data_rep import OpenFaceDataRepresentation
 from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
@@ -8,6 +8,7 @@ from openface_verify_algorithm import OpenFaceVerificationFlowAlgorithm
 from openface_training_algorithm import OpenFaceTrainingFlowAlgorithm
 from biomio.algorithms.interfaces import AlgorithmInterface
 from biomio.constants import REDIS_PROBE_RESULT_KEY
+from helper import pre_verification_helper, result_handling
 from biomio.algorithms.logger import logger
 from defs import OPENFACE_PATH
 import os
@@ -52,10 +53,10 @@ def verification_job(callback_code, **kwargs):
     logger.debug("OpenFaceVerificationPlugin::verification_job")
     logger.debug(kwargs)
     logger.debug("-----------------------------------")
-    settings = pre_identification_helper(callback_code=callback_code, **kwargs)
+    settings = pre_verification_helper(callback_code=callback_code, **kwargs)
     algo = OpenFaceAlgorithmInterface()
     res = algo.apply(callback=None, **settings)
-    AlgorithmsDataStore.instance().store_data(key=REDIS_PROBE_RESULT_KEY % callback_code, result=res)
+    result_handling(res, **settings)
 
 
 class OpenFaceAlgorithmInterface(AlgorithmInterface):
