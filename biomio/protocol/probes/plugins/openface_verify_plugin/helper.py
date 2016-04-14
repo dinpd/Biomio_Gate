@@ -11,7 +11,7 @@ import os
 import binascii
 
 
-ALGO_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'algorithms')
+ALGO_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 
 def pre_verification_helper(image, settings, probe_id, callback_code):
