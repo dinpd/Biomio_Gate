@@ -9,7 +9,7 @@ import tempfile
 import cPickle
 import os
 import binascii
-from biomio.protocol.probes.plugins.face_verify_plugin.algorithms.algorithms_interface import AlgorithmsInterface
+
 
 ALGO_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'algorithms')
 

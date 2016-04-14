@@ -2,12 +2,10 @@ from biomio.protocol.probes.plugins.face_identification_plugin.processes.interfa
     result_training_helper, ind_final_helper
 from biomio.algorithms.openface.openface_simple_dist_estimate import OpenFaceSimpleDistanceEstimation
 from biomio.algorithms.openface.openface_data_rep import OpenFaceDataRepresentation
-from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
 from algoflows_defs import OPENFACE_DATA_REPRESENTATION, OPENFACE_SD_ESTIMATE
 from openface_verify_algorithm import OpenFaceVerificationFlowAlgorithm
 from openface_training_algorithm import OpenFaceTrainingFlowAlgorithm
 from biomio.algorithms.interfaces import AlgorithmInterface
-from biomio.constants import REDIS_PROBE_RESULT_KEY
 from helper import pre_verification_helper, result_handling
 from biomio.algorithms.logger import logger
 from defs import OPENFACE_PATH
