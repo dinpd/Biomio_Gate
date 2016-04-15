@@ -52,6 +52,7 @@ def verification_job(callback_code, **kwargs):
     logger.debug(kwargs)
     logger.debug("-----------------------------------")
     settings = pre_verification_helper(callback_code=callback_code, **kwargs)
+    settings.update({'metadata': {'probeID': kwargs['probe_id'], 'userID': kwargs['settings']['userID']}})
     algo = OpenFaceAlgorithmInterface()
     res = algo.apply(callback=None, **settings)
     result_handling(result=res['result'], probe_id=kwargs['probe_id'], temp_image_path=settings['temp_image_path'],
