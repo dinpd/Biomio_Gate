@@ -3,12 +3,6 @@ import base64
 import shutil
 import tempfile
 import cPickle
-import os
-import binascii
-import json
-
-import requests
-from requests.exceptions import HTTPError
 from biomio.constants import REDIS_PROBE_RESULT_KEY, REDIS_RESULTS_COUNTER_KEY, REDIS_PARTIAL_RESULTS_KEY, \
     TRAINING_DATA_TABLE_CLASS_NAME, REDIS_JOB_RESULTS_ERROR, REST_REGISTER_BIOMETRICS, get_ai_training_response, \
     REDIS_UPDATE_TRAINING_KEY, REDIS_VERIFICATION_RETIES_COUNT_KEY, REDiS_TRAINING_RETRIES_COUNT_KEY, \
@@ -19,7 +13,13 @@ from biomio.mysql_storage.mysql_data_store_interface import MySQLDataStoreInterf
 from biomio.protocol.storage.redis_storage import RedisStorage
 from biomio.protocol.probes.plugins.face_photo_plugin.algorithms.algorithms_interface import AlgorithmsInterface
 from biomio.protocol.settings import settings as biomio_settings
+from biomio.algorithms.plugins_tools import store_test_photo_helper
 from logger import worker_logger
+from requests.exceptions import HTTPError
+import requests
+import binascii
+import json
+import os
 
 ALGO_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'algorithms')
 
@@ -52,7 +52,7 @@ def verification_job(image, probe_id, settings, callback_code):
         settings.update({'data': temp_image})
 
         # Store photos for test purposes
-        store_test_photo_helper([temp_image])
+        store_test_photo_helper(ALGO_ROOT, [temp_image])
 
         algo_result = AlgorithmsInterface.verification(**settings)
         if algo_result.get('status', '') == "result":
@@ -153,32 +153,6 @@ def _get_algo_db(probe_id):
     return cPickle.loads(base64.b64decode(database.data)) if database is not None else {}
 
 
-def store_test_photo_helper(image_paths):
-    import shutil
-    import os
-
-    TEST_PHOTO_PATH = os.path.join(ALGO_ROOT, 'test_photo')
-
-    if not os.path.exists(TEST_PHOTO_PATH):
-        os.makedirs(TEST_PHOTO_PATH)
-    else:
-        pass
-        # for the_file in os.listdir(TEST_PHOTO_PATH):
-        #     file_path = os.path.join(TEST_PHOTO_PATH, the_file)
-        #     try:
-        #         if os.path.isfile(file_path):
-        #             os.unlink(file_path)
-        #     except Exception, e:
-        #         print e
-    TEST_IMAGE_FOLDER = tempfile.mkdtemp(dir=TEST_PHOTO_PATH)
-
-    if not os.path.exists(TEST_IMAGE_FOLDER):
-        os.makedirs(TEST_IMAGE_FOLDER)
-
-    for path in image_paths:
-        shutil.copyfile(path, os.path.join(TEST_IMAGE_FOLDER, os.path.basename(path)))
-
-
 def training_job(images, probe_id, settings, callback_code, try_type, ai_code):
     """
         Runs education for given user with given array of images.
@@ -227,7 +201,7 @@ def training_job(images, probe_id, settings, callback_code, try_type, ai_code):
             image_paths.append(temp_image)
 
         # Store photos for test purposes
-        store_test_photo_helper(image_paths)
+        store_test_photo_helper(ALGO_ROOT, image_paths)
 
         settings.update({'data': image_paths})
         algo_result = AlgorithmsInterface.verification(**settings)

@@ -8,6 +8,7 @@ from biomio.constants import REDIS_PROBE_RESULT_KEY, REDIS_RESULTS_COUNTER_KEY, 
 from biomio.mysql_storage.mysql_data_store_interface import MySQLDataStoreInterface
 from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
 from biomio.protocol.probes.plugins.face_verify_plugin.defs import APP_ROOT
+from biomio.algorithms.plugins_tools import store_test_photo_helper
 from biomio.protocol.settings import settings as biomio_settings
 from requests.exceptions import HTTPError
 from logger import worker_logger
@@ -59,7 +60,7 @@ def pre_training_helper(images, probe_id, settings, callback_code, try_type, ai_
             image_paths.append(temp_image)
 
         # Store photos for test purposes
-        store_test_photo_helper(image_paths)
+        store_test_photo_helper(APP_ROOT, image_paths)
 
         settings.update({'data': image_paths})
         settings.update({'general_data': {'data_path': temp_image_path,
@@ -224,32 +225,6 @@ def store_verification_results(result, callback_code, probe_id):
 def _get_algo_db(probe_id):
     database = MySQLDataStoreInterface.get_object(table_name=TRAINING_DATA_TABLE_CLASS_NAME, object_id=probe_id)
     return cPickle.loads(base64.b64decode(database.data)) if database is not None else {}
-
-
-def store_test_photo_helper(image_paths):
-    import shutil
-    import os
-
-    TEST_PHOTO_PATH = os.path.join(APP_ROOT, 'test_photo')
-
-    if not os.path.exists(TEST_PHOTO_PATH):
-        os.makedirs(TEST_PHOTO_PATH)
-    else:
-        pass
-        # for the_file in os.listdir(TEST_PHOTO_PATH):
-        #     file_path = os.path.join(TEST_PHOTO_PATH, the_file)
-        #     try:
-        #         if os.path.isfile(file_path):
-        #             os.unlink(file_path)
-        #     except Exception, e:
-        #         print e
-    TEST_IMAGE_FOLDER = tempfile.mkdtemp(dir=TEST_PHOTO_PATH)
-
-    if not os.path.exists(TEST_IMAGE_FOLDER):
-        os.makedirs(TEST_IMAGE_FOLDER)
-
-    for path in image_paths:
-        shutil.copyfile(path, os.path.join(TEST_IMAGE_FOLDER, os.path.basename(path)))
 
 
 def _tell_ai_training_results(result, ai_response_type, try_type, ai_code):

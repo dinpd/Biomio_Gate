@@ -3,6 +3,7 @@ from biomio.constants import REDIS_PROBE_RESULT_KEY, REDIS_RESULTS_COUNTER_KEY, 
 from biomio.mysql_storage.mysql_data_store_interface import MySQLDataStoreInterface
 from biomio.protocol.storage.redis_storage import RedisStorage
 from biomio.algorithms.logger import logger
+from biomio.algorithms.plugins_tools import store_test_photo_helper
 import base64
 import shutil
 import tempfile
@@ -28,10 +29,12 @@ def pre_verification_helper(image, settings, probe_id, callback_code):
         photo_data = binascii.a2b_base64(str(image))
         with open(temp_image, 'wb') as f:
             f.write(photo_data)
-        settings.update({'data': temp_image, 'database': database, 'temp_image_path': temp_image_path})
 
         # Store photos for test purposes
-        store_test_photo_helper([temp_image])
+        backup_path = store_test_photo_helper(ALGO_ROOT, [temp_image])
+
+        settings.update({'data': temp_image, 'database': database, 'temp_image_path': temp_image_path,
+                         'backup_image_path': backup_path})
         return settings
     except Exception as e:
         logger.exception(e)
@@ -88,29 +91,3 @@ def store_verification_results(result, callback_code, probe_id):
 def _get_algo_db(probe_id):
     database = MySQLDataStoreInterface.get_object(table_name=TRAINING_DATA_TABLE_CLASS_NAME, object_id=probe_id)
     return cPickle.loads(base64.b64decode(database.data)) if database is not None else {}
-
-
-def store_test_photo_helper(image_paths):
-    import shutil
-    import os
-
-    TEST_PHOTO_PATH = os.path.join(ALGO_ROOT, 'test_photo')
-
-    if not os.path.exists(TEST_PHOTO_PATH):
-        os.makedirs(TEST_PHOTO_PATH)
-    else:
-        pass
-        # for the_file in os.listdir(TEST_PHOTO_PATH):
-        #     file_path = os.path.join(TEST_PHOTO_PATH, the_file)
-        #     try:
-        #         if os.path.isfile(file_path):
-        #             os.unlink(file_path)
-        #     except Exception, e:
-        #         print e
-    TEST_IMAGE_FOLDER = tempfile.mkdtemp(dir=TEST_PHOTO_PATH)
-
-    if not os.path.exists(TEST_IMAGE_FOLDER):
-        os.makedirs(TEST_IMAGE_FOLDER)
-
-    for path in image_paths:
-        shutil.copyfile(path, os.path.join(TEST_IMAGE_FOLDER, os.path.basename(path)))
