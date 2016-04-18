@@ -1,7 +1,8 @@
 from algoflows_defs import OPENFACE_DATA_REPRESENTATION, OPENFACE_SD_ESTIMATE
 from biomio.algorithms.flows.flow import AlgorithmFlow
 from biomio.algorithms.logger import logger
-from statictics_writer import append_verify_result_format, print_output
+from statictics_writer import append_verify_result_format, print_verify_result_output
+import os
 
 
 class OpenFaceVerificationFlowAlgorithm(AlgorithmFlow):
@@ -39,7 +40,10 @@ class OpenFaceVerificationFlowAlgorithm(AlgorithmFlow):
             # TODO: Write Error handler
             return data
         database = data.get('database')
-        tdata = self._stages.get(OPENFACE_DATA_REPRESENTATION).apply({'path': data.get('data')})
+        path = data.get('data')
+        if data.get('backup_image_path', None) is not None:
+            path = os.path.join(data.get('backup_image_path'), os.path.basename(path))
+        tdata = self._stages.get(OPENFACE_DATA_REPRESENTATION).apply({'path': path})
         dist = self._stages.get(OPENFACE_SD_ESTIMATE).apply({'data': tdata, 'database': database})
         result = {'result': dist['result'] < database.get('threshold', 0.0)}
         ##############################################################################################
@@ -47,8 +51,8 @@ class OpenFaceVerificationFlowAlgorithm(AlgorithmFlow):
         ##############################################################################################
         stat_data = data.get('metadata', {}).copy()
         stat_data.update({'threshold': database.get('threshold', 0.0), 'status': dist['result'],
-                          'result': result['result']})
+                          'result': result['result'], 'data_path': data.get('backup_image_path', "")})
         append_verify_result_format(stat_data)
-        print_output()
+        print_verify_result_output()
         ##############################################################################################
         return result

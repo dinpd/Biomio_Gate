@@ -8,6 +8,7 @@ from openface_training_algorithm import OpenFaceTrainingFlowAlgorithm
 from biomio.algorithms.interfaces import AlgorithmInterface
 from helper import pre_verification_helper, result_handling
 from biomio.algorithms.logger import logger
+from handlers import error_handler
 from defs import OPENFACE_PATH
 import os
 
@@ -65,7 +66,8 @@ class OpenFaceAlgorithmInterface(AlgorithmInterface):
         self._data_rep = OpenFaceDataRepresentation({
             'dlibFacePredictor': os.path.join(DLIB_MODEL_DIR, DLIB_MODEL_NAME),
             'networkModel': os.path.join(OPENFACE_MODEL_DIR, OPENFACE_MODEL_NAME),
-            'imgDim': IMAGE_DIMENSION
+            'imgDim': IMAGE_DIMENSION,
+            'error_handler': error_handler
         })
         self._sd_estimate = OpenFaceSimpleDistanceEstimation()
 
