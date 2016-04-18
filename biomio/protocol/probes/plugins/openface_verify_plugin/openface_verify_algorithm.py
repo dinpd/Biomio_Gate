@@ -38,12 +38,14 @@ class OpenFaceVerificationFlowAlgorithm(AlgorithmFlow):
         logger.debug("===================================")
         if data is None:
             # TODO: Write Error handler
-            return data
+            return {'result': False}
         database = data.get('database')
         path = data.get('data')
         if data.get('backup_image_path', None) is not None:
             path = os.path.join(data.get('backup_image_path'), os.path.basename(path))
         tdata = self._stages.get(OPENFACE_DATA_REPRESENTATION).apply({'path': path})
+        if tdata is None or len(tdata.get('rep', [])) <= 0:
+            return {'result': False}
         dist = self._stages.get(OPENFACE_SD_ESTIMATE).apply({'data': tdata, 'database': database})
         result = {'result': dist['result'] < database.get('threshold', 0.0)}
         ##############################################################################################
