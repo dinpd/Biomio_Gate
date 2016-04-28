@@ -46,4 +46,5 @@ class OpenFaceTrainingFlowAlgorithm(AlgorithmFlow):
         for img in data['data']:
             res = self._stages.get(OPENFACE_DATA_REPRESENTATION).apply({'path': img})
             db['data'].append(res)
+        self._stages.get(OPENFACE_DATA_REPRESENTATION).clean()
         return db

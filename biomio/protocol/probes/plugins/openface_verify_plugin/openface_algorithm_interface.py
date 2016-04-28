@@ -1,5 +1,5 @@
 from biomio.protocol.probes.plugins.face_identification_plugin.processes.interface_helper import pre_training_helper, \
-    result_training_helper, ind_final_helper
+    result_training_helper, final_helper
 from biomio.algorithms.openface.openface_simple_dist_estimate import OpenFaceSimpleDistanceEstimation
 from biomio.algorithms.openface.openface_data_rep import OpenFaceDataRepresentation
 from algoflows_defs import OPENFACE_DATA_REPRESENTATION, OPENFACE_SD_ESTIMATE
@@ -44,7 +44,7 @@ def training_job(callback_code, **kwargs):
         'ai_code': settings['general_data']['ai_code']
     }
     logger.info('Status::The database updated.')
-    result_training_helper(callback_code=callback_code, final_func=ind_final_helper, **result)
+    result_training_helper(callback_code=callback_code, final_func=final_helper, **result)
 
 
 def verification_job(callback_code, **kwargs):
