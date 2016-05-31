@@ -1,19 +1,15 @@
 from biomio.constants import REDIS_PROBE_RESULT_KEY, REDIS_RESULTS_COUNTER_KEY, REDIS_PARTIAL_RESULTS_KEY, \
-    TRAINING_DATA_TABLE_CLASS_NAME, REDIS_JOB_RESULTS_ERROR, \
-    REDIS_UPDATE_TRAINING_KEY, REDIS_VERIFICATION_RETIES_COUNT_KEY, REDiS_TRAINING_RETRIES_COUNT_KEY, \
-    TRAINING_RETRY_STATUS, TRAINING_RETRY_MESSAGE, TRAINING_SUCCESS_STATUS, TRAINING_SUCCESS_MESSAGE, \
-    TRAINING_FAILED_STATUS, TRAINING_FAILED_MESSAGE, TRAINING_MAX_RETRIES_STATUS, TRAINING_MAX_RETRIES_MESSAGE, \
-    TRAINING_STARTED_STATUS, TRAINING_STARTED_MESSAGE, REDIS_DO_NOT_STORE_RESULT_KEY
+    REDIS_JOB_RESULTS_ERROR, REDIS_UPDATE_TRAINING_KEY, REDIS_VERIFICATION_RETIES_COUNT_KEY, \
+    REDiS_TRAINING_RETRIES_COUNT_KEY, TRAINING_RETRY_STATUS, TRAINING_RETRY_MESSAGE, TRAINING_SUCCESS_STATUS, \
+    TRAINING_SUCCESS_MESSAGE, TRAINING_FAILED_STATUS, TRAINING_FAILED_MESSAGE, TRAINING_MAX_RETRIES_STATUS, \
+    TRAINING_MAX_RETRIES_MESSAGE, TRAINING_STARTED_STATUS, TRAINING_STARTED_MESSAGE, REDIS_DO_NOT_STORE_RESULT_KEY
 from biomio.algorithms.plugins_tools import store_test_photo_helper, ai_response_sender, get_algo_db, save_images, \
-    tell_ai_training_results
-from biomio.mysql_storage.mysql_data_store_interface import MySQLDataStoreInterface
+    tell_ai_training_results, store_training_db
 from biomio.protocol.probes.plugins.face_identification_plugin.defs import APP_ROOT
 from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
 from biomio.algorithms.logger import logger
 import tempfile
-import cPickle
 import shutil
-import base64
 
 
 def pre_training_helper(images, probe_id, settings, callback_code, try_type, ai_code):
@@ -88,7 +84,7 @@ def result_training_helper(algo_result, callback_code, probe_id, temp_image_path
             # algoID if it doesn't exists
             database = algo_result.get('database', None)
             if database is not None:
-                _store_training_db(database, probe_id)
+                store_training_db(database, probe_id)
                 result = True
                 ai_response_type.update(dict(
                     status=TRAINING_SUCCESS_STATUS,
@@ -112,7 +108,7 @@ def result_training_helper(algo_result, callback_code, probe_id, temp_image_path
                 elif algo_result_item.get('status', '') == 'update':
                     database = algo_result_item.get('database', None)
                     if database is not None:
-                        _store_training_db(database, probe_id)
+                        store_training_db(database, probe_id)
                         result = True
                         ai_response_type.update(dict(
                             status=TRAINING_SUCCESS_STATUS,
@@ -250,16 +246,3 @@ def store_verification_results(result, callback_code, probe_id):
     AlgorithmsDataStore.instance().delete_data(key=REDIS_PARTIAL_RESULTS_KEY % callback_code)
     AlgorithmsDataStore.instance().store_data(key=REDIS_PROBE_RESULT_KEY % callback_code, result=result)
 
-
-def _store_training_db(database, probe_id):
-    training_data = base64.b64encode(cPickle.dumps(database, cPickle.HIGHEST_PROTOCOL))
-    try:
-        MySQLDataStoreInterface.create_data(table_name=TRAINING_DATA_TABLE_CLASS_NAME, probe_id=probe_id,
-                                            data=training_data)
-    except Exception as e:
-        if '1062 Duplicate entry' in str(e):
-            logger.info('Training data already exists, updating the record.')
-            MySQLDataStoreInterface.update_data(table_name=TRAINING_DATA_TABLE_CLASS_NAME,
-                                                object_id=probe_id, data=training_data)
-        else:
-            logger.exception(e)

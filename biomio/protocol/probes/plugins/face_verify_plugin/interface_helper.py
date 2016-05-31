@@ -1,25 +1,20 @@
 from __future__ import absolute_import
 from biomio.constants import REDIS_PROBE_RESULT_KEY, REDIS_RESULTS_COUNTER_KEY, REDIS_PARTIAL_RESULTS_KEY, \
-    TRAINING_DATA_TABLE_CLASS_NAME, REDIS_JOB_RESULTS_ERROR, REST_REGISTER_BIOMETRICS, get_ai_training_response, \
+    REST_REGISTER_BIOMETRICS, get_ai_training_response, TRAINING_STARTED_STATUS, TRAINING_STARTED_MESSAGE, \
     REDIS_UPDATE_TRAINING_KEY, REDIS_VERIFICATION_RETIES_COUNT_KEY, REDiS_TRAINING_RETRIES_COUNT_KEY, \
     TRAINING_RETRY_STATUS, TRAINING_RETRY_MESSAGE, TRAINING_SUCCESS_STATUS, TRAINING_SUCCESS_MESSAGE, \
-    TRAINING_FAILED_STATUS, TRAINING_FAILED_MESSAGE, TRAINING_MAX_RETRIES_STATUS, TRAINING_MAX_RETRIES_MESSAGE, \
-    TRAINING_STARTED_STATUS, TRAINING_STARTED_MESSAGE
-from biomio.mysql_storage.mysql_data_store_interface import MySQLDataStoreInterface
+    TRAINING_FAILED_STATUS, TRAINING_FAILED_MESSAGE, TRAINING_MAX_RETRIES_STATUS, TRAINING_MAX_RETRIES_MESSAGE
 from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
 from biomio.protocol.probes.plugins.face_verify_plugin.defs import APP_ROOT
-from biomio.algorithms.plugins_tools import store_test_photo_helper, get_algo_db
+from biomio.algorithms.plugins_tools import store_test_photo_helper, get_algo_db, save_images, store_training_db
 from biomio.protocol.settings import settings as biomio_settings
 from requests.exceptions import HTTPError
 from logger import worker_logger
 import requests
 import tempfile
-import binascii
-import cPickle
 import shutil
 import base64
 import json
-import os
 
 
 def pre_training_helper(images, probe_id, settings, callback_code, try_type, ai_code):
@@ -50,14 +45,7 @@ def pre_training_helper(images, probe_id, settings, callback_code, try_type, ai_
         AlgorithmsDataStore.instance().delete_data(key=REDIS_UPDATE_TRAINING_KEY % probe_id)
     temp_image_path = tempfile.mkdtemp(dir=APP_ROOT)
     try:
-        image_paths = []
-        for image in images:
-            fd, temp_image = tempfile.mkstemp(dir=temp_image_path)
-            os.close(fd)
-            photo_data = binascii.a2b_base64(str(image))
-            with open(temp_image, 'wb') as f:
-                f.write(photo_data)
-            image_paths.append(temp_image)
+        image_paths = save_images(images, temp_image_path)
 
         # Store photos for test purposes
         store_test_photo_helper(APP_ROOT, image_paths)
@@ -91,7 +79,7 @@ def result_training_helper(algo_result, callback_code, probe_id, temp_image_path
             # algoID if it doesn't exists
             database = algo_result.get('database', None)
             if database is not None:
-                _store_training_db(database, probe_id)
+                store_training_db(database, probe_id)
                 result = True
                 ai_response_type.update(dict(
                     status=TRAINING_SUCCESS_STATUS,
@@ -115,7 +103,7 @@ def result_training_helper(algo_result, callback_code, probe_id, temp_image_path
                 elif algo_result_item.get('status', '') == 'update':
                     database = algo_result_item.get('database', None)
                     if database is not None:
-                        _store_training_db(database, probe_id)
+                        store_training_db(database, probe_id)
                         result = True
                         ai_response_type.update(dict(
                             status=TRAINING_SUCCESS_STATUS,
@@ -244,17 +232,3 @@ def _tell_ai_training_results(result, ai_response_type, try_type, ai_code):
     except Exception as e:
         worker_logger.error('Failed to build rest request to AI - %s' % str(e))
         worker_logger.exception(e)
-
-
-def _store_training_db(database, probe_id):
-    training_data = base64.b64encode(cPickle.dumps(database, cPickle.HIGHEST_PROTOCOL))
-    try:
-        MySQLDataStoreInterface.create_data(table_name=TRAINING_DATA_TABLE_CLASS_NAME, probe_id=probe_id,
-                                            data=training_data)
-    except Exception as e:
-        if '1062 Duplicate entry' in str(e):
-            worker_logger.info('Training data already exists, updating the record.')
-            MySQLDataStoreInterface.update_data(table_name=TRAINING_DATA_TABLE_CLASS_NAME,
-                                                object_id=probe_id, data=training_data)
-        else:
-            worker_logger.exception(e)

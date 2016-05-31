@@ -2,14 +2,10 @@ from biomio.constants import REDIS_PROBE_RESULT_KEY, REDIS_RESULTS_COUNTER_KEY, 
     REDIS_JOB_RESULTS_ERROR, REDIS_VERIFICATION_RETIES_COUNT_KEY
 from biomio.protocol.storage.redis_storage import RedisStorage
 from biomio.algorithms.logger import logger
-from biomio.algorithms.plugins_tools import store_test_photo_helper, get_algo_db
+from biomio.algorithms.plugins_tools import store_test_photo_helper, get_algo_db, save_image
+from defs import APP_ROOT
 import shutil
 import tempfile
-import os
-import binascii
-
-
-ALGO_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 
 def pre_verification_helper(image, settings, probe_id, callback_code):
@@ -19,16 +15,12 @@ def pre_verification_helper(image, settings, probe_id, callback_code):
         logger.info('Job interrupted because of job_results_error key existence.')
         return
     database = get_algo_db(probe_id=probe_id)
-    temp_image_path = tempfile.mkdtemp(dir=ALGO_ROOT)
+    temp_image_path = tempfile.mkdtemp(dir=APP_ROOT)
     try:
-        fd, temp_image = tempfile.mkstemp(dir=temp_image_path)
-        os.close(fd)
-        photo_data = binascii.a2b_base64(str(image))
-        with open(temp_image, 'wb') as f:
-            f.write(photo_data)
+        temp_image = save_image(image, temp_image_path)
 
         # Store photos for test purposes
-        backup_path = store_test_photo_helper(ALGO_ROOT, [temp_image])
+        backup_path = store_test_photo_helper(APP_ROOT, [temp_image], "candidates_{}".format(settings.get('userID')))
 
         settings.update({'data': temp_image, 'database': database, 'temp_image_path': temp_image_path,
                          'backup_image_path': backup_path})
