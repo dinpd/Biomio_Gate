@@ -1,5 +1,5 @@
-from biomio.algorithms.statistics.dataformats import VerificationResultFormat, ImageErrorFormat
-from biomio.algorithms.statistics.dataformat_stream import DataFormatStream
+from biomio.algorithms.analytics.dataformats import VerificationResultFormat, ImageErrorFormat
+from biomio.algorithms.analytics.dataformat_stream import DataFormatStream
 from defs import APP_ROOT, os
 
 STATISTICS_FILE_NAME = 'stat.log'

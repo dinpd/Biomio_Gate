@@ -1,5 +1,5 @@
 from algoflows_defs import OPENFACE_DATA_REPRESENTATION
-from biomio.algorithms.flows.flow import AlgorithmFlow
+from biomio.algorithms.flows.base import AlgorithmFlow
 from biomio.algorithms.logger import logger
 
 

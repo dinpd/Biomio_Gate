@@ -7,8 +7,8 @@ from openface_verify_algorithm import OpenFaceVerificationFlowAlgorithm
 from openface_training_algorithm import OpenFaceTrainingFlowAlgorithm
 from biomio.algorithms.interfaces import AlgorithmInterface
 from helper import pre_verification_helper, result_handling
+from analytics.handlers import error_handler
 from biomio.algorithms.logger import logger
-from handlers import error_handler
 from defs import OPENFACE_PATH
 import os
 

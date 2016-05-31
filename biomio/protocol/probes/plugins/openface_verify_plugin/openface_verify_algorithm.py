@@ -1,6 +1,6 @@
-from statictics_writer import append_verify_result_format, print_verify_result_output
+from analytics.statictics_writer import append_verify_result_format, print_verify_result_output
 from algoflows_defs import OPENFACE_DATA_REPRESENTATION, OPENFACE_SD_ESTIMATE
-from biomio.algorithms.flows.flow import AlgorithmFlow
+from biomio.algorithms.flows.base import AlgorithmFlow
 from biomio.algorithms.logger import logger
 import os
 
