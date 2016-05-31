@@ -1,13 +1,12 @@
-from biomio.protocol.probes.plugins.face_identification_plugin.processes.interface_helper import pre_training_helper, \
-    result_training_helper, final_helper
 from biomio.algorithms.openface.openface_simple_dist_estimate import OpenFaceSimpleDistanceEstimation
+from algoflows_defs import OPENFACE_DATA_REPRESENTATION, OPENFACE_SD_ESTIMATE, FINAL_TRAINING_STAGE
 from biomio.algorithms.openface.openface_data_rep import OpenFaceDataRepresentation
-from algoflows_defs import OPENFACE_DATA_REPRESENTATION, OPENFACE_SD_ESTIMATE
 from openface_verify_algorithm import OpenFaceVerificationFlowAlgorithm
 from openface_training_algorithm import OpenFaceTrainingFlowAlgorithm
 from biomio.algorithms.interfaces import AlgorithmInterface
 from helper import pre_verification_helper, result_handling
 from initial_training_stage import InitialTrainingStage
+from result_training_stage import ResultTrainingStage
 from final_training_stage import FinalTrainingStage
 from analytics.handlers import error_handler
 from biomio.algorithms.logger import logger
@@ -29,7 +28,7 @@ def training_job(callback_code, **kwargs):
     logger.debug(kwargs)
     logger.debug("-----------------------------------")
     init_training = InitialTrainingStage()
-    init_training.addStage(FinalTrainingStage())
+    init_training.addStage(FINAL_TRAINING_STAGE, FinalTrainingStage())
     settings = init_training.apply({'images': kwargs['images'], 'probe_id': kwargs['probe_id'],
                                     'settings': kwargs['settings'], 'callback_code': callback_code,
                                     'try_type': kwargs['try_type'], 'ai_code': kwargs['ai_code'],
@@ -47,10 +46,13 @@ def training_job(callback_code, **kwargs):
         'temp_image_path': settings['general_data']['data_path'],
         'probe_id': settings['general_data']['probe_id'],
         'try_type': settings['general_data']['try_type'],
-        'ai_code': settings['general_data']['ai_code']
+        'ai_code': settings['general_data']['ai_code'],
+        'callback_code': callback_code
     }
     logger.info('Status::The database updated.')
-    result_training_helper(callback_code=callback_code, final_func=final_helper, **result)
+    result_stage = ResultTrainingStage()
+    result_stage.addStage(FINAL_TRAINING_STAGE, FinalTrainingStage())
+    result_stage.apply(result)
 
 
 def verification_job(callback_code, **kwargs):

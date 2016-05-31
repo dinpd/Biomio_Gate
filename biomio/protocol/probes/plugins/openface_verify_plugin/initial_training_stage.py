@@ -3,11 +3,9 @@ from biomio.constants import REDIS_UPDATE_TRAINING_KEY, TRAINING_SUCCESS_STATUS,
 from biomio.algorithms.plugins_tools import store_test_photo_helper, ai_response_sender, get_algo_db, save_images
 from biomio.protocol.data_stores.algorithms_data_store import AlgorithmsDataStore
 from biomio.algorithms.flows.base import AlgorithmFlow
+from algoflows_defs import FINAL_TRAINING_STAGE
 from biomio.algorithms.logger import logger
 import tempfile
-
-
-FINAL_TRAINING_STAGE = 'final_training_sg'
 
 
 class InitialTrainingStage(AlgorithmFlow):
@@ -55,7 +53,7 @@ class InitialTrainingStage(AlgorithmFlow):
             image_paths = save_images(images, temp_image_path)
 
             # Store photos for test purposes
-            store_test_photo_helper(temp_data_dir, image_paths)
+            store_test_photo_helper(temp_data_dir, image_paths, "train_{}".format(settings.get('userID')))
 
             settings.update({'data': image_paths})
             settings.update({'general_data': {'data_path': temp_image_path, 'ai_code': ai_code,
