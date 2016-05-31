@@ -7,9 +7,11 @@ from openface_verify_algorithm import OpenFaceVerificationFlowAlgorithm
 from openface_training_algorithm import OpenFaceTrainingFlowAlgorithm
 from biomio.algorithms.interfaces import AlgorithmInterface
 from helper import pre_verification_helper, result_handling
+from initial_training_stage import InitialTrainingStage
+from final_training_stage import FinalTrainingStage
 from analytics.handlers import error_handler
 from biomio.algorithms.logger import logger
-from defs import OPENFACE_PATH
+from defs import OPENFACE_PATH, APP_ROOT
 import os
 
 
@@ -26,8 +28,12 @@ def training_job(callback_code, **kwargs):
     logger.debug("OpenFaceVerificationPlugin::training_job")
     logger.debug(kwargs)
     logger.debug("-----------------------------------")
-    settings = pre_training_helper(images=kwargs['images'], probe_id=kwargs['probe_id'], settings=kwargs['settings'],
-                                   callback_code=callback_code, try_type=kwargs['try_type'], ai_code=kwargs['ai_code'])
+    init_training = InitialTrainingStage()
+    init_training.addStage(FinalTrainingStage())
+    settings = init_training.apply({'images': kwargs['images'], 'probe_id': kwargs['probe_id'],
+                                    'settings': kwargs['settings'], 'callback_code': callback_code,
+                                    'try_type': kwargs['try_type'], 'ai_code': kwargs['ai_code'],
+                                    'temp_data_dir': APP_ROOT})
     settings.update({'threshold': kwargs['threshold']})
     algo = OpenFaceAlgorithmInterface()
     res = algo.training(callback=None, **settings)
