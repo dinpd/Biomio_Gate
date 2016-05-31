@@ -1,6 +1,7 @@
 from biomio.algorithms.analytics.dataformats import VerificationResultFormat, ImageErrorFormat
+from biomio.protocol.probes.plugins.openface_verify_plugin.defs import APP_ROOT, os
 from biomio.algorithms.analytics.dataformat_stream import DataFormatStream
-from defs import APP_ROOT, os
+
 
 STATISTICS_FILE_NAME = 'stat.log'
 ERROR_FILE_NAME = 'error.log'
@@ -8,6 +9,7 @@ STATISTICS_PATH = os.path.join(APP_ROOT, STATISTICS_FILE_NAME)
 ERROR_PATH = os.path.join(APP_ROOT, ERROR_FILE_NAME)
 
 data_stream = DataFormatStream(STATISTICS_PATH)
+
 
 def append_verify_result_format(data):
     """
