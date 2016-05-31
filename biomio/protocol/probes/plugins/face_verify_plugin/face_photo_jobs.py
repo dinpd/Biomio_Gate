@@ -1,16 +1,13 @@
 from __future__ import absolute_import
-import base64
 import shutil
 import tempfile
-import cPickle
 import os
 import binascii
 
 from biomio.constants import REDIS_PROBE_RESULT_KEY, REDIS_RESULTS_COUNTER_KEY, REDIS_PARTIAL_RESULTS_KEY, \
-    TRAINING_DATA_TABLE_CLASS_NAME, REDIS_JOB_RESULTS_ERROR, REDIS_VERIFICATION_RETIES_COUNT_KEY
-from biomio.mysql_storage.mysql_data_store_interface import MySQLDataStoreInterface
+    REDIS_JOB_RESULTS_ERROR, REDIS_VERIFICATION_RETIES_COUNT_KEY
 from biomio.protocol.probes.plugins.face_verify_plugin.algorithms.algorithms_interface import AlgorithmsInterface
-from biomio.algorithms.plugins_tools import store_test_photo_helper
+from biomio.algorithms.plugins_tools import store_test_photo_helper, get_algo_db
 from biomio.protocol.storage.redis_storage import RedisStorage
 from logger import worker_logger
 
@@ -31,7 +28,7 @@ def verification_job(image, probe_id, settings, callback_code):
         worker_logger.info('Job interrupted because of job_results_error key existence.')
         return
     result = False
-    database = _get_algo_db(probe_id=probe_id)
+    database = get_algo_db(probe_id=probe_id)
     settings.update({'database': database})
     settings.update({'action': 'verification'})
     temp_image_path = tempfile.mkdtemp(dir=ALGO_ROOT)
@@ -139,8 +136,3 @@ def store_verification_results(result, callback_code, probe_id):
     RedisStorage.persistence_instance().delete_data(key=REDIS_RESULTS_COUNTER_KEY % callback_code)
     RedisStorage.persistence_instance().delete_data(key=REDIS_PARTIAL_RESULTS_KEY % callback_code)
     RedisStorage.persistence_instance().store_data(key=REDIS_PROBE_RESULT_KEY % callback_code, result=result)
-
-
-def _get_algo_db(probe_id):
-    database = MySQLDataStoreInterface.get_object(table_name=TRAINING_DATA_TABLE_CLASS_NAME, object_id=probe_id)
-    return cPickle.loads(base64.b64decode(database.data)) if database is not None else {}

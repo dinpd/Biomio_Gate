@@ -13,7 +13,7 @@ from biomio.mysql_storage.mysql_data_store_interface import MySQLDataStoreInterf
 from biomio.protocol.storage.redis_storage import RedisStorage
 from biomio.protocol.probes.plugins.face_photo_plugin.algorithms.algorithms_interface import AlgorithmsInterface
 from biomio.protocol.settings import settings as biomio_settings
-from biomio.algorithms.plugins_tools import store_test_photo_helper
+from biomio.algorithms.plugins_tools import store_test_photo_helper, get_algo_db
 from logger import worker_logger
 from requests.exceptions import HTTPError
 import requests
@@ -38,7 +38,7 @@ def verification_job(image, probe_id, settings, callback_code):
         worker_logger.info('Job interrupted because of job_results_error key existence.')
         return
     result = False
-    database = _get_algo_db(probe_id=probe_id)
+    database = get_algo_db(probe_id=probe_id)
     settings.update({'database': database})
     settings.update({'action': 'verification'})
     temp_image_path = tempfile.mkdtemp(dir=ALGO_ROOT)
@@ -148,11 +148,6 @@ def store_verification_results(result, callback_code, probe_id):
     RedisStorage.persistence_instance().store_data(key=REDIS_PROBE_RESULT_KEY % callback_code, result=result)
 
 
-def _get_algo_db(probe_id):
-    database = MySQLDataStoreInterface.get_object(table_name=TRAINING_DATA_TABLE_CLASS_NAME, object_id=probe_id)
-    return cPickle.loads(base64.b64decode(database.data)) if database is not None else {}
-
-
 def training_job(images, probe_id, settings, callback_code, try_type, ai_code):
     """
         Runs education for given user with given array of images.
@@ -187,7 +182,7 @@ def training_job(images, probe_id, settings, callback_code, try_type, ai_code):
     error = None
     settings.update({'action': 'education'})
     if RedisStorage.persistence_instance().exists(key=REDIS_UPDATE_TRAINING_KEY % probe_id):
-        settings.update({'database': _get_algo_db(probe_id=probe_id)})
+        settings.update({'database': get_algo_db(probe_id=probe_id)})
         RedisStorage.persistence_instance().delete_data(key=REDIS_UPDATE_TRAINING_KEY % probe_id)
     temp_image_path = tempfile.mkdtemp(dir=ALGO_ROOT)
     try:
