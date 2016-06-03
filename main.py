@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import json
 import ssl
+import signal
 
 import tornado.web
 import tornado.websocket
@@ -171,6 +172,8 @@ def run_tornado():
     https_server = tornado.httpserver.HTTPServer(https_app, ssl_options=ssl_options)
     logger.info('Running REST SSL tornado server on port %s ...' % settings.rest_ssl_port)
     https_server.listen(settings.rest_ssl_port)
+
+    signal.signal(signal.SIGUSR1, ConnectionTimeoutHandler.instance().log_open_connections)
 
     tornado.ioloop.IOLoop.instance().start()
 

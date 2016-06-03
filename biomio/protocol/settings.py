@@ -12,6 +12,7 @@ DEFAULT_REDIS_PORT = 6379
 DEFAULT_REDIS_LRU_PORT = 6381
 DEFAULT_REDIS_HOST = 'localhost'
 DEFAULT_BIOAUTH_TIMEOUT = 5 * 60
+DEFAULT_CONNECTION_CHECKING_INTERVAL = 5
 
 
 DEFAULT_MYSQL_HOST = 'localhost'
@@ -45,6 +46,7 @@ define('redis_port', default=DEFAULT_REDIS_PORT, help='Redis port')
 define('redis_lru_port', default=DEFAULT_REDIS_LRU_PORT, help='Redis LRU port')
 define('redis_host', default=DEFAULT_REDIS_HOST, help='Redis host address')
 define('bioauth_timeout', default=DEFAULT_BIOAUTH_TIMEOUT, help='Biometric authentication timeout')
+define('connection_checking_interval', default=DEFAULT_CONNECTION_CHECKING_INTERVAL, help='Connection checking interval')
 
 # Setting MySQL options
 define('mysql_host', default=DEFAULT_MYSQL_HOST, help='MySQL server host.')
@@ -71,4 +73,3 @@ define('ai_rest_url', default=DEFAULT_AI_REST_URL, help='REST url to communicate
 # options.logging = None
 parse_config_file(path=os.path.join(APP_ROOT, 'biomio.conf'))
 settings = options
-

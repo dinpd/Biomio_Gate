@@ -1,4 +1,4 @@
-
+import os
 from biomio.utils.timeoutqueue import TimeoutQueue
 from biomio.protocol.settings import settings
 
@@ -7,6 +7,7 @@ from weakref import WeakKeyDictionary
 from time import time
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -26,7 +27,7 @@ class ConnectionTimeoutHandler:
         self._connections_queue = TimeoutQueue()
         self._callback_by_connection = WeakKeyDictionary()
         self._timeout_handle = None
-        self._connection_checking_interval = 1
+        self._connection_checking_interval = settings.connection_checking_interval
 
     def adjust(self, ts):
         """ Helper method to adjust connection timestamp using check interval.
@@ -76,3 +77,7 @@ class ConnectionTimeoutHandler:
             if callback:
                 callback()
         self._run_timer()
+
+    def log_open_connections(self, signum, stack):
+        logger.info('PROCESS WITH ID %d GOT SIGNAL %s\nTHE NUMBER OF OPENED CONNECTIONS: %s' %
+                    (os.getpid(), signum, len(self._connections_queue.queue)))
