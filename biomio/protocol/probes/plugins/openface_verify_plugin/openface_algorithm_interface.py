@@ -1,6 +1,7 @@
 from biomio.algorithms.openface.openface_simple_dist_estimate import OpenFaceSimpleDistanceEstimation
 from algoflows_defs import OPENFACE_DATA_REPRESENTATION, OPENFACE_SD_ESTIMATE, FINAL_TRAINING_STAGE
-from biomio.algorithms.openface.openface_data_rep import OpenFaceDataRepresentation
+from biomio.algorithms.openface.openface_data_rep import OpenFaceDataRepresentation, \
+    INNER_EYES_AND_BOTTOM_LIP, DLIB_PREDICTOR_V2
 from openface_verify_algorithm import OpenFaceVerificationFlowAlgorithm
 from openface_training_algorithm import OpenFaceTrainingFlowAlgorithm
 from biomio.algorithms.interfaces import AlgorithmInterface
@@ -18,7 +19,9 @@ MODEL_DIR = os.path.join(OPENFACE_PATH, "models")
 DLIB_MODEL_DIR = os.path.join(MODEL_DIR, "dlib")
 OPENFACE_MODEL_DIR = os.path.join(MODEL_DIR, "openface")
 DLIB_MODEL_NAME = "shape_predictor_68_face_landmarks.dat"
-OPENFACE_MODEL_NAME = 'nn4.small2.v1.t7'
+OPENFACE_MODEL_NAME_NN4 = 'nn4.small2.v1.t7'
+OPENFACE_MODEL_NAME_AMF = '94.9-accuracy-model-float.t7'
+OPENFACE_MODEL_NAME = OPENFACE_MODEL_NAME_AMF
 IMAGE_DIMENSION = 96
 
 
@@ -73,6 +76,8 @@ class OpenFaceAlgorithmInterface(AlgorithmInterface):
         self._callback = None
         self._data_rep = OpenFaceDataRepresentation({
             'dlibFacePredictor': os.path.join(DLIB_MODEL_DIR, DLIB_MODEL_NAME),
+            'landmarkIndices': INNER_EYES_AND_BOTTOM_LIP,
+            'predictorVersion': DLIB_PREDICTOR_V2,
             'networkModel': os.path.join(OPENFACE_MODEL_DIR, OPENFACE_MODEL_NAME),
             'imgDim': IMAGE_DIMENSION,
             'error_handler': error_handler
