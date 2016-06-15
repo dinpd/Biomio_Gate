@@ -1,5 +1,5 @@
-
 from collections import OrderedDict
+
 
 class TimeoutQueue:
     def __init__(self):
@@ -38,6 +38,8 @@ class TimeoutQueue:
                 item_list.remove(item)
                 if not item_list:
                     ts_to_remove = t
+                else:
+                    self.queue[t] = item_list
                 break
         if ts_to_remove:
             del self.queue[ts_to_remove]
@@ -50,3 +52,9 @@ class TimeoutQueue:
         for item in self.queue.iteritems():
             s.join('%s %s' % item)
         return s
+
+    def first(self):
+        if self.queue:
+            (timestamp, item_list) = self.queue.itervalues().next()
+            return timestamp
+        return None
