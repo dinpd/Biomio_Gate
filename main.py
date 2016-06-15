@@ -12,6 +12,8 @@ import greenado
 import traceback
 from biomio.mysql_storage.mysql_data_store import MySQLDataStore
 from biomio.protocol.data_stores.application_data_store import ApplicationDataStore
+from biomio.protocol.crypt import Crypto
+from biomio.protocol.data_stores.application_data_store import ApplicationDataStore
 from biomio.protocol.data_stores.condition_data_store import ConditionDataStore
 from biomio.protocol.probes.probe_plugin_manager import ProbePluginManager
 from biomio.protocol.rpc.app_connection_manager import AppConnectionManager
@@ -81,6 +83,22 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
     def check_connected(self):
         return bool(self.ws_connection)
+
+
+class GenerateRSAKeys(tornado.web.RequestHandler):
+    def post(self, *args, **kwargs):
+        request_body = json.loads(self.request.body)
+        user_id = request_body.get('user_id')
+        app_type = request_body.get('app_type')
+        key, pub_key = Crypto.generate_keypair()
+        fingerprint = Crypto.get_public_rsa_fingerprint(pub_key)
+        ApplicationDataStore.instance().store_data(
+            app_id=str(fingerprint),
+            public_key=pub_key,
+            app_type=app_type,
+            users=int(user_id)
+        )
+        self.write(json.dumps(dict(pub_key=pub_key, fingerprint=fingerprint)))
 
 
 class InitialProbeRestHandler(tornado.web.RequestHandler):
@@ -253,6 +271,7 @@ class HttpApplication(tornado.web.Application):
             (r'/set_recognition_type.*', SetRecognitionType),
             (r'/get_user_providers.*', GetUserProviders),
             (r'/start_auth.*', StartSimulatorAuth)
+            (r'/generate_rsa_keys.*', GenerateRSAKeys)
         ]
         tornado.web.Application.__init__(self, handlers)
 
