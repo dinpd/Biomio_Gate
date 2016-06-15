@@ -30,7 +30,6 @@ class ConnectionTimeoutHandler:
         self._connections_queue = TimeoutQueue()
         self._callback_by_connection = WeakKeyDictionary()
         self._timeout_handle = None
-        self._connection_checking_interval = 1
         self._connection_timeout_check_range = 2
 
     # def adjust(self, ts):

@@ -270,7 +270,7 @@ class HttpApplication(tornado.web.Application):
             (r'/tries_simulator.*', TryRequestsSimulator),
             (r'/set_recognition_type.*', SetRecognitionType),
             (r'/get_user_providers.*', GetUserProviders),
-            (r'/start_auth.*', StartSimulatorAuth)
+            (r'/start_auth.*', StartSimulatorAuth),
             (r'/generate_rsa_keys.*', GenerateRSAKeys)
         ]
         tornado.web.Application.__init__(self, handlers)
