@@ -54,7 +54,7 @@ class TimeoutQueue:
         return s
 
     def first(self):
-        if self.queue:
-            (timestamp, item_list) = self.queue.itervalues().next()
+        if len(self.queue):
+            (timestamp, item_list) = self.queue.iteritems().next()
             return timestamp
         return None

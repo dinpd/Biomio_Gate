@@ -28,6 +28,7 @@ MYSQL_IDENTIFICATION_USER_HASH_TABLE_NAME = 'IdentificationUsersBucketsData'
 MYSQL_IDENTIFICATION_HASH_DATA_TABLE_NAME = 'IdentificationHashData'
 
 # Redis Constants
+REDIS_BIOMIO_GENERAL_CHANNEL = 'biomio_general:%s'
 REDIS_APP_AUTH_KEY = 'auth:%s'
 REDIS_APP_CONNECTION_KEY = 'connection:%s'
 REDIS_APPLICATION_KEY = 'application:%s'

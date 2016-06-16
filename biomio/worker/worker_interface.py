@@ -2,6 +2,8 @@ from __future__ import absolute_import
 import ast
 import re
 from threading import Lock
+
+from biomio.protocol.storage.redis_subscriber import RedisSubscriber
 from os import urandom
 from hashlib import sha1
 
@@ -9,8 +11,8 @@ from redis.client import StrictRedis
 
 from rq import Queue
 
-from tornadoredis import Client
-import tornado.gen
+# from tornadoredis import Client
+# import tornado.gen
 
 from biomio.constants import REDIS_JOB_RESULT_KEY, REDIS_DO_NOT_STORE_RESULT_KEY, REDIS_RESULTS_COUNTER_KEY, \
     REDIS_PROBE_RESULT_KEY
@@ -26,10 +28,12 @@ class WorkerInterface:
     def __init__(self):
         self._queue = Queue(connection=StrictRedis(host=settings.redis_host, port=settings.redis_port))
         self._subscribed_callbacks = dict()
-        self._redis_client = Client(host=settings.redis_host, port=settings.redis_port)
-        self._redis_probes_client = Client(host=settings.redis_host, port=settings.redis_port)
+        # self._redis_client = Client(host=settings.redis_host, port=settings.redis_port)
+        # self._redis_probes_client = Client(host=settings.redis_host, port=settings.redis_port)
         self._lru_redis = RedisStorage.lru_instance()
         self._persistence_redis = RedisStorage.persistence_instance()
+
+        self._redis_subscriber = RedisSubscriber.instance()
 
         import biomio.worker.storage_jobs as sj
         import biomio.worker.engine_jobs as ej
@@ -91,37 +95,41 @@ class WorkerInterface:
             kwargs.update(kwarg)
             self._queue.enqueue(job_to_run, **kwargs)
 
-    @tornado.gen.engine
+#    @tornado.gen.engine
     def _listen_for_results(self):
         """
             Initializes redis changes listener for given key pattern.
 
         """
-        self._redis_client.connect()
-        yield tornado.gen.Task(self._redis_client.psubscribe, "__keyspace*:%s" % (REDIS_JOB_RESULT_KEY % ('*', '*')))
-        self._redis_client.listen(self._process_results)
+        self._redis_subscriber.subscribe(channel_key=REDIS_JOB_RESULT_KEY % ('*', '*'), callback=self._process_results)
+        # self._redis_client.connect()
+        # yield tornado.gen.Task(self._redis_client.psubscribe, "__keyspace*:%s" % (REDIS_JOB_RESULT_KEY % ('*', '*')))
+        # self._redis_client.listen(self._process_results)
 
-    @tornado.gen.engine
+#    @tornado.gen.engine
     def _listen_for_probe_results(self):
         """
             Initializes redis changes listener for given key pattern.
 
         """
-        self._redis_probes_client.connect()
-        yield tornado.gen.Task(self._redis_probes_client.psubscribe, "__keyspace*:%s" % (REDIS_PROBE_RESULT_KEY % '*'))
-        self._redis_probes_client.listen(self._process_probe_results)
+        self._redis_subscriber.subscribe(channel_key=REDIS_PROBE_RESULT_KEY % '*', callback=self._process_probe_results)
+        # self._redis_probes_client.connect()
+        # yield tornado.gen.Task(self._redis_probes_client.psubscribe, "__keyspace*:%s" % (REDIS_PROBE_RESULT_KEY % '*'))
+        # self._redis_probes_client.listen(self._process_probe_results)
 
-    def _process_results(self, msg):
+    def _process_results(self, message):
         """
             Parses redis changes message and processes the result.
-        :param msg: Redis changes message.
+        :param message: Redis changes message.
         """
-        if msg.kind == 'pmessage':
-            if msg.body == 'set':
+        if message.kind == 'pmessage':
+            if message.body == 'set':
 
-                job_result_key = re.search('.*:(%s)' % (REDIS_JOB_RESULT_KEY % ('.*', '.*')), msg.channel).group(1)
-                callback_code = re.search('.*:%s' % (REDIS_JOB_RESULT_KEY % ('(.*):.*', '.*')), msg.channel).group(1)
-                redis_result_key = re.search('.*:%s' % (REDIS_JOB_RESULT_KEY % ('.*', '(.*:.*)')), msg.channel).group(1)
+                job_result_key = re.search('.*:(%s)' % (REDIS_JOB_RESULT_KEY % ('.*', '.*')), message.channel).group(1)
+                callback_code = re.search('.*:%s' % (REDIS_JOB_RESULT_KEY % ('(.*):.*', '.*')), message.channel).group(
+                    1)
+                redis_result_key = re.search('.*:%s' % (REDIS_JOB_RESULT_KEY % ('.*', '(.*:.*)')),
+                                             message.channel).group(1)
 
                 callback, result = self._parse_result_get_callback(result_key=job_result_key,
                                                                    callback_code=callback_code)
@@ -133,15 +141,15 @@ class WorkerInterface:
                 self._run_results_callback(result=result, result_key=job_result_key, callback=callback,
                                            callback_code=callback_code)
 
-    def _process_probe_results(self, msg):
+    def _process_probe_results(self, message):
         """
             Parses redis change message and processes the result.
-        :param msg: Redis changes message.
+        :param message: Redis changes message.
         """
-        if msg.kind == 'pmessage':
-            if msg.body == 'set':
-                job_result_key = re.search('.*:(%s)' % (REDIS_PROBE_RESULT_KEY % '.*'), msg.channel).group(1)
-                callback_code = re.search('.*:%s' % (REDIS_PROBE_RESULT_KEY % '(.*)'), msg.channel).group(1)
+        if message.kind == 'pmessage':
+            if message.body == 'set':
+                job_result_key = re.search('.*:(%s)' % (REDIS_PROBE_RESULT_KEY % '.*'), message.channel).group(1)
+                callback_code = re.search('.*:%s' % (REDIS_PROBE_RESULT_KEY % '(.*)'), message.channel).group(1)
 
                 callback, result = self._parse_result_get_callback(result_key=job_result_key, algo_result=True,
                                                                    callback_code=callback_code)
