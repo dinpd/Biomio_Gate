@@ -101,7 +101,7 @@ class WorkerInterface:
             Initializes redis changes listener for given key pattern.
 
         """
-        self._redis_subscriber.subscribe(channel_key=REDIS_JOB_RESULT_KEY % ('*', '*'), callback=self._process_results)
+        self._redis_subscriber.subscribe(channel_key=REDIS_JOB_RESULT_KEY % ('.*', '.*'), callback=self._process_results)
         # self._redis_client.connect()
         # yield tornado.gen.Task(self._redis_client.psubscribe, "__keyspace*:%s" % (REDIS_JOB_RESULT_KEY % ('*', '*')))
         # self._redis_client.listen(self._process_results)
@@ -112,7 +112,7 @@ class WorkerInterface:
             Initializes redis changes listener for given key pattern.
 
         """
-        self._redis_subscriber.subscribe(channel_key=REDIS_PROBE_RESULT_KEY % '*', callback=self._process_probe_results)
+        self._redis_subscriber.subscribe(channel_key=REDIS_PROBE_RESULT_KEY % '.*', callback=self._process_probe_results)
         # self._redis_probes_client.connect()
         # yield tornado.gen.Task(self._redis_probes_client.psubscribe, "__keyspace*:%s" % (REDIS_PROBE_RESULT_KEY % '*'))
         # self._redis_probes_client.listen(self._process_probe_results)
