@@ -1,10 +1,10 @@
 import requests
+from biomio.utils.utils import store_job_result
 from requests.exceptions import HTTPError
 from biomio.constants import REDIS_DO_NOT_STORE_RESULT_KEY, REST_VERIFY_COMMAND, \
     USERS_TABLE_CLASS_NAME
 from biomio.mysql_storage.mysql_data_store_interface import MySQLDataStoreInterface
 from biomio.protocol.crypt import Crypto
-from biomio.protocol.data_stores.base_data_store import BaseDataStore
 from biomio.protocol.settings import settings
 from logger import worker_logger
 
@@ -57,8 +57,8 @@ def verify_registration_job(code, app_type, callback_code):
         result.update({'error': 'Sorry but we were not able to register the app: Internal error occurred.'})
 
     finally:
-        BaseDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
-                                                  record_dict=result, callback_code=callback_code)
+        store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
+                         record_dict=result, callback_code=callback_code)
         worker_logger.info('Finished app registration with result: %s' % str(result))
 
 
@@ -75,8 +75,8 @@ def get_probe_ids_by_user_email(table_class_name, user_id, callback_code):
         worker_logger.exception(e)
         result.update({'result': [], 'error': str(e)})
     finally:
-        BaseDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
-                                                  record_dict=result, callback_code=callback_code)
+        store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
+                         record_dict=result, callback_code=callback_code)
         worker_logger.info('Got probe ids for user - %s' % user_id)
 
 
@@ -103,6 +103,6 @@ def get_extension_ids_by_probe_id(table_class_name, probe_id, callback_code):
         worker_logger.exception(e)
         result.update({'error': str(e)})
     finally:
-        BaseDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
-                                                  record_dict=result, callback_code=callback_code)
+        store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
+                         record_dict=result, callback_code=callback_code)
         worker_logger.info('Got extension ids by probe ID - %s' % probe_id)

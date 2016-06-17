@@ -1,8 +1,7 @@
 from __future__ import absolute_import
 from logger import worker_logger
 from biomio.mysql_storage.mysql_data_store_interface import MySQLDataStoreInterface
-from biomio.protocol.data_stores.base_data_store import BaseDataStore
-from biomio.utils.utils import import_module_class
+from biomio.utils.utils import import_module_class, delete_custom_redis_data
 from biomio.constants import REDIS_CHANGES_CLASS_NAME, MODULES_CLASSES_BY_TABLE_NAMES
 
 
@@ -17,7 +16,7 @@ def update_redis_job():
             if result.get('record_id'):
                 key = key_to_delete % result.get('record_id')
                 worker_logger.info('Deleting key - %s' % key)
-                BaseDataStore.instance().delete_custom_lru_redis_data(key)
+                delete_custom_redis_data(key, lru=True)
     worker_logger.info('REDIS UPDATE done.')
 
 

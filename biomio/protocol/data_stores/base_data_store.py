@@ -151,16 +151,6 @@ class BaseDataStore:
         self._lru_redis.delete_data(key)
         self._run_storage_job(self._worker.DELETE_JOB, table_class_name=table_class_name, object_id=object_id)
 
-    def store_job_result(self, record_key, record_dict, callback_code):
-        """
-            Stores job result data into redis with generated JOB_RESULT key.
-        :param record_key: Redis key of the current record object.
-        :param record_dict: dict data from the current record.
-        :param callback_code: Code of the callback that must be executed after we got result.
-        """
-        job_result_key = REDIS_JOB_RESULT_KEY % (callback_code, record_key)
-        self._persistence_redis.store_data(key=job_result_key, **record_dict)
-
     def delete_custom_lru_redis_data(self, key):
         """
             Deletes data only from lru redis for given redis key.

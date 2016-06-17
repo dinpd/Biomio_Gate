@@ -52,7 +52,7 @@ class RedisSubscriber:
             channel_key = re.search('.*:%s' % (REDIS_BIOMIO_GENERAL_CHANNEL % '(.*)'), message.channel)
             channel_callbacks = []
             if channel_key is not None:
-                channel_key = channel_key.group(1)
+                channel_key = channel_key.group(0)
                 if channel_key in self._subscribers:
                     channel_callbacks[0] = self._subscribers.get(channel_key)
                 else:

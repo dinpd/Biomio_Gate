@@ -470,7 +470,7 @@ class BioauthFlow:
             _PROBESTORE_TRAINING_TYPE_KEY: 'face-photo',
             _PROBESTORE_AI_CODE_KEY: code
         }
-        app_id = 'auth:%s:%s' % ('code_%s' % code, probe_id)
+        app_id = 'biomio_general:auth:%s:%s' % ('code_%s' % code, probe_id)
         DeviceInformationStore.instance().get_data(app_id=probe_id, callback=push_notification_callback(
             'Please open the app to proceed with training'))
         AuthStateStorage.instance().store_probe_data(app_id, ttl=settings.bioauth_timeout, **data)

@@ -1,10 +1,10 @@
 import requests
+from biomio.utils.utils import store_job_result, delete_custom_redis_data
 from requests.exceptions import HTTPError
 from biomio.constants import REST_CREATE_EMAIL_KEYS, REDIS_PARTIAL_RESULTS_KEY, REDIS_RESULTS_COUNTER_KEY, \
     REDIS_DO_NOT_STORE_RESULT_KEY, APPS_TABLE_CLASS_NAME, \
     PGP_KEYS_DATA_TABLE_CLASS_NAME, REDIS_PGP_DATA_KEY
 from biomio.mysql_storage.mysql_data_store_interface import MySQLDataStoreInterface
-from biomio.protocol.data_stores.base_data_store import BaseDataStore
 from biomio.protocol.settings import settings
 from biomio.protocol.storage.redis_storage import RedisStorage
 from biomio.utils.gnugpg_generator import generate_pgp_key_pair
@@ -44,17 +44,17 @@ def verify_email_job(email, callback_code):
             if results_counter < 0:
                 worker_logger.exception('Results count is less than 0, check the worker consistency!')
             result = dict(result=gathered_results)
-            BaseDataStore.instance().delete_custom_persistence_redis_data(key=REDIS_RESULTS_COUNTER_KEY % callback_code)
-            BaseDataStore.instance().delete_custom_persistence_redis_data(key=REDIS_PARTIAL_RESULTS_KEY % callback_code)
-            BaseDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
-                                                      record_dict=result, callback_code=callback_code)
+            delete_custom_redis_data(key=REDIS_RESULTS_COUNTER_KEY % callback_code)
+            delete_custom_redis_data(key=REDIS_PARTIAL_RESULTS_KEY % callback_code)
+            store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
+                             record_dict=result, callback_code=callback_code)
         worker_logger.info('Finished email verification, for email - %s' % email)
 
 
 def generate_pgp_keys_job(email):
     worker_logger.info('Started email PGP keys generation, email - %s' % email)
     # TODO: Temp solution, use lru cleaner scheduled method.
-    BaseDataStore.instance().delete_custom_lru_redis_data(REDIS_PGP_DATA_KEY % email)
+    delete_custom_redis_data(REDIS_PGP_DATA_KEY % email, lru=True)
 
     generate_email_pgp_keys(email=email, table_class_name=PGP_KEYS_DATA_TABLE_CLASS_NAME)
     worker_logger.info('Finished email PGP keys generation, email - %s' % email)

@@ -2,8 +2,7 @@ from __future__ import absolute_import
 
 from biomio.constants import REDIS_DO_NOT_STORE_RESULT_KEY
 from biomio.mysql_storage.mysql_data_store_interface import MySQLDataStoreInterface
-from biomio.protocol.data_stores.base_data_store import BaseDataStore
-
+from biomio.utils.utils import store_job_result
 
 from logger import worker_logger
 
@@ -58,15 +57,15 @@ def get_record_job(table_class_name, object_id, callback_code, to_dict=False, cu
             redis_key = record.get('redis_key')
             del record['redis_key']
         worker_logger.debug('Data: %s' % record)
-        BaseDataStore.instance().store_job_result(record_key=redis_key,
-                                                  record_dict=record,
-                                                  callback_code=callback_code)
+        store_job_result(record_key=redis_key,
+                         record_dict=record,
+                         callback_code=callback_code)
     except Exception as e:
         worker_logger.exception(e)
         result = dict(error=str(e))
-        BaseDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY,
-                                                  record_dict=result,
-                                                  callback_code=callback_code)
+        store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
+                         record_dict=result,
+                         callback_code=callback_code)
     worker_logger.info('Got record for table class - %s, with object_id - %s' % (table_class_name, object_id))
 
 
@@ -76,11 +75,11 @@ def select_records_by_ids_job(table_class_name, object_ids, callback_code, flat_
         records = MySQLDataStoreInterface.select_data_by_ids(table_name=table_class_name, object_ids=object_ids,
                                                              flat_result=flat_result)
         worker_logger.debug('Data: %s' % records)
-        BaseDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
-                                                  record_dict=records, callback_code=callback_code)
+        store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
+                         record_dict=records, callback_code=callback_code)
     except Exception as e:
         worker_logger.exception(e)
         result = dict(error=str(e))
-        BaseDataStore.instance().store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
-                                                  record_dict=result, callback_code=callback_code)
+        store_job_result(record_key=REDIS_DO_NOT_STORE_RESULT_KEY % callback_code,
+                         record_dict=result, callback_code=callback_code)
     worker_logger.info('Got records for table class - %s, with object_ids - %s' % (table_class_name, object_ids))

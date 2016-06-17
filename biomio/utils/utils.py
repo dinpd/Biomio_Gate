@@ -2,8 +2,9 @@ from __future__ import absolute_import
 import importlib
 import logging
 from apns import APNs, Payload
+from biomio.constants import REDIS_JOB_RESULT_KEY
 from biomio.protocol.settings import APNS_PRODUCTION_PEM, APNS_DEV_PEM, settings
-
+from biomio.protocol.storage.redis_storage import RedisStorage
 
 logger = logging.getLogger(__name__)
 
@@ -49,3 +50,27 @@ def import_module_class(module, class_name):
     """
     module = importlib.import_module(module)
     return getattr(module, class_name, None)
+
+
+def store_job_result(record_key, record_dict, callback_code):
+    """
+        Stores job result data into redis with generated JOB_RESULT key.
+    :param record_key: Redis key of the current record object.
+    :param record_dict: dict data from the current record.
+    :param callback_code: Code of the callback that must be executed after we got result.
+    """
+    _persistence_redis = RedisStorage.persistence_instance()
+    job_result_key = REDIS_JOB_RESULT_KEY % (callback_code, record_key)
+    _persistence_redis.store_data(key=job_result_key, **record_dict)
+
+
+def delete_custom_redis_data(key, lru=False):
+    """
+        Deletes data only from persistence redis instance for given redis key.
+    :param key: Generated redis key.
+    """
+    if lru:
+        _persistence_redis = RedisStorage.lru_instance()
+    else:
+        _persistence_redis = RedisStorage.persistence_instance()
+    _persistence_redis.delete_data(key)
