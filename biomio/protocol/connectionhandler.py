@@ -1,5 +1,6 @@
 from threading import Lock
 
+import os
 from biomio.utils.timeoutqueue import TimeoutQueue
 from biomio.protocol.settings import settings
 
@@ -95,3 +96,7 @@ class ConnectionTimeoutHandler:
             self._run_timer()
 
         return _on_check_expired_connections
+
+    def log_open_connections(self, signum, stack):
+        logger.info('PROCESS WITH ID %d GOT SIGNAL %s\nTHE NUMBER OF OPENED CONNECTIONS: %s' %
+                    (os.getpid(), signum, len(self._connections_queue.queue)))
