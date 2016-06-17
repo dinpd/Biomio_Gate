@@ -49,7 +49,7 @@ class RedisSubscriber:
 
     def _message_handler(self, message):
         if message.kind == 'pmessage':
-            channel_key = re.search('.*:%s' % (REDIS_BIOMIO_GENERAL_CHANNEL % '(.*)'), message.channel)
+            channel_key = re.search(REDIS_BIOMIO_GENERAL_CHANNEL % '(.*)', message.channel)
             channel_callbacks = []
             if channel_key is not None:
                 channel_key = channel_key.group(0)
