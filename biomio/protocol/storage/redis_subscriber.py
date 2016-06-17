@@ -57,7 +57,8 @@ class RedisSubscriber:
                     channel_callbacks[0] = self._subscribers.get(channel_key)
                 else:
                     for subscriber_channel_key in self._subscribers.keys():
-                        if re.match(subscriber_channel_key, channel_key):
+                        re_channel_key = subscriber_channel_key.replace('*', '.*')
+                        if re.match(re_channel_key, channel_key):
                             channel_callbacks.append(self._subscribers.get(subscriber_channel_key))
             if len(channel_callbacks):
                 for channel_callback in channel_callbacks:

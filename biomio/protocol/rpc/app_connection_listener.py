@@ -23,9 +23,9 @@ class AppConnectionListener:
     @staticmethod
     def app_key_pattern(app_id, app_type):
         if app_type == PROBE_APP_TYPE_PREFIX:
-            redis_key_pattern = AppConnectionListener.auth_key('.*', app_id)
+            redis_key_pattern = AppConnectionListener.auth_key('*', app_id)
         else:
-            redis_key_pattern = AppConnectionListener.auth_key(app_id, '.*')
+            redis_key_pattern = AppConnectionListener.auth_key(app_id, '*')
 
         return redis_key_pattern
 
