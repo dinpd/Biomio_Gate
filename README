@@ -7,3 +7,10 @@ To run all tests, execute: nosetests -s -v tests.py --attr '!slow'
 To skip slow tests (e.g. connection timeout): nosetests -s -v tests.py --attr '!slow'
 
 To run certain test (for instance test_message_sequence_with_bye test method from TestReadyState) run: nosetests -s -v tests.py:TestReadyState.test_message_sequence_with_bye
+
+
+
+
+Biomio - adaptive multi-factor authenticator with emphasis on passwordless via AI
+
+//developed with help from Vakoms Digital Transformation Services - vakoms.com
